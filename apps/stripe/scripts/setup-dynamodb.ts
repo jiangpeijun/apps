@@ -21,7 +21,7 @@ try {
       "endpoint-url": {
         type: "string",
         short: "e",
-        default: "http://localhost:8000",
+        default: "http://localhost:8001",
       },
     },
   });

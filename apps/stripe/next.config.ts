@@ -28,7 +28,20 @@ const nextConfig: NextConfig = {
     "@aws-sdk/util-dynamodb",
     "dynamodb-toolbox",
   ],
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    if (dev) {
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          "**/node_modules/**",
+          "D:/DumpStack.log.tmp",
+          "D:/pagefile.sys",
+          "D:/hiberfil.sys",
+          "D:/System Volume Information/**",
+        ],
+      };
+    }
+
     if (isServer) {
       // Ignore opentelemetry warnings - https://github.com/open-telemetry/opentelemetry-js/issues/4173
       config.ignoreWarnings = [{ module: /require-in-the-middle/ }];
