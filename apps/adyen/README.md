@@ -1,11 +1,11 @@
 <div align="center">
-  <h1>Saleor App Payment Stripe</h1>
+  <h1>Saleor App Payment Adyen</h1>
 </div>
 
 <div align="center">
   <a href="https://saleor.io/">🏠 Website</a>
   <span> • </span>
-  <a href="https://docs.saleor.io/developer/app-store/apps/stripe/overview">📚 Docs</a>
+  <a href="https://docs.saleor.io/developer/app-store/apps/adyen/overview">📚 Docs</a>
   <span> • </span>
   <a href="https://saleor.io/blog/">📰 Blog</a>
 </div>
@@ -66,7 +66,7 @@ To run integration tests:
 pnpm run test:integration
 ```
 
-Tests are using mocked Saleor and local DynamoDB in Docker but are calling the real Stripe API.
+Tests are using mocked Saleor and local DynamoDB in Docker but are calling the real Adyen API.
 
 ### E2E tests
 
@@ -80,4 +80,4 @@ To run e2e tests:
 pnpm run test:e2e
 ```
 
-Tests are using the Stripe staging app that is already installed on Saleor environments.
+Tests are using the Adyen staging app that is already installed on Saleor environments.

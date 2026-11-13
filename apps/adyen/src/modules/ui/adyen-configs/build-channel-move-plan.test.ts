@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { type ConfigChannelFragment } from "@/generated/graphql";
-import { type StripeFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
 
 import { type ChannelMapping } from "./build-channel-assignment-updates";
 import { buildChannelMovePlan } from "./build-channel-move-plan";
@@ -17,7 +17,7 @@ const channel = (id: string): ConfigChannelFragment => ({
 const config = (
   id: string,
   env: "test" | "live" = "test",
-): StripeFrontendConfigSerializedFields => ({
+): AdyenFrontendConfigSerializedFields => ({
   id,
   name: `Config ${id}`,
   restrictedKey: `rk_${env}_...`,

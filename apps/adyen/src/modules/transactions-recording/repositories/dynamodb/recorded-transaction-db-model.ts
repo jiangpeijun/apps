@@ -3,14 +3,14 @@ import { item } from "dynamodb-toolbox/schema/item";
 
 import { DynamoMainTable, dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 
 class AccessPattern {
   static getPK({ saleorApiUrl, appId }: { saleorApiUrl: SaleorApiUrl; appId: string }) {
     return DynamoMainTable.getPrimaryKeyScopedToInstallation({ saleorApiUrl, appId });
   }
 
-  static getSKforSpecificItem({ paymentIntentId }: { paymentIntentId: StripePaymentIntentId }) {
+  static getSKforSpecificItem({ paymentIntentId }: { paymentIntentId: AdyenPaymentIntentId }) {
     return `TRANSACTION#${paymentIntentId}` as const;
   }
 }

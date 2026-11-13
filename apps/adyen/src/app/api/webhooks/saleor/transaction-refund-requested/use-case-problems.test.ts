@@ -1,19 +1,19 @@
 import { err } from "neverthrow";
-import Stripe from "stripe";
+import Adyen from "adyen";
 import { describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
 import { mockedConfigurationId, mockedSaleorAppId } from "@/__tests__/mocks/constants";
-import { mockStripeProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
-import { mockedStripeRefundsApi } from "@/__tests__/mocks/mocked-adyen-refunds-api";
+import { mockAdyenProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
+import { mockedAdyenRefundsApi } from "@/__tests__/mocks/mocked-adyen-refunds-api";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { getMockedTransactionRefundRequestedEvent } from "@/__tests__/mocks/saleor-events/transaction-refund-request-event";
 import {
-  StripeAPIError,
-  StripeAuthenticationError,
-  StripePermissionError,
+  AdyenAPIError,
+  AdyenAuthenticationError,
+  AdyenPermissionError,
 } from "@/modules/adyen/adyen-api-error";
-import { type IStripeRefundsApiFactory } from "@/modules/adyen/types";
+import { type IAdyenRefundsApiFactory } from "@/modules/adyen/types";
 
 import { TransactionRefundRequestedUseCase } from "./use-case";
 
@@ -38,95 +38,95 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("TransactionRefundRequestedUseCase - problem reporting", () => {
-  const stripeRefundsApiFactory = {
-    create: () => mockedStripeRefundsApi,
-  } satisfies IStripeRefundsApiFactory;
+  const adyenRefundsApiFactory = {
+    create: () => mockedAdyenRefundsApi,
+  } satisfies IAdyenRefundsApiFactory;
 
-  it("Reports authentication problem when Stripe returns StripeAuthenticationError", async () => {
-    vi.spyOn(mockedStripeRefundsApi, "createRefund").mockImplementationOnce(async () =>
+  it("Reports authentication problem when Adyen returns AdyenAuthenticationError", async () => {
+    vi.spyOn(mockedAdyenRefundsApi, "createRefund").mockImplementationOnce(async () =>
       err(
-        new Stripe.errors.StripeAuthenticationError({
+        new Adyen.errors.AdyenAuthenticationError({
           type: "authentication_error",
           message: "Invalid API key",
         }),
       ),
     );
 
-    const reportSpy = vi.spyOn(mockStripeProblemReporter, "reportApiProblem");
+    const reportSpy = vi.spyOn(mockAdyenProblemReporter, "reportApiProblem");
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
-    expect(reportSpy).toHaveBeenCalledWith(expect.any(StripeAuthenticationError), {
+    expect(reportSpy).toHaveBeenCalledWith(expect.any(AdyenAuthenticationError), {
       id: mockedConfigurationId,
       name: "config-name",
     });
   });
 
-  it("Reports permission problem when Stripe returns StripePermissionError", async () => {
-    vi.spyOn(mockedStripeRefundsApi, "createRefund").mockImplementationOnce(async () =>
+  it("Reports permission problem when Adyen returns AdyenPermissionError", async () => {
+    vi.spyOn(mockedAdyenRefundsApi, "createRefund").mockImplementationOnce(async () =>
       err(
-        new Stripe.errors.StripePermissionError({
+        new Adyen.errors.AdyenPermissionError({
           type: "api_error",
           message: "Insufficient permissions",
         }),
       ),
     );
 
-    const reportSpy = vi.spyOn(mockStripeProblemReporter, "reportApiProblem");
+    const reportSpy = vi.spyOn(mockAdyenProblemReporter, "reportApiProblem");
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
-    expect(reportSpy).toHaveBeenCalledWith(expect.any(StripePermissionError), {
+    expect(reportSpy).toHaveBeenCalledWith(expect.any(AdyenPermissionError), {
       id: mockedConfigurationId,
       name: "config-name",
     });
   });
 
-  it("Calls reportApiProblem with non-reportable error when Stripe returns other error", async () => {
-    vi.spyOn(mockedStripeRefundsApi, "createRefund").mockImplementationOnce(async () =>
+  it("Calls reportApiProblem with non-reportable error when Adyen returns other error", async () => {
+    vi.spyOn(mockedAdyenRefundsApi, "createRefund").mockImplementationOnce(async () =>
       err(
-        new Stripe.errors.StripeAPIError({
+        new Adyen.errors.AdyenAPIError({
           type: "api_error",
           message: "Something went wrong",
         }),
       ),
     );
 
-    const reportSpy = vi.spyOn(mockStripeProblemReporter, "reportApiProblem");
+    const reportSpy = vi.spyOn(mockAdyenProblemReporter, "reportApiProblem");
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
-    expect(reportSpy).toHaveBeenCalledWith(expect.any(StripeAPIError), {
+    expect(reportSpy).toHaveBeenCalledWith(expect.any(AdyenAPIError), {
       id: mockedConfigurationId,
       name: "config-name",
     });

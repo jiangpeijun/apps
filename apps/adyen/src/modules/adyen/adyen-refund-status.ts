@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-const StripeRefundStatusSchema = z
+const AdyenRefundStatusSchema = z
   .enum(["pending", "succeeded", "failed", "canceled", "requires_action"])
-  .brand("StripeRefundStatus");
+  .brand("AdyenRefundStatus");
 
-export const createStripeRefundStatus = (raw: string | null) => StripeRefundStatusSchema.parse(raw);
+export const createAdyenRefundStatus = (raw: string | null) => AdyenRefundStatusSchema.parse(raw);
 
-export type StripeRefundStatus = z.infer<typeof StripeRefundStatusSchema>;
+export type AdyenRefundStatus = z.infer<typeof AdyenRefundStatusSchema>;

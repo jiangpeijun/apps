@@ -11,13 +11,13 @@ import { type AppContext } from "@/lib/app-context";
 import { BaseError } from "@/lib/errors";
 import { type SaleorMoney } from "@/modules/saleor/saleor-money";
 import { type SaleorPaymentMethodDetails } from "@/modules/saleor/saleor-payment-method-details";
-import { generatePaymentIntentStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
 import {
-  type StripeApiError,
-  StripeApiErrorPublicCode,
-  StripeCardErrorPublicCode,
+  type AdyenApiError,
+  AdyenApiErrorPublicCode,
+  AdyenCardErrorPublicCode,
 } from "@/modules/adyen/adyen-api-error";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import {
   type AuthorizationActionRequiredResult,
   type ChargeActionRequiredResult,
@@ -47,14 +47,14 @@ class Success extends SuccessWebhookResponse {
   readonly transactionResult: TransactionResult;
   readonly saleorMoney: SaleorMoney;
   readonly timestamp: Date | null;
-  readonly stripePaymentIntentId: StripePaymentIntentId;
+  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
   readonly paymentMethodDetails: SaleorPaymentMethodDetails | null;
 
   constructor(args: {
     transactionResult: TransactionResult;
     saleorMoney: SaleorMoney;
     timestamp: Date | null;
-    stripePaymentIntentId: StripePaymentIntentId;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appContext: AppContext;
     saleorPaymentMethodDetails: SaleorPaymentMethodDetails | null;
   }) {
@@ -62,25 +62,25 @@ class Success extends SuccessWebhookResponse {
     this.transactionResult = args.transactionResult;
     this.saleorMoney = args.saleorMoney;
     this.timestamp = args.timestamp;
-    this.stripePaymentIntentId = args.stripePaymentIntentId;
+    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
     this.paymentMethodDetails = args.saleorPaymentMethodDetails;
   }
 
   getResponse(): Response {
-    if (!this.appContext.stripeEnv) {
-      throw new BaseError("Stripe environment is not set. Ensure AppContext is set earlier");
+    if (!this.appContext.adyenEnv) {
+      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
     }
 
     const typeSafeResponse: TransactionSessionSuccess | TransactionSessionActionRequired = {
       result: this.transactionResult.result,
       amount: this.saleorMoney.amount,
-      pspReference: this.stripePaymentIntentId,
-      // https://docs.stripe.com/payments/paymentintents/lifecycle
+      pspReference: this.adyenPaymentIntentId,
+      // https://docs.adyen.com/payments/paymentintents/lifecycle
       message: this.transactionResult.message,
       actions: this.transactionResult.actions,
-      externalUrl: generatePaymentIntentStripeDashboardUrl(
-        this.stripePaymentIntentId,
-        this.appContext.stripeEnv,
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(
+        this.adyenPaymentIntentId,
+        this.appContext.adyenEnv,
       ),
       time: this.timestamp?.toISOString(),
       paymentMethodDetails: this.paymentMethodDetails?.toSaleorWebhookResponse(),
@@ -92,13 +92,13 @@ class Success extends SuccessWebhookResponse {
 
 class Failure extends SuccessWebhookResponse {
   readonly transactionResult: ChargeFailureResult | AuthorizationFailureResult;
-  readonly error: StripeApiError;
-  readonly stripePaymentIntentId: StripePaymentIntentId;
+  readonly error: AdyenApiError;
+  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
 
   private static ResponseDataSchema = createFailureWebhookResponseDataSchema(
     z.array(
       z.object({
-        code: z.union([z.literal(StripeCardErrorPublicCode), z.literal(StripeApiErrorPublicCode)]),
+        code: z.union([z.literal(AdyenCardErrorPublicCode), z.literal(AdyenApiErrorPublicCode)]),
         message: z.string(),
       }),
     ),
@@ -106,28 +106,28 @@ class Failure extends SuccessWebhookResponse {
 
   constructor(args: {
     transactionResult: ChargeFailureResult | AuthorizationFailureResult;
-    error: StripeApiError;
-    stripePaymentIntentId: StripePaymentIntentId;
+    error: AdyenApiError;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appContext: AppContext;
   }) {
     super(args.appContext);
     this.transactionResult = args.transactionResult;
     this.error = args.error;
-    this.stripePaymentIntentId = args.stripePaymentIntentId;
+    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
   }
 
   getResponse() {
-    if (!this.appContext.stripeEnv) {
-      throw new BaseError("Stripe environment is not set. Ensure AppContext is set earlier");
+    if (!this.appContext.adyenEnv) {
+      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
     }
 
     const typeSafeResponse: TransactionSessionFailure = {
       result: this.transactionResult.result,
       message: this.error.merchantMessage,
-      pspReference: this.stripePaymentIntentId,
-      externalUrl: generatePaymentIntentStripeDashboardUrl(
-        this.stripePaymentIntentId,
-        this.appContext.stripeEnv,
+      pspReference: this.adyenPaymentIntentId,
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(
+        this.adyenPaymentIntentId,
+        this.appContext.adyenEnv,
       ),
       data: Failure.ResponseDataSchema.parse({
         paymentIntent: {

@@ -1,12 +1,12 @@
 import { z } from "zod";
 
 import {
-  createStripePublishableKey,
-  type StripePublishableKey,
+  createAdyenPublishableKey,
+  type AdyenPublishableKey,
 } from "@/modules/adyen/adyen-publishable-key";
 import {
-  createStripeRestrictedKey,
-  type StripeRestrictedKey,
+  createAdyenRestrictedKey,
+  type AdyenRestrictedKey,
 } from "@/modules/adyen/adyen-restricted-key";
 
 /**
@@ -26,9 +26,9 @@ export const hasPublishableKeyPrefix = (value: string) =>
 export const hasRestrictedKeyPrefix = (value: string) =>
   value.startsWith("rk_test_") || value.startsWith("rk_live_");
 
-export const stripePublishableKeyInputSchema = z
+export const adyenPublishableKeyInputSchema = z
   .string()
-  .transform((value, ctx): StripePublishableKey => {
+  .transform((value, ctx): AdyenPublishableKey => {
     if (!hasPublishableKeyPrefix(value)) {
       ctx.addIssue({
         message: PUBLISHABLE_KEY_FORMAT_MESSAGE,
@@ -45,7 +45,7 @@ export const stripePublishableKeyInputSchema = z
       return z.NEVER;
     }
 
-    return createStripePublishableKey(value).match(
+    return createAdyenPublishableKey(value).match(
       (parsed) => parsed,
       () => {
         ctx.addIssue({
@@ -59,9 +59,9 @@ export const stripePublishableKeyInputSchema = z
     );
   });
 
-export const stripeRestrictedKeyInputSchema = z
+export const adyenRestrictedKeyInputSchema = z
   .string()
-  .transform((value, ctx): StripeRestrictedKey => {
+  .transform((value, ctx): AdyenRestrictedKey => {
     if (!hasRestrictedKeyPrefix(value)) {
       ctx.addIssue({
         message: RESTRICTED_KEY_FORMAT_MESSAGE,
@@ -72,7 +72,7 @@ export const stripeRestrictedKeyInputSchema = z
       return z.NEVER;
     }
 
-    return createStripeRestrictedKey(value).match(
+    return createAdyenRestrictedKey(value).match(
       (parsed) => parsed,
       () => {
         ctx.addIssue({
@@ -89,10 +89,10 @@ export const stripeRestrictedKeyInputSchema = z
 export const MIXED_KEY_ENVIRONMENTS_MESSAGE =
   "Both Publishable and Restricted Keys must be live or test";
 
-export const stripeKeyEnv = (key: string): "TEST" | "LIVE" =>
+export const adyenKeyEnv = (key: string): "TEST" | "LIVE" =>
   key.startsWith("pk_test") || key.startsWith("rk_test") ? "TEST" : "LIVE";
 
 export const keysShareEnvironment = (keys: {
   publishableKey: string;
   restrictedKey: string;
-}): boolean => stripeKeyEnv(keys.publishableKey) === stripeKeyEnv(keys.restrictedKey);
+}): boolean => adyenKeyEnv(keys.publishableKey) === adyenKeyEnv(keys.restrictedKey);

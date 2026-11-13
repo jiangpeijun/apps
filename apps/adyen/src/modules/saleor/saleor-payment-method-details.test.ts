@@ -1,23 +1,23 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  mockedStripeCardPaymentMethod,
-  mockedStripeOtherPaymentMethod,
+  mockedAdyenCardPaymentMethod,
+  mockedAdyenOtherPaymentMethod,
 } from "@/__tests__/mocks/mocked-adyen-payment-method";
 
 import { SaleorPaymentMethodDetails } from "./saleor-payment-method-details";
 
 describe("SaleorPaymentMethodDetails", () => {
-  describe("createFromStripe", () => {
-    it("creates a valid instance from Stripe PaymentMethod object", () => {
-      const result = SaleorPaymentMethodDetails.createFromStripe(mockedStripeCardPaymentMethod);
+  describe("createFromAdyen", () => {
+    it("creates a valid instance from Adyen PaymentMethod object", () => {
+      const result = SaleorPaymentMethodDetails.createFromAdyen(mockedAdyenCardPaymentMethod);
 
       expect(result.isOk()).toBe(true);
       expect(result._unsafeUnwrap()).toBeInstanceOf(SaleorPaymentMethodDetails);
     });
 
     it("returns error when payment method is null", () => {
-      const result = SaleorPaymentMethodDetails.createFromStripe(null);
+      const result = SaleorPaymentMethodDetails.createFromAdyen(null);
 
       expect(result.isErr()).toBe(true);
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(
@@ -27,7 +27,7 @@ describe("SaleorPaymentMethodDetails", () => {
     });
 
     it("returns error when payment method is a string", () => {
-      const result = SaleorPaymentMethodDetails.createFromStripe("pm_123456789");
+      const result = SaleorPaymentMethodDetails.createFromAdyen("pm_123456789");
 
       expect(result.isErr()).toBe(true);
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(
@@ -39,8 +39,8 @@ describe("SaleorPaymentMethodDetails", () => {
 
   describe("toSaleorWebhookResponse", () => {
     it("returns CARD type with all card details when payment method is a card", () => {
-      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const result = paymentMethodDetails.toSaleorWebhookResponse();
@@ -59,15 +59,15 @@ describe("SaleorPaymentMethodDetails", () => {
 
     it("returns CARD type with generic_card name when display_brand is missing", () => {
       const cardWithoutDisplayBrand = {
-        ...mockedStripeCardPaymentMethod,
+        ...mockedAdyenCardPaymentMethod,
         card: {
-          ...mockedStripeCardPaymentMethod.card!,
+          ...mockedAdyenCardPaymentMethod.card!,
           display_brand: null,
         },
       };
 
       const paymentMethodDetails =
-        SaleorPaymentMethodDetails.createFromStripe(cardWithoutDisplayBrand)._unsafeUnwrap();
+        SaleorPaymentMethodDetails.createFromAdyen(cardWithoutDisplayBrand)._unsafeUnwrap();
 
       const result = paymentMethodDetails.toSaleorWebhookResponse();
 
@@ -84,8 +84,8 @@ describe("SaleorPaymentMethodDetails", () => {
     });
 
     it("returns OTHER type with payment method type name for non-card payment methods", () => {
-      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeOtherPaymentMethod,
+      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenOtherPaymentMethod,
       )._unsafeUnwrap();
 
       const result = paymentMethodDetails.toSaleorWebhookResponse();
@@ -101,8 +101,8 @@ describe("SaleorPaymentMethodDetails", () => {
 
   describe("toSaleorTransactionEventPayload", () => {
     it("returns card object with all card details when payment method is a card", () => {
-      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const result = paymentMethodDetails.toSaleorTransactionEventPayload();
@@ -122,15 +122,15 @@ describe("SaleorPaymentMethodDetails", () => {
 
     it("returns card object with generic_card name when display_brand is missing", () => {
       const cardWithoutDisplayBrand = {
-        ...mockedStripeCardPaymentMethod,
+        ...mockedAdyenCardPaymentMethod,
         card: {
-          ...mockedStripeCardPaymentMethod.card!,
+          ...mockedAdyenCardPaymentMethod.card!,
           display_brand: null,
         },
       };
 
       const paymentMethodDetails =
-        SaleorPaymentMethodDetails.createFromStripe(cardWithoutDisplayBrand)._unsafeUnwrap();
+        SaleorPaymentMethodDetails.createFromAdyen(cardWithoutDisplayBrand)._unsafeUnwrap();
 
       const result = paymentMethodDetails.toSaleorTransactionEventPayload();
 
@@ -148,8 +148,8 @@ describe("SaleorPaymentMethodDetails", () => {
     });
 
     it("returns other object with payment method type name for non-card payment methods", () => {
-      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeOtherPaymentMethod,
+      const paymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenOtherPaymentMethod,
       )._unsafeUnwrap();
 
       const result = paymentMethodDetails.toSaleorTransactionEventPayload();

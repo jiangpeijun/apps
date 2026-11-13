@@ -15,19 +15,19 @@ import { type NextPage } from "next";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-import { newStripeConfigInputSchema } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
+import { newAdyenConfigInputSchema } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
 import { trpcClient } from "@/modules/trpc/trpc-client";
 import { MissingAppAccess } from "@/modules/ui/missing-app-access";
-import { inferStripeEnvFromKeys } from "@/modules/ui/adyen-configs/infer-adyen-env-from-keys";
+import { inferAdyenEnvFromKeys } from "@/modules/ui/adyen-configs/infer-adyen-env-from-keys";
 import {
-  StripeConfigFields,
-  type StripeConfigFormShape,
+  AdyenConfigFields,
+  type AdyenConfigFormShape,
 } from "@/modules/ui/adyen-configs/adyen-config-fields";
-import { StripeEnvBadge } from "@/modules/ui/adyen-configs/adyen-env-badge";
-import { StripeModeLegend } from "@/modules/ui/adyen-setup/adyen-mode-legend";
+import { AdyenEnvBadge } from "@/modules/ui/adyen-configs/adyen-env-badge";
+import { AdyenModeLegend } from "@/modules/ui/adyen-setup/adyen-mode-legend";
 import { useHasAppAccess } from "@/modules/ui/use-has-app-access";
 
-const FORM_ID = "new_stripe_config_form";
+const FORM_ID = "new_adyen_config_form";
 const CONFIG_LIST_PATH = "/config";
 
 const NewConfiguration: NextPage = () => {
@@ -38,18 +38,18 @@ const NewConfiguration: NextPage = () => {
     handleSubmit,
     control,
     formState: { errors, isDirty },
-  } = useForm<StripeConfigFormShape>({
+  } = useForm<AdyenConfigFormShape>({
     defaultValues: {
       name: "",
       publishableKey: "",
       restrictedKey: "",
     },
-    resolver: zodResolver(newStripeConfigInputSchema),
+    resolver: zodResolver(newAdyenConfigInputSchema),
   });
 
   const publishableKey = useWatch({ control, name: "publishableKey" });
   const restrictedKey = useWatch({ control, name: "restrictedKey" });
-  const envHint = inferStripeEnvFromKeys({ publishableKey, restrictedKey });
+  const envHint = inferAdyenEnvFromKeys({ publishableKey, restrictedKey });
 
   /**
    * Submitting is not enough to drop the guard: react-hook-form reports a successful submit as
@@ -60,14 +60,14 @@ const NewConfiguration: NextPage = () => {
   const guard = useUnsavedChangesGuard({ enabled: isDirty && !isSaved });
 
   /**
-   * Saving creates a Stripe webhook, so a second submit would leave an orphaned
+   * Saving creates a Adyen webhook, so a second submit would leave an orphaned
    * configuration behind — the savebar and inputs stay locked while it is in flight.
    */
   const {
     mutate: saveConfig,
     isLoading: isSaving,
     isError: isSaveError,
-  } = trpcClient.appConfig.saveNewStripeConfig.useMutation({
+  } = trpcClient.appConfig.saveNewAdyenConfig.useMutation({
     onSuccess() {
       notifySuccess("Configuration saved");
       setIsSaved(true);
@@ -88,9 +88,9 @@ const NewConfiguration: NextPage = () => {
   }
 
   return (
-    <DetailPageLayout withSavebar data-test-id="stripe-config-new-page">
+    <DetailPageLayout withSavebar data-test-id="adyen-config-new-page">
       <AppPageHeader
-        title="New Stripe configuration"
+        title="New Adyen configuration"
         href={CONFIG_LIST_PATH}
         hrefTitle="Configuration"
       />
@@ -98,22 +98,22 @@ const NewConfiguration: NextPage = () => {
         <SettingsPageContent
           description={
             <>
-              Add a Stripe configuration. After saving, assign it to the Saleor channels that should
+              Add a Adyen configuration. After saving, assign it to the Saleor channels that should
               use these keys on the configuration card.
             </>
           }
-          aside={<StripeModeLegend />}
+          aside={<AdyenModeLegend />}
         >
           <Box as="form" id={FORM_ID} onSubmit={handleSubmit((values) => saveConfig(values))}>
             <SettingsSection
-              title="Stripe keys"
+              title="Adyen keys"
               ownership="channel"
               description="Keys are used by every channel you assign to this configuration."
-              headerEnd={envHint ? <StripeEnvBadge env={envHint} /> : undefined}
-              data-test-id="stripe-new-config-card"
+              headerEnd={envHint ? <AdyenEnvBadge env={envHint} /> : undefined}
+              data-test-id="adyen-new-config-card"
             >
               <SettingsFieldStack>
-                <StripeConfigFields control={control} errors={errors} disabled={isSaving} />
+                <AdyenConfigFields control={control} errors={errors} disabled={isSaving} />
               </SettingsFieldStack>
             </SettingsSection>
           </Box>

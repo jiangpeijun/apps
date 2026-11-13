@@ -1,6 +1,6 @@
 import { assertUnreachable } from "@/lib/assert-unreachable";
 import { type ResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
-import { type StripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { type AdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 
 import {
   AuthorizationActionRequiredResult,
@@ -10,10 +10,10 @@ import { AuthorizationRequestResult, ChargeRequestResult } from "./request-resul
 import { AuthorizationSuccessResult, ChargeSuccessResult } from "./success-result";
 
 export const mapPaymentIntentStatusToTransactionResult = (
-  stripePaymentIntentStatus: StripePaymentIntentStatus,
+  adyenPaymentIntentStatus: AdyenPaymentIntentStatus,
   resolvedTransactionFlow: ResolvedTransactionFlow,
 ) => {
-  switch (stripePaymentIntentStatus) {
+  switch (adyenPaymentIntentStatus) {
     case "succeeded":
       return new ChargeSuccessResult();
 
@@ -22,10 +22,10 @@ export const mapPaymentIntentStatusToTransactionResult = (
     case "requires_action":
     case "canceled":
       if (resolvedTransactionFlow === "CHARGE") {
-        return new ChargeActionRequiredResult(stripePaymentIntentStatus);
+        return new ChargeActionRequiredResult(adyenPaymentIntentStatus);
       }
 
-      return new AuthorizationActionRequiredResult(stripePaymentIntentStatus);
+      return new AuthorizationActionRequiredResult(adyenPaymentIntentStatus);
     case "processing":
       if (resolvedTransactionFlow === "CHARGE") {
         return new ChargeRequestResult();
@@ -35,6 +35,6 @@ export const mapPaymentIntentStatusToTransactionResult = (
     case "requires_capture":
       return new AuthorizationSuccessResult();
     default:
-      assertUnreachable(stripePaymentIntentStatus);
+      assertUnreachable(adyenPaymentIntentStatus);
   }
 };

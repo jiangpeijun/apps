@@ -1,4 +1,4 @@
-name: saleor-app-stripe_integration_tests
+name: saleor-app-adyen_integration_tests
 services:
   dynamodb:
     image: "amazon/dynamodb-local:latest"

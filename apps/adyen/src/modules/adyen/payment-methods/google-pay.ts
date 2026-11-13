@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { z } from "zod";
 
 import {
@@ -10,7 +10,7 @@ import { type SaleorTransationFlow } from "@/modules/saleor/saleor-transaction-f
 import { type PaymentMethod } from "./types";
 
 /**
- * https://docs.stripe.com/google-pay
+ * https://docs.adyen.com/google-pay
  */
 export class GooglePayPaymentMethod implements PaymentMethod {
   // Internally it's the card
@@ -28,7 +28,7 @@ export class GooglePayPaymentMethod implements PaymentMethod {
 
   getCreatePaymentIntentMethodOptions(
     saleorTransactionFlow: SaleorTransationFlow,
-  ): Stripe.PaymentIntentCreateParams.PaymentMethodOptions {
+  ): Adyen.PaymentIntentCreateParams.PaymentMethodOptions {
     const transactionFlow = this.getResolvedTransactionFlow(saleorTransactionFlow);
 
     return {

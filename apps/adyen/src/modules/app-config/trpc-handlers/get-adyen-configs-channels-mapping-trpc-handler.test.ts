@@ -4,19 +4,19 @@ import { describe, expect, it, vi } from "vitest";
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
 import { mockedAppToken, mockedSaleorAppId } from "@/__tests__/mocks/constants";
 import { mockedGraphqlClient } from "@/__tests__/mocks/graphql-client";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { TEST_Procedure } from "@/__tests__/trpc-testing-procedure";
 import { BaseError } from "@/lib/errors";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { GetStripeConfigsChannelsMappingTrpcHandler } from "@/modules/app-config/trpc-handlers/get-adyen-configs-channels-mapping-trpc-handler";
+import { GetAdyenConfigsChannelsMappingTrpcHandler } from "@/modules/app-config/trpc-handlers/get-adyen-configs-channels-mapping-trpc-handler";
 import { router } from "@/modules/trpc/trpc-server";
 
 /**
  * TODO: Probably create some test abstraction to bootstrap trpc handler for testing
  */
 const getTestCaller = () => {
-  const instance = new GetStripeConfigsChannelsMappingTrpcHandler();
+  const instance = new GetAdyenConfigsChannelsMappingTrpcHandler();
 
   // @ts-expect-error - context doesnt match but its applied in test
   instance.baseProcedure = TEST_Procedure;
@@ -38,7 +38,7 @@ const getTestCaller = () => {
   };
 };
 
-describe("GetStripeConfigsChannelsMappingTrpcHandler", () => {
+describe("GetAdyenConfigsChannelsMappingTrpcHandler", () => {
   it("Returns error 500 if repository is down", async () => {
     const { caller, mockedAppConfigRepo } = getTestCaller();
 
@@ -61,7 +61,7 @@ describe("GetStripeConfigsChannelsMappingTrpcHandler", () => {
             "c-id1": "id-1",
           },
           {
-            "id-1": mockedStripeConfig,
+            "id-1": mockedAdyenConfig,
           },
         ),
       ),
@@ -70,7 +70,7 @@ describe("GetStripeConfigsChannelsMappingTrpcHandler", () => {
     // Missing webhook status is expected - we dont have to show this field in the UI
     return expect(caller.testProcedure()).resolves.toMatchInlineSnapshot(`
       {
-        "c-id1": StripeFrontendConfig {
+        "c-id1": AdyenFrontendConfig {
           "id": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
           "name": "config-name",
           "publishableKey": "pk_live_1",

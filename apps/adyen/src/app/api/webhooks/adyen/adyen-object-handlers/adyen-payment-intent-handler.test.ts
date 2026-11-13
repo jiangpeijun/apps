@@ -1,13 +1,13 @@
 import { ok } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getMockedRecordedTransaction } from "@/__tests__/mocks/mocked-recorded-transaction";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripePaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
 import {
-  mockedStripeCardPaymentMethod,
-  mockedStripeOtherPaymentMethod,
+  mockedAdyenCardPaymentMethod,
+  mockedAdyenOtherPaymentMethod,
 } from "@/__tests__/mocks/mocked-adyen-payment-method";
 import { MockedTransactionRecorder } from "@/__tests__/mocks/mocked-transaction-recorder";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
@@ -19,9 +19,9 @@ import { getMockedPaymentIntentRequiresActionEvent } from "@/__tests__/mocks/ady
 import { getMockedPaymentIntentSucceededEvent } from "@/__tests__/mocks/adyen-events/mocked-payment-intent-succeeded";
 import { createResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
 
-import { StripePaymentIntentHandler } from "./adyen-payment-intent-handler";
+import { AdyenPaymentIntentHandler } from "./adyen-payment-intent-handler";
 
-describe("StripePaymentIntentHandler", () => {
+describe("AdyenPaymentIntentHandler", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -34,21 +34,21 @@ describe("StripePaymentIntentHandler", () => {
     const mockTransactionRecorder = new MockedTransactionRecorder();
     const event = {
       type: "payment_intent.created",
-    } as unknown as Stripe.Event;
+    } as unknown as Adyen.Event;
 
-    const handler = new StripePaymentIntentHandler();
+    const handler = new AdyenPaymentIntentHandler();
 
     const result = await handler.processPaymentIntentEvent({
       event,
-      stripeEnv: "LIVE",
+      adyenEnv: "LIVE",
       transactionRecorder: mockTransactionRecorder,
       appId: "appId",
       saleorApiUrl: mockedSaleorApiUrl,
-      stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+      adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
     });
 
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(
-      StripePaymentIntentHandler.NotSupportedEventError,
+      AdyenPaymentIntentHandler.NotSupportedEventError,
     );
   });
 
@@ -58,20 +58,20 @@ describe("StripePaymentIntentHandler", () => {
         createResolvedTransactionFlow("AUTHORIZATION"),
         createResolvedTransactionFlow("CHARGE"),
       ])(
-        "should resolve fields with type: 'CHARGE' from Stripe event properly for '%s' flow",
+        "should resolve fields with type: 'CHARGE' from Adyen event properly for '%s' flow",
         async (resolvedTransactionFlow) => {
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
 
-          vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
+          vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
             async () =>
               ok({
-                payment_method: mockedStripeCardPaymentMethod,
+                payment_method: mockedAdyenCardPaymentMethod,
               }),
           );
 
@@ -81,14 +81,14 @@ describe("StripePaymentIntentHandler", () => {
 
           event.data.object.amount_received = amountToUse;
 
-          const handler = new StripePaymentIntentHandler();
+          const handler = new AdyenPaymentIntentHandler();
           const result = await handler.processPaymentIntentEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
-            stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+            adyenEnv: "LIVE",
+            adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
           });
 
           const { type, amount, pspReference, time, saleorPaymentMethodDetailsInput } = result
@@ -125,21 +125,21 @@ describe("StripePaymentIntentHandler", () => {
           expectedType: "CHARGE_REQUEST",
         },
       ])(
-        "should resolve fields with type: $expectedType from Stripe event properly for $resolvedTransactionFlow flow",
+        "should resolve fields with type: $expectedType from Adyen event properly for $resolvedTransactionFlow flow",
         async ({ resolvedTransactionFlow, expectedType }) => {
           const event = getMockedPaymentIntentProcessingEvent();
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
 
-          vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
+          vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
             async () =>
               ok({
-                payment_method: mockedStripeOtherPaymentMethod,
+                payment_method: mockedAdyenOtherPaymentMethod,
               }),
           );
 
@@ -148,14 +148,14 @@ describe("StripePaymentIntentHandler", () => {
 
           event.data.object.amount = amountToUse;
 
-          const handler = new StripePaymentIntentHandler();
+          const handler = new AdyenPaymentIntentHandler();
           const result = await handler.processPaymentIntentEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
-            stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+            adyenEnv: "LIVE",
+            adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
           });
 
           const { type, amount, pspReference, time, saleorPaymentMethodDetailsInput } = result
@@ -189,17 +189,17 @@ describe("StripePaymentIntentHandler", () => {
           expectedType: "CHARGE_ACTION_REQUIRED",
         },
       ])(
-        "should resolve fields with type: $expectedType from Stripe event properly for $resolvedTransactionFlow flow",
+        "should resolve fields with type: $expectedType from Adyen event properly for $resolvedTransactionFlow flow",
         async ({ resolvedTransactionFlow, expectedType }) => {
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
 
-          vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
+          vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
             async () =>
               ok({
                 payment_method: null,
@@ -212,15 +212,15 @@ describe("StripePaymentIntentHandler", () => {
 
           event.data.object.amount = amountToUse;
 
-          const handler = new StripePaymentIntentHandler();
+          const handler = new AdyenPaymentIntentHandler();
 
           const result = await handler.processPaymentIntentEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
-            stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+            adyenEnv: "LIVE",
+            adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
           });
 
           const { type, amount, pspReference, time, saleorPaymentMethodDetailsInput } = result
@@ -249,17 +249,17 @@ describe("StripePaymentIntentHandler", () => {
           expectedType: "AUTHORIZATION_SUCCESS",
         },
       ])(
-        "should resolve fields with type: $expectedType from Stripe event properly for $resolvedTransactionFlow flow",
+        "should resolve fields with type: $expectedType from Adyen event properly for $resolvedTransactionFlow flow",
         async ({ resolvedTransactionFlow, expectedType }) => {
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
 
-          vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
+          vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
             async () =>
               ok({
                 payment_method: "pm_1MockedOtherPaymentMethod",
@@ -272,14 +272,14 @@ describe("StripePaymentIntentHandler", () => {
 
           event.data.object.amount_capturable = amountToUse;
 
-          const handler = new StripePaymentIntentHandler();
+          const handler = new AdyenPaymentIntentHandler();
           const result = await handler.processPaymentIntentEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
-            stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+            adyenEnv: "LIVE",
+            adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
           });
 
           const { type, amount, pspReference, time, saleorPaymentMethodDetailsInput } = result
@@ -308,20 +308,20 @@ describe("StripePaymentIntentHandler", () => {
           expectedType: "CHARGE_FAILURE",
         },
       ])(
-        "should resolve fields with type: $expectedType from Stripe event properly for $resolvedTransactionFlow flow",
+        "should resolve fields with type: $expectedType from Adyen event properly for $resolvedTransactionFlow flow",
         async ({ resolvedTransactionFlow, expectedType }) => {
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
 
-          vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
+          vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
             async () =>
               ok({
-                payment_method: mockedStripeOtherPaymentMethod,
+                payment_method: mockedAdyenOtherPaymentMethod,
               }),
           );
 
@@ -331,14 +331,14 @@ describe("StripePaymentIntentHandler", () => {
 
           event.data.object.amount = amountToUse;
 
-          const handler = new StripePaymentIntentHandler();
+          const handler = new AdyenPaymentIntentHandler();
           const result = await handler.processPaymentIntentEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
-            stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+            adyenEnv: "LIVE",
+            adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
           });
 
           const { type, amount, pspReference, time, saleorPaymentMethodDetailsInput } = result
@@ -371,21 +371,21 @@ describe("StripePaymentIntentHandler", () => {
           expectedType: "CANCEL_SUCCESS",
         },
       ])(
-        "should resolve fields with type: $expectedType from Stripe event properly for $resolvedTransactionFlow flow",
+        "should resolve fields with type: $expectedType from Adyen event properly for $resolvedTransactionFlow flow",
         async ({ resolvedTransactionFlow, expectedType }) => {
           const event = getMockedPaymentIntentPaymentCanceledEvent();
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
 
-          vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
+          vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(
             async () =>
               ok({
-                payment_method: mockedStripeCardPaymentMethod,
+                payment_method: mockedAdyenCardPaymentMethod,
               }),
           );
 
@@ -394,14 +394,14 @@ describe("StripePaymentIntentHandler", () => {
 
           event.data.object.amount = amountToUse;
 
-          const handler = new StripePaymentIntentHandler();
+          const handler = new AdyenPaymentIntentHandler();
           const result = await handler.processPaymentIntentEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
-            stripePaymentIntentsApi: mockedStripePaymentIntentsApi,
+            adyenEnv: "LIVE",
+            adyenPaymentIntentsApi: mockedAdyenPaymentIntentsApi,
           });
 
           const { type, amount, pspReference, time, saleorPaymentMethodDetailsInput } = result

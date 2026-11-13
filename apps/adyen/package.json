@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "saleor-app-payment-stripe",
+  "name": "saleor-app-payment-adyen",
   "version": "2.12.0",
   "private": true,
   "type": "module",
@@ -35,6 +35,7 @@
     }
   },
   "dependencies": {
+    "@adyen/api-library": "32.3.0",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/lib-dynamodb": "catalog:",
     "@aws-sdk/util-dynamodb": "catalog:",
@@ -79,7 +80,6 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-hook-form": "catalog:",
-    "stripe": "18.1.0",
     "urql": "catalog:",
     "usehooks-ts": "catalog:",
     "zod": "catalog:"

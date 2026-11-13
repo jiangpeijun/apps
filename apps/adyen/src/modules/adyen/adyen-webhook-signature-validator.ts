@@ -1,20 +1,20 @@
 import { fromThrowable } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
-import { type StripeClient } from "@/modules/adyen/adyen-client";
-import { type StripeWebhookSecret } from "@/modules/adyen/stripe-webhook-secret";
+import { type AdyenClient } from "@/modules/adyen/adyen-client";
+import { type AdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 
-import { type IStripeEventVerify, StripeEventParsingError } from "./types";
+import { type IAdyenEventVerify, AdyenEventParsingError } from "./types";
 
-export class StripeWebhookSignatureValidator implements IStripeEventVerify {
-  private stripeSdkClient: Pick<Stripe, "webhooks">;
+export class AdyenWebhookSignatureValidator implements IAdyenEventVerify {
+  private adyenSdkClient: Pick<Adyen, "webhooks">;
 
-  private constructor(stripeApiWrapper: Pick<Stripe, "webhooks">) {
-    this.stripeSdkClient = stripeApiWrapper;
+  private constructor(adyenApiWrapper: Pick<Adyen, "webhooks">) {
+    this.adyenSdkClient = adyenApiWrapper;
   }
 
-  static createFromClient(client: StripeClient) {
-    return new StripeWebhookSignatureValidator(client.nativeClient);
+  static createFromClient(client: AdyenClient) {
+    return new AdyenWebhookSignatureValidator(client.nativeClient);
   }
 
   verifyEvent = ({
@@ -24,15 +24,15 @@ export class StripeWebhookSignatureValidator implements IStripeEventVerify {
   }: {
     rawBody: string | Buffer;
     signatureHeader: string;
-    webhookSecret: StripeWebhookSecret;
+    webhookSecret: AdyenWebhookSecret;
   }) => {
     return fromThrowable(
       /**
-       * Bind Stripe because otherwise it lost it's internal this
+       * Bind Adyen because otherwise it lost it's internal this
        */
-      this.stripeSdkClient.webhooks.constructEvent.bind(this.stripeSdkClient.webhooks),
+      this.adyenSdkClient.webhooks.constructEvent.bind(this.adyenSdkClient.webhooks),
       (err) =>
-        new StripeEventParsingError("Failed to validate Stripe Event", {
+        new AdyenEventParsingError("Failed to validate Adyen Event", {
           cause: err,
         }),
     )(rawBody, signatureHeader, webhookSecret);

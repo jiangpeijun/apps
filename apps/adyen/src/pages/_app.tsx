@@ -26,7 +26,7 @@ function NextApp({ Component, pageProps }: AppProps) {
       <ThemeProvider>
         <IframeProtectedWrapper
           allowedPathNames={["/"]}
-          fallback={<IframeProtectedFallback appName="Saleor Stripe App" />}
+          fallback={<IframeProtectedFallback appName="Saleor Adyen App" />}
         >
           <AppBridgeProvider appBridgeInstance={appBridgeInstance}>
             <GraphQLProvider>

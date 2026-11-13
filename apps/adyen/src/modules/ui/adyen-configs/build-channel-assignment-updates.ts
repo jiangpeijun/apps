@@ -1,7 +1,7 @@
 import { type ConfigChannelFragment } from "@/generated/graphql";
-import { type StripeFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
 
-export type ChannelMapping = Record<string, StripeFrontendConfigSerializedFields>;
+export type ChannelMapping = Record<string, AdyenFrontendConfigSerializedFields>;
 
 export type ChannelAssignmentUpdate = { channelId: string; configId: string | null };
 

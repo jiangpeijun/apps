@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { mockedSaleorAppId, mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
 import { getMockedRecordedTransaction } from "@/__tests__/mocks/mocked-recorded-transaction";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { DynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
@@ -24,7 +24,7 @@ describe("DynamoDBTransactionRecorderRepo", () => {
     const table = DynamoMainTable.create({
       // @ts-expect-error mocking DynamoDBDocumentClient
       documentClient: mockDocumentClient,
-      tableName: "stripe-test-table",
+      tableName: "adyen-test-table",
     });
 
     const entity = DynamoDbRecordedTransaction.createEntity(table);
@@ -94,7 +94,7 @@ describe("DynamoDBTransactionRecorderRepo", () => {
     });
   });
 
-  describe("getTransactionByStripePaymentIntentId", () => {
+  describe("getTransactionByAdyenPaymentIntentId", () => {
     it("Returns RecordedTransaction value object if found in DynamoDB", async () => {
       mockDocumentClient
         .on(GetCommand, {
@@ -107,7 +107,7 @@ describe("DynamoDBTransactionRecorderRepo", () => {
           Item: {
             PK: "https://foo.bar.saleor.cloud/graphql/#saleor-app-id",
             SK: "TRANSACTION#pi_TEST_TEST_TEST",
-            paymentIntentId: mockedStripePaymentIntentId,
+            paymentIntentId: mockedAdyenPaymentIntentId,
             saleorTransactionId: mockedSaleorTransactionId,
             saleorTransactionFlow: "CHARGE",
             resolvedTransactionFlow: "CHARGE",
@@ -124,12 +124,12 @@ describe("DynamoDBTransactionRecorderRepo", () => {
           },
         });
 
-      const result = await repo.getTransactionByStripePaymentIntentId(
+      const result = await repo.getTransactionByAdyenPaymentIntentId(
         {
           appId: mockedSaleorAppId,
           saleorApiUrl: mockedSaleorApiUrl,
         },
-        mockedStripePaymentIntentId,
+        mockedAdyenPaymentIntentId,
       );
 
       expect(result._unsafeUnwrap()).toBeInstanceOf(RecordedTransaction);
@@ -143,7 +143,7 @@ describe("DynamoDBTransactionRecorderRepo", () => {
           "saleorTransactionFlow": "CHARGE",
           "saleorTransactionId": "mocked-transaction-id",
           "selectedPaymentMethod": "card",
-          "stripePaymentIntentId": "pi_TEST_TEST_TEST",
+          "adyenPaymentIntentId": "pi_TEST_TEST_TEST",
         }
       `);
     });
@@ -162,12 +162,12 @@ describe("DynamoDBTransactionRecorderRepo", () => {
           },
         });
 
-      const result = await repo.getTransactionByStripePaymentIntentId(
+      const result = await repo.getTransactionByAdyenPaymentIntentId(
         {
           appId: mockedSaleorAppId,
           saleorApiUrl: mockedSaleorApiUrl,
         },
-        mockedStripePaymentIntentId,
+        mockedAdyenPaymentIntentId,
       );
 
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(
@@ -189,12 +189,12 @@ describe("DynamoDBTransactionRecorderRepo", () => {
           },
         });
 
-      const result = await repo.getTransactionByStripePaymentIntentId(
+      const result = await repo.getTransactionByAdyenPaymentIntentId(
         {
           appId: mockedSaleorAppId,
           saleorApiUrl: mockedSaleorApiUrl,
         },
-        mockedStripePaymentIntentId,
+        mockedAdyenPaymentIntentId,
       );
 
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(

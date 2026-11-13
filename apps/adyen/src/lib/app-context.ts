@@ -4,14 +4,14 @@ import { type NextRequest } from "next/server";
 
 import { createLogger } from "@/lib/logger";
 import { loggerContext } from "@/lib/logger-context";
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
 
 export type AppContext = {
-  stripeEnv: StripeEnv | null;
+  adyenEnv: AdyenEnv | null;
 };
 
 const defaultAppContext: AppContext = {
-  stripeEnv: null,
+  adyenEnv: null,
 };
 
 export class AppContextContainer {

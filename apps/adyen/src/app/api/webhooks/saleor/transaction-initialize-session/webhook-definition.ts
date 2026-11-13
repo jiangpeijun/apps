@@ -11,7 +11,7 @@ export const transactionInitializeSessionWebhookDefinition =
   new SaleorSyncWebhook<TransactionInitializeSessionEventFragment>({
     apl: saleorApp.apl,
     event: "TRANSACTION_INITIALIZE_SESSION",
-    name: "Stripe Transaction Initialize Session",
+    name: "Adyen Transaction Initialize Session",
     isActive: true,
     query: TransactionInitializeSessionDocument,
     webhookPath: "api/webhooks/saleor/transaction-initialize-session",

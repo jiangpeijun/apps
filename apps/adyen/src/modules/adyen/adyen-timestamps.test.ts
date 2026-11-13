@@ -1,20 +1,20 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { describe, expect, it } from "vitest";
 
 import {
   createTimestampFromPaymentIntent,
-  createTimestampFromStripeEvent,
+  createTimestampFromAdyenEvent,
 } from "@/modules/adyen/adyen-timestamps";
 
-describe("createTimestampFromStripeEvent", () => {
-  it("Parses date from SECONDS that are returned from Stripe", () => {
+describe("createTimestampFromAdyenEvent", () => {
+  it("Parses date from SECONDS that are returned from Adyen", () => {
     const theDate = new Date("2023-10-10T00:00:00Z");
 
     const event = {
       created: theDate.getTime() / 1000,
-    } as unknown as Stripe.Event;
+    } as unknown as Adyen.Event;
 
-    const result = createTimestampFromStripeEvent(event);
+    const result = createTimestampFromAdyenEvent(event);
 
     expect(result).toStrictEqual(theDate);
   });
@@ -27,7 +27,7 @@ describe("createTimestampFromPaymentIntent", () => {
     const paymentIntent = {
       status: "canceled",
       canceled_at: theDate.getTime() / 1000,
-    } as Stripe.PaymentIntent;
+    } as Adyen.PaymentIntent;
 
     const result = createTimestampFromPaymentIntent(paymentIntent);
 
@@ -38,7 +38,7 @@ describe("createTimestampFromPaymentIntent", () => {
     const paymentIntent = {
       status: "succeeded",
       canceled_at: null,
-    } as Stripe.PaymentIntent;
+    } as Adyen.PaymentIntent;
 
     const result = createTimestampFromPaymentIntent(paymentIntent);
 

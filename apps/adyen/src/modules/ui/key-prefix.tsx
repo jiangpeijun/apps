@@ -8,7 +8,7 @@ type Props = {
 };
 
 /**
- * Inline monospace Stripe key prefix (`pk_test`, `rk_live`) for body copy and field hints.
+ * Inline monospace Adyen key prefix (`pk_test`, `rk_live`) for body copy and field hints.
  * Reading these character by character is the point, so they never share the prose font.
  *
  * Color goes through the `__color` escape hatch on purpose: these sit inside muted `default2`

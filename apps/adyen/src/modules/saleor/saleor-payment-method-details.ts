@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { type Paymentmethoddetails } from "@/generated/app-webhooks-types/transaction-process-session";
 import { type PaymentMethodDetailsInput } from "@/generated/graphql";
@@ -10,10 +10,10 @@ export type SaleorPaymentMethodDetailsErrorType = InstanceType<
 >;
 
 export class SaleorPaymentMethodDetails {
-  private stripePaymentMethod: Stripe.PaymentMethod;
+  private adyenPaymentMethod: Adyen.PaymentMethod;
 
-  private constructor(stripePaymentMethod: Stripe.PaymentMethod) {
-    this.stripePaymentMethod = stripePaymentMethod;
+  private constructor(adyenPaymentMethod: Adyen.PaymentMethod) {
+    this.adyenPaymentMethod = adyenPaymentMethod;
   }
 
   static SaleorPaymentMethodDetailsError = BaseError.subclass("SaleorPaymentMethodDetailsError", {
@@ -22,8 +22,8 @@ export class SaleorPaymentMethodDetails {
     },
   });
 
-  static createFromStripe(
-    paymentMethod: string | Stripe.PaymentMethod | null,
+  static createFromAdyen(
+    paymentMethod: string | Adyen.PaymentMethod | null,
   ): Result<SaleorPaymentMethodDetails, SaleorPaymentMethodDetailsErrorType> {
     if (!paymentMethod) {
       return err(
@@ -43,47 +43,47 @@ export class SaleorPaymentMethodDetails {
   }
 
   private getCardName() {
-    return this.stripePaymentMethod.card?.display_brand || "card";
+    return this.adyenPaymentMethod.card?.display_brand || "card";
   }
 
   toSaleorWebhookResponse(): Paymentmethoddetails {
-    const type = this.stripePaymentMethod.type;
+    const type = this.adyenPaymentMethod.type;
 
     if (type === "card") {
       return {
         type: "CARD",
         name: this.getCardName(),
-        brand: this.stripePaymentMethod.card?.brand,
-        lastDigits: this.stripePaymentMethod.card?.last4,
-        expMonth: this.stripePaymentMethod.card?.exp_month,
-        expYear: this.stripePaymentMethod.card?.exp_year,
+        brand: this.adyenPaymentMethod.card?.brand,
+        lastDigits: this.adyenPaymentMethod.card?.last4,
+        expMonth: this.adyenPaymentMethod.card?.exp_month,
+        expYear: this.adyenPaymentMethod.card?.exp_year,
       };
     }
 
     return {
       type: "OTHER",
-      name: this.stripePaymentMethod.type,
+      name: this.adyenPaymentMethod.type,
     };
   }
 
   toSaleorTransactionEventPayload(): PaymentMethodDetailsInput {
-    const type = this.stripePaymentMethod.type;
+    const type = this.adyenPaymentMethod.type;
 
     if (type === "card") {
       return {
         card: {
-          brand: this.stripePaymentMethod.card?.brand,
+          brand: this.adyenPaymentMethod.card?.brand,
           name: this.getCardName(),
-          lastDigits: this.stripePaymentMethod.card?.last4,
-          expMonth: this.stripePaymentMethod.card?.exp_month,
-          expYear: this.stripePaymentMethod.card?.exp_year,
+          lastDigits: this.adyenPaymentMethod.card?.last4,
+          expMonth: this.adyenPaymentMethod.card?.exp_month,
+          expYear: this.adyenPaymentMethod.card?.exp_year,
         },
       };
     }
 
     return {
       other: {
-        name: this.stripePaymentMethod.type,
+        name: this.adyenPaymentMethod.type,
       },
     };
   }

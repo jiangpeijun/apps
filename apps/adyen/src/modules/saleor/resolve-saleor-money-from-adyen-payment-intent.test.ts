@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveSaleorMoneyFromStripePaymentIntent } from "./resolve-saleor-money-from-adyen-payment-intent";
+import { resolveSaleorMoneyFromAdyenPaymentIntent } from "./resolve-saleor-money-from-adyen-payment-intent";
 
-describe("resolveSaleorMoneyFromStripePaymentIntent", () => {
-  it("when StripePaymentIntent has status: 'canceled' should use the 'amount' field", () => {
-    const result = resolveSaleorMoneyFromStripePaymentIntent({
+describe("resolveSaleorMoneyFromAdyenPaymentIntent", () => {
+  it("when AdyenPaymentIntent has status: 'canceled' should use the 'amount' field", () => {
+    const result = resolveSaleorMoneyFromAdyenPaymentIntent({
       status: "canceled",
       amount: 45689,
       amount_capturable: 0,
@@ -20,8 +20,8 @@ describe("resolveSaleorMoneyFromStripePaymentIntent", () => {
     `);
   });
 
-  it("when StripePaymentIntent has status: 'requires_payment_method' should use the 'amount' field", () => {
-    const result = resolveSaleorMoneyFromStripePaymentIntent({
+  it("when AdyenPaymentIntent has status: 'requires_payment_method' should use the 'amount' field", () => {
+    const result = resolveSaleorMoneyFromAdyenPaymentIntent({
       status: "requires_payment_method",
       amount: 12356,
       amount_capturable: 0,
@@ -37,8 +37,8 @@ describe("resolveSaleorMoneyFromStripePaymentIntent", () => {
     `);
   });
 
-  it("when StripePaymentIntent has status: 'requires_capture' should use the 'amount_capturable' field", () => {
-    const result = resolveSaleorMoneyFromStripePaymentIntent({
+  it("when AdyenPaymentIntent has status: 'requires_capture' should use the 'amount_capturable' field", () => {
+    const result = resolveSaleorMoneyFromAdyenPaymentIntent({
       status: "requires_capture",
       amount: 0,
       amount_capturable: 99978,
@@ -54,8 +54,8 @@ describe("resolveSaleorMoneyFromStripePaymentIntent", () => {
     `);
   });
 
-  it("when StripePaymentIntent has other status should use the 'amount_received' field", () => {
-    const result = resolveSaleorMoneyFromStripePaymentIntent({
+  it("when AdyenPaymentIntent has other status should use the 'amount_received' field", () => {
+    const result = resolveSaleorMoneyFromAdyenPaymentIntent({
       status: "succeeded",
       amount: 0,
       amount_capturable: 0,

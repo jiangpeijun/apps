@@ -1,36 +1,36 @@
 import { type Result, ResultAsync } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
-import { StripeClient } from "./adyen-client";
-import { type StripeMoney } from "./adyen-money";
-import { type StripePaymentIntentId } from "./adyen-payment-intent-id";
-import { type StripeRestrictedKey } from "./adyen-restricted-key";
-import { type IStripeRefundsApi } from "./types";
+import { AdyenClient } from "./adyen-client";
+import { type AdyenMoney } from "./adyen-money";
+import { type AdyenPaymentIntentId } from "./adyen-payment-intent-id";
+import { type AdyenRestrictedKey } from "./adyen-restricted-key";
+import { type IAdyenRefundsApi } from "./types";
 
-export class StripeRefundsApi implements IStripeRefundsApi {
-  private stripeApiWrapper: Pick<Stripe, "refunds">;
+export class AdyenRefundsApi implements IAdyenRefundsApi {
+  private adyenApiWrapper: Pick<Adyen, "refunds">;
 
-  private constructor(stripeApiWrapper: Pick<Stripe, "refunds">) {
-    this.stripeApiWrapper = stripeApiWrapper;
+  private constructor(adyenApiWrapper: Pick<Adyen, "refunds">) {
+    this.adyenApiWrapper = adyenApiWrapper;
   }
 
-  static createFromKey(args: { key: StripeRestrictedKey }) {
-    const stripeApiWrapper = StripeClient.createFromRestrictedKey(args.key);
+  static createFromKey(args: { key: AdyenRestrictedKey }) {
+    const adyenApiWrapper = AdyenClient.createFromRestrictedKey(args.key);
 
-    return new StripeRefundsApi(stripeApiWrapper.nativeClient);
+    return new AdyenRefundsApi(adyenApiWrapper.nativeClient);
   }
 
   async createRefund(args: {
-    paymentIntentId: StripePaymentIntentId;
-    stripeMoney: StripeMoney;
+    paymentIntentId: AdyenPaymentIntentId;
+    adyenMoney: AdyenMoney;
     idempotencyKey: string | undefined;
-    metadata?: Stripe.MetadataParam;
-  }): Promise<Result<Stripe.Refund, unknown>> {
+    metadata?: Adyen.MetadataParam;
+  }): Promise<Result<Adyen.Refund, unknown>> {
     return ResultAsync.fromPromise(
-      this.stripeApiWrapper.refunds.create(
+      this.adyenApiWrapper.refunds.create(
         {
           payment_intent: args.paymentIntentId,
-          amount: args.stripeMoney.amount,
+          amount: args.adyenMoney.amount,
           metadata: args.metadata,
         },
         {

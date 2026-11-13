@@ -9,8 +9,8 @@ import { createSaleorTransactionFlow } from "@/modules/saleor/saleor-transaction
 import { createSaleorTransactionId } from "@/modules/saleor/saleor-transaction-id";
 import { type PaymentMethod } from "@/modules/adyen/payment-methods/types";
 import {
-  createStripePaymentIntentId,
-  type StripePaymentIntentId,
+  createAdyenPaymentIntentId,
+  type AdyenPaymentIntentId,
 } from "@/modules/adyen/adyen-payment-intent-id";
 import { RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 import {
@@ -53,9 +53,9 @@ export class DynamoDBTransactionRecorderRepo implements TransactionRecorderRepo 
             saleorApiUrl: accessPattern.saleorApiUrl,
           }),
           SK: DynamoDbRecordedTransaction.accessPattern.getSKforSpecificItem({
-            paymentIntentId: transaction.stripePaymentIntentId,
+            paymentIntentId: transaction.adyenPaymentIntentId,
           }),
-          paymentIntentId: transaction.stripePaymentIntentId,
+          paymentIntentId: transaction.adyenPaymentIntentId,
           selectedPaymentMethod: transaction.selectedPaymentMethod,
           saleorTransactionId: transaction.saleorTransactionId,
           saleorTransactionFlow: transaction.saleorTransactionFlow,
@@ -88,11 +88,11 @@ export class DynamoDBTransactionRecorderRepo implements TransactionRecorderRepo 
     } catch (e) {
       /*
        * Handle race condition: if another request already wrote this transaction,
-       * treat it as success, Stripe respects idempotency-key and won't charge many times
+       * treat it as success, Adyen respects idempotency-key and won't charge many times
        */
       if (e instanceof ConditionalCheckFailedException) {
         this.logger.info("Transaction already recorded, skipping write (idempotent)", {
-          paymentIntentId: transaction.stripePaymentIntentId,
+          paymentIntentId: transaction.adyenPaymentIntentId,
         });
 
         return ok(null);
@@ -113,9 +113,9 @@ export class DynamoDBTransactionRecorderRepo implements TransactionRecorderRepo 
     }
   }
 
-  async getTransactionByStripePaymentIntentId(
+  async getTransactionByAdyenPaymentIntentId(
     accessPattern: TransactionRecorderRepoAccess,
-    id: StripePaymentIntentId,
+    id: AdyenPaymentIntentId,
   ): Promise<Result<RecordedTransaction, TransactionRecorderError>> {
     try {
       const operation = this.entity.build(GetItemCommand).key({
@@ -153,7 +153,7 @@ export class DynamoDBTransactionRecorderRepo implements TransactionRecorderRepo 
             resolvedTransactionFlow: createResolvedTransactionFlow(resolvedTransactionFlow),
             saleorTransactionFlow: createSaleorTransactionFlow(saleorTransactionFlow),
             saleorTransactionId: createSaleorTransactionId(saleorTransactionId),
-            stripePaymentIntentId: createStripePaymentIntentId(paymentIntentId),
+            adyenPaymentIntentId: createAdyenPaymentIntentId(paymentIntentId),
             selectedPaymentMethod: selectedPaymentMethod as PaymentMethod["type"],
             saleorSchemaVersion: [
               result.Item.saleorSchemaVersion.major,

@@ -1,19 +1,19 @@
 import { TRPCError } from "@trpc/server";
 
 import {
-  StripeFrontendConfig,
-  type StripeFrontendConfigSerializedFields,
+  AdyenFrontendConfig,
+  type AdyenFrontendConfigSerializedFields,
 } from "@/modules/app-config/domain/adyen-config";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
 // todo test
-export class GetStripeConfigsChannelsMappingTrpcHandler {
+export class GetAdyenConfigsChannelsMappingTrpcHandler {
   baseProcedure = protectedClientProcedure;
 
   getTrpcProcedure() {
     return this.baseProcedure.query(
-      async ({ ctx }): Promise<Record<string, StripeFrontendConfigSerializedFields>> => {
+      async ({ ctx }): Promise<Record<string, AdyenFrontendConfigSerializedFields>> => {
         const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
 
         /**
@@ -40,19 +40,19 @@ export class GetStripeConfigsChannelsMappingTrpcHandler {
         }
 
         const mapping = config.value.chanelConfigMapping;
-        const allConfigs = config.value.stripeConfigsById;
+        const allConfigs = config.value.adyenConfigsById;
 
         return Object.entries(mapping).reduce(
           (acc, [channelID, configId]) => {
             const config = allConfigs[configId];
 
             if (config) {
-              acc[channelID] = StripeFrontendConfig.createFromStripeConfig(config);
+              acc[channelID] = AdyenFrontendConfig.createFromAdyenConfig(config);
             }
 
             return acc;
           },
-          {} as Record<string, StripeFrontendConfigSerializedFields>,
+          {} as Record<string, AdyenFrontendConfigSerializedFields>,
         );
       },
     );

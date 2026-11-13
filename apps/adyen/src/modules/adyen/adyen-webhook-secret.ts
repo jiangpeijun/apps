@@ -4,21 +4,21 @@ import { z } from "zod";
 
 import { BaseError } from "@/lib/errors";
 
-export const StripeWebhookSecretValidationError = BaseError.subclass(
-  "StripeWebhookSecretValidationError",
+export const AdyenWebhookSecretValidationError = BaseError.subclass(
+  "AdyenWebhookSecretValidationError",
   {
     props: {
-      _internalName: "StripeWebhookSecretValidationError" as const,
+      _internalName: "AdyenWebhookSecretValidationError" as const,
     },
   },
 );
 
-export const StripeWebhookSecretSchema = z
+export const AdyenWebhookSecretSchema = z
   .string()
   .min(1)
   .refine((v) => {
     if (!v.startsWith("whsec_")) {
-      captureMessage("Received unexpected Stripe Webhook Secret format", (scope) => {
+      captureMessage("Received unexpected Adyen Webhook Secret format", (scope) => {
         scope.setLevel("warning");
         scope.setExtra("first4letters", v.slice(0, 4));
 
@@ -28,11 +28,11 @@ export const StripeWebhookSecretSchema = z
 
     return true;
   })
-  .brand("StripeWebhookSecret");
+  .brand("AdyenWebhookSecret");
 
-export const createStripeWebhookSecret = (raw: string | null) =>
-  fromThrowable(StripeWebhookSecretSchema.parse, (error) =>
-    StripeWebhookSecretValidationError.normalize(error),
+export const createAdyenWebhookSecret = (raw: string | null) =>
+  fromThrowable(AdyenWebhookSecretSchema.parse, (error) =>
+    AdyenWebhookSecretValidationError.normalize(error),
   )(raw);
 
-export type StripeWebhookSecret = z.infer<typeof StripeWebhookSecretSchema>;
+export type AdyenWebhookSecret = z.infer<typeof AdyenWebhookSecretSchema>;

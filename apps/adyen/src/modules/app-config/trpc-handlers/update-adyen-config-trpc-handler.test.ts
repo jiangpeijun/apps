@@ -8,25 +8,25 @@ import {
   mockedSaleorAppId,
 } from "@/__tests__/mocks/constants";
 import { mockedGraphqlClient } from "@/__tests__/mocks/graphql-client";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 import {
-  mockedStripePublishableKey,
-  mockedStripePublishableKeyTest,
+  mockedAdyenPublishableKey,
+  mockedAdyenPublishableKeyTest,
 } from "@/__tests__/mocks/mocked-adyen-publishable-key";
 import {
-  mockedStripeRestrictedKey,
-  mockedStripeRestrictedKeyTest,
+  mockedAdyenRestrictedKey,
+  mockedAdyenRestrictedKeyTest,
 } from "@/__tests__/mocks/mocked-adyen-restricted-key";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 import { TEST_Procedure } from "@/__tests__/trpc-testing-procedure";
 import { BaseError } from "@/lib/errors";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { UpdateStripeConfigTrpcHandler } from "@/modules/app-config/trpc-handlers/update-adyen-config-trpc-handler";
-import { StripeAuthValidator } from "@/modules/adyen/adyen-auth-validator";
+import { UpdateAdyenConfigTrpcHandler } from "@/modules/app-config/trpc-handlers/update-adyen-config-trpc-handler";
+import { AdyenAuthValidator } from "@/modules/adyen/adyen-auth-validator";
 import {
-  StripeWebhookManager,
-  StripeWebhookManagerErrors,
+  AdyenWebhookManager,
+  AdyenWebhookManagerErrors,
 } from "@/modules/adyen/adyen-webhook-manager";
 import { router } from "@/modules/trpc/trpc-server";
 
@@ -40,15 +40,15 @@ vi.mock("@/lib/graphql-client", () => ({
 
 const clearProblemsForConfig = vi.hoisted(() => vi.fn());
 
-vi.mock("@/modules/app-problems/stripe-problem-reporter", () => ({
-  StripeProblemReporter: class {
+vi.mock("@/modules/app-problems/adyen-problem-reporter", () => ({
+  AdyenProblemReporter: class {
     clearProblemsForConfig = clearProblemsForConfig;
   },
 }));
 
 const getTestCaller = () => {
-  const webhookManager = new StripeWebhookManager();
-  const instance = new UpdateStripeConfigTrpcHandler({ webhookManager });
+  const webhookManager = new AdyenWebhookManager();
+  const instance = new UpdateAdyenConfigTrpcHandler({ webhookManager });
 
   // @ts-expect-error - context doesnt match but its applied in test
   instance.baseProcedure = TEST_Procedure;
@@ -74,18 +74,18 @@ const getTestCaller = () => {
 const validInput = {
   configId: mockedConfigurationId,
   name: "Renamed config",
-  publishableKey: mockedStripePublishableKey,
+  publishableKey: mockedAdyenPublishableKey,
   restrictedKey: null,
 };
 
 const mockExistingConfig = () => {
   vi.mocked(mockedAppConfigRepo.getRootConfig).mockResolvedValue(
-    ok(new AppRootConfig({}, { [mockedConfigurationId]: mockedStripeConfig })),
+    ok(new AppRootConfig({}, { [mockedConfigurationId]: mockedAdyenConfig })),
   );
-  vi.mocked(mockedAppConfigRepo.saveStripeConfig).mockResolvedValue(ok(null));
+  vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mockResolvedValue(ok(null));
 };
 
-describe("UpdateStripeConfigTrpcHandler", () => {
+describe("UpdateAdyenConfigTrpcHandler", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockExistingConfig();
@@ -113,17 +113,17 @@ describe("UpdateStripeConfigTrpcHandler", () => {
 
       await caller.testProcedure(validInput);
 
-      const savedConfig = vi.mocked(mockedAppConfigRepo.saveStripeConfig).mock.calls[0][0].config;
+      const savedConfig = vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mock.calls[0][0].config;
 
       expect(savedConfig.name).toBe("Renamed config");
       expect(savedConfig.id).toBe(mockedConfigurationId);
-      expect(savedConfig.restrictedKey).toBe(mockedStripeRestrictedKey);
-      expect(savedConfig.webhookId).toBe(mockedStripeConfig.webhookId);
-      expect(savedConfig.webhookSecret).toBe(mockedStripeConfig.webhookSecret);
+      expect(savedConfig.restrictedKey).toBe(mockedAdyenRestrictedKey);
+      expect(savedConfig.webhookId).toBe(mockedAdyenConfig.webhookId);
+      expect(savedConfig.webhookSecret).toBe(mockedAdyenConfig.webhookSecret);
       expect(createWebhook).not.toHaveBeenCalled();
       expect(updateDescription).toHaveBeenCalledWith({
-        webhookId: mockedStripeConfig.webhookId,
-        restrictedKey: mockedStripeRestrictedKey,
+        webhookId: mockedAdyenConfig.webhookId,
+        restrictedKey: mockedAdyenRestrictedKey,
         configName: "Renamed config",
       });
       expect(clearProblemsForConfig).not.toHaveBeenCalled();
@@ -132,12 +132,12 @@ describe("UpdateStripeConfigTrpcHandler", () => {
     it("Returns 500 when config cannot be saved", async () => {
       const { caller } = getTestCaller();
 
-      vi.mocked(mockedAppConfigRepo.saveStripeConfig).mockResolvedValue(err(new BaseError("TEST")));
+      vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mockResolvedValue(err(new BaseError("TEST")));
 
       return expect(() =>
         caller.testProcedure(validInput),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `[TRPCError: Failed to update Stripe configuration. Data can't be saved.]`,
+        `[TRPCError: Failed to update Adyen configuration. Data can't be saved.]`,
       );
     });
   });
@@ -148,7 +148,7 @@ describe("UpdateStripeConfigTrpcHandler", () => {
     it("Keeps the existing webhook when the new key can reach it", async () => {
       const { caller, webhookManager } = getTestCaller();
 
-      vi.spyOn(StripeAuthValidator.prototype, "validateStripeAuth").mockResolvedValue(ok(null));
+      vi.spyOn(AdyenAuthValidator.prototype, "validateAdyenAuth").mockResolvedValue(ok(null));
 
       const isReachable = vi
         .spyOn(webhookManager, "isWebhookReachableWithKey")
@@ -158,68 +158,68 @@ describe("UpdateStripeConfigTrpcHandler", () => {
 
       await caller.testProcedure({ ...validInput, name: "config-name", restrictedKey: rotatedKey });
 
-      const savedConfig = vi.mocked(mockedAppConfigRepo.saveStripeConfig).mock.calls[0][0].config;
+      const savedConfig = vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mock.calls[0][0].config;
 
       expect(isReachable).toHaveBeenCalledWith({
-        webhookId: mockedStripeConfig.webhookId,
+        webhookId: mockedAdyenConfig.webhookId,
         restrictedKey: rotatedKey,
       });
       expect(savedConfig.restrictedKey).toBe(rotatedKey);
-      expect(savedConfig.webhookId).toBe(mockedStripeConfig.webhookId);
+      expect(savedConfig.webhookId).toBe(mockedAdyenConfig.webhookId);
       expect(createWebhook).not.toHaveBeenCalled();
       expect(removeWebhook).not.toHaveBeenCalled();
       expect(clearProblemsForConfig).toHaveBeenCalledWith(mockedConfigurationId);
     });
 
-    it("Recreates the webhook when the key points to another Stripe account", async () => {
+    it("Recreates the webhook when the key points to another Adyen account", async () => {
       const { caller, webhookManager } = getTestCaller();
 
-      vi.spyOn(StripeAuthValidator.prototype, "validateStripeAuth").mockResolvedValue(ok(null));
+      vi.spyOn(AdyenAuthValidator.prototype, "validateAdyenAuth").mockResolvedValue(ok(null));
       vi.spyOn(webhookManager, "isWebhookReachableWithKey").mockResolvedValue(ok(false));
 
       const createWebhook = vi.spyOn(webhookManager, "createWebhook").mockResolvedValue(
         ok({
           id: "wh_new",
-          secret: mockStripeWebhookSecret,
+          secret: mockAdyenWebhookSecret,
         }),
       );
       const removeWebhook = vi.spyOn(webhookManager, "removeWebhook").mockResolvedValue(ok(null));
 
       await caller.testProcedure({ ...validInput, name: "config-name", restrictedKey: rotatedKey });
 
-      const savedConfig = vi.mocked(mockedAppConfigRepo.saveStripeConfig).mock.calls[0][0].config;
+      const savedConfig = vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mock.calls[0][0].config;
 
       expect(createWebhook).toHaveBeenCalledOnce();
       expect(savedConfig.webhookId).toBe("wh_new");
-      expect(savedConfig.webhookSecret).toBe(mockStripeWebhookSecret);
+      expect(savedConfig.webhookSecret).toBe(mockAdyenWebhookSecret);
       expect(removeWebhook).toHaveBeenCalledWith({
-        webhookId: mockedStripeConfig.webhookId,
-        restrictedKey: mockedStripeRestrictedKey,
+        webhookId: mockedAdyenConfig.webhookId,
+        restrictedKey: mockedAdyenRestrictedKey,
       });
     });
 
     it("Does not touch the config when the new restricted key is invalid", async () => {
       const { caller } = getTestCaller();
 
-      vi.spyOn(StripeAuthValidator.prototype, "validateStripeAuth").mockResolvedValue(
-        err(new StripeAuthValidator.AuthError("TEST")),
+      vi.spyOn(AdyenAuthValidator.prototype, "validateAdyenAuth").mockResolvedValue(
+        err(new AdyenAuthValidator.AuthError("TEST")),
       );
 
       await expect(() =>
         caller.testProcedure({ ...validInput, restrictedKey: rotatedKey }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `[TRPCError: Failed to update Stripe configuration. Restricted key is invalid]`,
+        `[TRPCError: Failed to update Adyen configuration. Restricted key is invalid]`,
       );
 
-      expect(mockedAppConfigRepo.saveStripeConfig).not.toHaveBeenCalled();
+      expect(mockedAppConfigRepo.saveAdyenConfig).not.toHaveBeenCalled();
     });
 
-    it("Aborts instead of risking a duplicate webhook when Stripe cannot be reached", async () => {
+    it("Aborts instead of risking a duplicate webhook when Adyen cannot be reached", async () => {
       const { caller, webhookManager } = getTestCaller();
 
-      vi.spyOn(StripeAuthValidator.prototype, "validateStripeAuth").mockResolvedValue(ok(null));
+      vi.spyOn(AdyenAuthValidator.prototype, "validateAdyenAuth").mockResolvedValue(ok(null));
       vi.spyOn(webhookManager, "isWebhookReachableWithKey").mockResolvedValue(
-        err(new StripeWebhookManagerErrors.CantFetchWebhookError("Stripe is down")),
+        err(new AdyenWebhookManagerErrors.CantFetchWebhookError("Adyen is down")),
       );
 
       const createWebhook = vi.spyOn(webhookManager, "createWebhook");
@@ -227,11 +227,11 @@ describe("UpdateStripeConfigTrpcHandler", () => {
       await expect(() =>
         caller.testProcedure({ ...validInput, restrictedKey: rotatedKey }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `[TRPCError: Couldn't verify the existing Stripe webhook with the new key. Ensure the key can read and write webhook endpoints, then try again.]`,
+        `[TRPCError: Couldn't verify the existing Adyen webhook with the new key. Ensure the key can read and write webhook endpoints, then try again.]`,
       );
 
       expect(createWebhook).not.toHaveBeenCalled();
-      expect(mockedAppConfigRepo.saveStripeConfig).not.toHaveBeenCalled();
+      expect(mockedAppConfigRepo.saveAdyenConfig).not.toHaveBeenCalled();
     });
   });
 
@@ -242,14 +242,14 @@ describe("UpdateStripeConfigTrpcHandler", () => {
       await expect(() =>
         caller.testProcedure({
           ...validInput,
-          publishableKey: mockedStripePublishableKeyTest,
+          publishableKey: mockedAdyenPublishableKeyTest,
           restrictedKey: null,
         }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
         `[TRPCError: Publishable key belongs to a different environment than the saved restricted key. To switch between sandbox and live, provide both keys.]`,
       );
 
-      expect(mockedAppConfigRepo.saveStripeConfig).not.toHaveBeenCalled();
+      expect(mockedAppConfigRepo.saveAdyenConfig).not.toHaveBeenCalled();
     });
 
     it("Rejects mixed environments in the submitted pair", async () => {
@@ -258,8 +258,8 @@ describe("UpdateStripeConfigTrpcHandler", () => {
       await expect(() =>
         caller.testProcedure({
           ...validInput,
-          publishableKey: mockedStripePublishableKeyTest,
-          restrictedKey: mockedStripeRestrictedKey,
+          publishableKey: mockedAdyenPublishableKeyTest,
+          restrictedKey: mockedAdyenRestrictedKey,
         }),
       ).rejects.toThrow(/Both Publishable and Restricted Keys must be live or test/);
     });
@@ -267,23 +267,23 @@ describe("UpdateStripeConfigTrpcHandler", () => {
     it("Accepts a matching pair from the other environment and recreates the webhook", async () => {
       const { caller, webhookManager } = getTestCaller();
 
-      vi.spyOn(StripeAuthValidator.prototype, "validateStripeAuth").mockResolvedValue(ok(null));
+      vi.spyOn(AdyenAuthValidator.prototype, "validateAdyenAuth").mockResolvedValue(ok(null));
       vi.spyOn(webhookManager, "isWebhookReachableWithKey").mockResolvedValue(ok(false));
       vi.spyOn(webhookManager, "createWebhook").mockResolvedValue(
-        ok({ id: "wh_test_new", secret: mockStripeWebhookSecret }),
+        ok({ id: "wh_test_new", secret: mockAdyenWebhookSecret }),
       );
       vi.spyOn(webhookManager, "removeWebhook").mockResolvedValue(ok(null));
 
       await caller.testProcedure({
         ...validInput,
         name: "config-name",
-        publishableKey: mockedStripePublishableKeyTest,
-        restrictedKey: mockedStripeRestrictedKeyTest,
+        publishableKey: mockedAdyenPublishableKeyTest,
+        restrictedKey: mockedAdyenRestrictedKeyTest,
       });
 
-      const savedConfig = vi.mocked(mockedAppConfigRepo.saveStripeConfig).mock.calls[0][0].config;
+      const savedConfig = vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mock.calls[0][0].config;
 
-      expect(savedConfig.getStripeEnvValue()).toBe("TEST");
+      expect(savedConfig.getAdyenEnvValue()).toBe("TEST");
       expect(savedConfig.webhookId).toBe("wh_test_new");
     });
   });

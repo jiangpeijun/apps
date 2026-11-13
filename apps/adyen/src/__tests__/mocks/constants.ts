@@ -20,7 +20,7 @@ export const mockedSaleorTransactionId = createSaleorTransactionId("mocked-trans
 export const mockedSaleorActionIdempotencyKey = "mocked-action-idempotency-key";
 
 export const getMockedSaleorMoney = (amount: number = 10_00, currency: string = "usd") =>
-  SaleorMoney.createFromStripe({
+  SaleorMoney.createFromAdyen({
     amount,
     currency,
   })._unsafeUnwrap();

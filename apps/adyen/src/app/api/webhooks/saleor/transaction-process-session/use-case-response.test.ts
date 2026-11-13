@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { getMockedSaleorMoney } from "@/__tests__/mocks/constants";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
 import {
-  mockedStripeCardPaymentMethod,
-  mockedStripeOtherPaymentMethod,
+  mockedAdyenCardPaymentMethod,
+  mockedAdyenOtherPaymentMethod,
 } from "@/__tests__/mocks/mocked-adyen-payment-method";
 import { SaleorPaymentMethodDetails } from "@/modules/saleor/saleor-payment-method-details";
-import { StripeInvalidRequestError } from "@/modules/adyen/adyen-api-error";
-import { createStripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { AdyenInvalidRequestError } from "@/modules/adyen/adyen-api-error";
+import { createAdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 import {
   AuthorizationActionRequiredResult,
   ChargeActionRequiredResult,
@@ -34,12 +34,12 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
       const transactionResult = new ChargeSuccessResult();
 
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -52,7 +52,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "REFUND",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent has been successful",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_SUCCESS",
@@ -67,9 +67,9 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -83,7 +83,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "CANCEL",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent has been successful",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "AUTHORIZATION_SUCCESS",
@@ -93,16 +93,16 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
 
     it("getResponse() returns valid Response with status 200 and message indicating that intent requires action if transactionResult is ChargeActionRequired", async () => {
       const transactionResult = new ChargeActionRequiredResult(
-        createStripePaymentIntentStatus("requires_action"),
+        createAdyenPaymentIntentStatus("requires_action"),
       );
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
 
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: new Date(2025, 1, 1, 21, 37),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -115,7 +115,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "CANCEL",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent requires action",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_ACTION_REQUIRED",
@@ -126,15 +126,15 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
 
     it("getResponse() returns valid Response with status 200 and message indicating that intent requires action if transactionResult is AuthorizationActionRequired", async () => {
       const transactionResult = new AuthorizationActionRequiredResult(
-        createStripePaymentIntentStatus("requires_action"),
+        createAdyenPaymentIntentStatus("requires_action"),
       );
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -147,7 +147,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "CANCEL",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent requires action",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "AUTHORIZATION_ACTION_REQUIRED",
@@ -158,12 +158,12 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     it("getResponse() returns valid Response with status 200 and message indicating that intent is processing if transactionResult is ChargeRequest", async () => {
       const transactionResult = new ChargeRequestResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -174,7 +174,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
         {
           "actions": [],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent is processing",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_REQUEST",
@@ -185,12 +185,12 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     it("getResponse() returns valid Response with status 200 and message indicating that intent is processing if transactionResult is AuthorizationRequest", async () => {
       const transactionResult = new AuthorizationRequestResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -201,7 +201,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
         {
           "actions": [],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent is processing",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "AUTHORIZATION_REQUEST",
@@ -210,18 +210,18 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     });
 
     it("getResponse() returns valid Response with card payment method details when saleorPaymentMethodDetails is provided", async () => {
-      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const transactionResult = new ChargeSuccessResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails,
       });
@@ -234,7 +234,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "REFUND",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent has been successful",
           "paymentMethodDetails": {
             "brand": "visa",
@@ -251,18 +251,18 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     });
 
     it("getResponse() returns valid Response with non-card payment method details when saleorPaymentMethodDetails is provided", async () => {
-      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeOtherPaymentMethod,
+      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenOtherPaymentMethod,
       )._unsafeUnwrap();
 
       const transactionResult = new AuthorizationSuccessResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails,
       });
@@ -276,7 +276,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "CANCEL",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent has been successful",
           "paymentMethodDetails": {
             "name": "sepa_debit",
@@ -289,20 +289,20 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     });
 
     it("getResponse() returns valid Response with card payment method details when transactionResult is ChargeActionRequired", async () => {
-      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const transactionResult = new ChargeActionRequiredResult(
-        createStripePaymentIntentStatus("requires_action"),
+        createAdyenPaymentIntentStatus("requires_action"),
       );
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails,
       });
@@ -315,7 +315,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "CANCEL",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent requires action",
           "paymentMethodDetails": {
             "brand": "visa",
@@ -332,20 +332,20 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     });
 
     it("getResponse() returns valid Response with card payment method details when transactionResult is AuthorizationActionRequired", async () => {
-      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const transactionResult = new AuthorizationActionRequiredResult(
-        createStripePaymentIntentStatus("requires_action"),
+        createAdyenPaymentIntentStatus("requires_action"),
       );
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails,
       });
@@ -358,7 +358,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "CANCEL",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent requires action",
           "paymentMethodDetails": {
             "brand": "visa",
@@ -375,18 +375,18 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     });
 
     it("getResponse() returns valid Response with card payment method details when transactionResult is ChargeRequest", async () => {
-      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const transactionResult = new ChargeRequestResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails,
       });
@@ -397,7 +397,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
         {
           "actions": [],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent is processing",
           "paymentMethodDetails": {
             "brand": "visa",
@@ -414,18 +414,18 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     });
 
     it("getResponse() returns valid Response with card payment method details when transactionResult is AuthorizationRequest", async () => {
-      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromStripe(
-        mockedStripeCardPaymentMethod,
+      const saleorPaymentMethodDetails = SaleorPaymentMethodDetails.createFromAdyen(
+        mockedAdyenCardPaymentMethod,
       )._unsafeUnwrap();
 
       const transactionResult = new AuthorizationRequestResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails,
       });
@@ -436,7 +436,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
         {
           "actions": [],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent is processing",
           "paymentMethodDetails": {
             "brand": "visa",
@@ -455,12 +455,12 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
     it("getResponse() returns valid Response without paymentMethodDetails field when saleorPaymentMethodDetails is null", async () => {
       const transactionResult = new ChargeSuccessResult();
       const response = new TransactionProcessSessionUseCaseResponses.Success({
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         transactionResult,
         timestamp: null,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
         saleorPaymentMethodDetails: null,
       });
@@ -475,7 +475,7 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
             "REFUND",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent has been successful",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_SUCCESS",
@@ -488,11 +488,11 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
         const transactionResult = new ChargeFailureResult();
 
         const successResponse = new TransactionProcessSessionUseCaseResponses.Failure({
-          stripePaymentIntentId: mockedStripePaymentIntentId,
-          error: new StripeInvalidRequestError("Invalid request"),
+          adyenPaymentIntentId: mockedAdyenPaymentIntentId,
+          error: new AdyenInvalidRequestError("Invalid request"),
           transactionResult,
           appContext: {
-            stripeEnv: "LIVE",
+            adyenEnv: "LIVE",
           },
         });
         const fetchReponse = successResponse.getResponse();
@@ -507,14 +507,14 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
               "paymentIntent": {
                 "errors": [
                   {
-                    "code": "StripeApiError",
-                    "message": "There is a problem with the request to Stripe API",
+                    "code": "AdyenApiError",
+                    "message": "There is a problem with the request to Adyen API",
                   },
                 ],
               },
             },
-            "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
-            "message": "There is a problem with the request to Stripe API",
+            "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
+            "message": "There is a problem with the request to Adyen API",
             "pspReference": "pi_TEST_TEST_TEST",
             "result": "CHARGE_FAILURE",
           }
@@ -526,10 +526,10 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
 
         const successResponse = new TransactionProcessSessionUseCaseResponses.Failure({
           appContext: {
-            stripeEnv: "LIVE",
+            adyenEnv: "LIVE",
           },
-          stripePaymentIntentId: mockedStripePaymentIntentId,
-          error: new StripeInvalidRequestError("Invalid request"),
+          adyenPaymentIntentId: mockedAdyenPaymentIntentId,
+          error: new AdyenInvalidRequestError("Invalid request"),
           transactionResult,
         });
         const fetchReponse = successResponse.getResponse();
@@ -544,14 +544,14 @@ describe("TransactionProcessSessionUseCaseResponses", () => {
               "paymentIntent": {
                 "errors": [
                   {
-                    "code": "StripeApiError",
-                    "message": "There is a problem with the request to Stripe API",
+                    "code": "AdyenApiError",
+                    "message": "There is a problem with the request to Adyen API",
                   },
                 ],
               },
             },
-            "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
-            "message": "There is a problem with the request to Stripe API",
+            "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
+            "message": "There is a problem with the request to Adyen API",
             "pspReference": "pi_TEST_TEST_TEST",
             "result": "AUTHORIZATION_FAILURE",
           }

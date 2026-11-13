@@ -1,16 +1,16 @@
-import { generatePaymentIntentStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 
-import { mockedStripePaymentIntentId } from "./mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "./mocked-adyen-payment-intent-id";
 
 type Params = {
-  paymentIntentId?: StripePaymentIntentId;
-  stripeEnv?: StripeEnv;
+  paymentIntentId?: AdyenPaymentIntentId;
+  adyenEnv?: AdyenEnv;
 };
 
 export const getMockedPaymentIntentDashboardUrl = (params?: Params) =>
-  generatePaymentIntentStripeDashboardUrl(
-    params?.paymentIntentId ?? mockedStripePaymentIntentId,
-    params?.stripeEnv ?? "TEST",
+  generatePaymentIntentAdyenDashboardUrl(
+    params?.paymentIntentId ?? mockedAdyenPaymentIntentId,
+    params?.adyenEnv ?? "TEST",
   );

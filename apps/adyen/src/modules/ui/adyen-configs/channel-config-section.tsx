@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import { type ReactNode } from "react";
 
 import { trpcClient } from "@/modules/trpc/trpc-client";
-import { StripeConfigsList } from "@/modules/ui/adyen-configs/stripe-configs-list";
+import { AdyenConfigsList } from "@/modules/ui/adyen-configs/adyen-configs-list";
 
 /** Keeps title / ownership / test id identical across loading, error and data states. */
 const Section = ({
@@ -18,11 +18,11 @@ const Section = ({
   children: ReactNode;
 }) => (
   <SettingsSection
-    title="Stripe configurations"
+    title="Adyen configurations"
     ownership="channel"
     description={description}
     headerEnd={headerEnd}
-    data-test-id="stripe-configurations-card"
+    data-test-id="adyen-configurations-card"
   >
     {children}
   </SettingsSection>
@@ -44,12 +44,12 @@ export const ChannelConfigSectionSkeleton = () => (
  * Queries opt out of `refetchOnMount` globally (see trpc-client), so returning from /config/new
  * or /config/[configId] would otherwise render stale data. Opting back in refreshes cached data
  * on mount without duplicating the request on the first render - unlike a refetch in an effect,
- * which cancels the in-flight query and re-runs the Stripe webhook lookups behind it.
+ * which cancels the in-flight query and re-runs the Adyen webhook lookups behind it.
  */
 const refreshOnMount = { refetchOnMount: true } as const;
 
 export const ChannelConfigSection = () => {
-  const configsQuery = trpcClient.appConfig.getStripeConfigsList.useQuery(
+  const configsQuery = trpcClient.appConfig.getAdyenConfigsList.useQuery(
     undefined,
     refreshOnMount,
   );
@@ -64,7 +64,7 @@ export const ChannelConfigSection = () => {
     <>
       Create configurations (sandbox or live), then assign which Saleor channels use each one.
       Checkout uses the configuration mapped to that channel. See the{" "}
-      <TextLink href="https://docs.saleor.io/developer/app-store/apps/stripe/configuration" newTab>
+      <TextLink href="https://docs.saleor.io/developer/app-store/apps/adyen/configuration" newTab>
         configuration docs
       </TextLink>
       .
@@ -135,7 +135,7 @@ export const ChannelConfigSection = () => {
     return (
       <Section description={description} headerEnd={addButtonSecondary}>
         {/* List owns padded grid + full-bleed unassigned fold (SettingsSection body siblings). */}
-        <StripeConfigsList
+        <AdyenConfigsList
           configs={configsQuery.data}
           channels={channelsQuery.data}
           mapping={mappingQuery.data}

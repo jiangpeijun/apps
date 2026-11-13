@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
-import { createStripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { createAdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 
 import {
   AuthorizationActionRequiredResult,
@@ -41,11 +41,11 @@ describe("mapPaymentIntentStatusToAppResult", () => {
         expectedResult: ChargeActionRequiredResult,
       },
     ])(
-      "maps Stripe PaymentIntent status: $status to transactionResult: $expectedResult.name",
+      "maps Adyen PaymentIntent status: $status to transactionResult: $expectedResult.name",
       ({ status, expectedResult }) => {
-        const stripeStatus = createStripePaymentIntentStatus(status);
+        const adyenStatus = createAdyenPaymentIntentStatus(status);
         const result = mapPaymentIntentStatusToTransactionResult(
-          stripeStatus,
+          adyenStatus,
           resolvedTransactionFlow,
         );
 
@@ -87,11 +87,11 @@ describe("mapPaymentIntentStatusToAppResult", () => {
         expectedResult: AuthorizationSuccessResult,
       },
     ])(
-      "maps Stripe status: $status to transactionResult: $expectedResult.name",
+      "maps Adyen status: $status to transactionResult: $expectedResult.name",
       ({ status, expectedResult }) => {
-        const stripeStatus = createStripePaymentIntentStatus(status);
+        const adyenStatus = createAdyenPaymentIntentStatus(status);
         const result = mapPaymentIntentStatusToTransactionResult(
-          stripeStatus,
+          adyenStatus,
           resolvedTransactionFlow,
         );
 

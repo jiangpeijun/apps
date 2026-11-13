@@ -1,31 +1,31 @@
 import { err, ok, type Result } from "neverthrow";
 
 import { BaseError } from "@/lib/errors";
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
-import { type StripePublishableKey } from "@/modules/adyen/adyen-publishable-key";
-import { type StripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { type StripeWebhookSecret } from "@/modules/adyen/stripe-webhook-secret";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
+import { type AdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
+import { type AdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { type AdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 
-export class StripeConfig {
+export class AdyenConfig {
   readonly name: string;
   readonly id: string;
-  readonly restrictedKey: StripeRestrictedKey;
-  readonly publishableKey: StripePublishableKey;
-  readonly webhookSecret: StripeWebhookSecret;
+  readonly restrictedKey: AdyenRestrictedKey;
+  readonly publishableKey: AdyenPublishableKey;
+  readonly webhookSecret: AdyenWebhookSecret;
   readonly webhookId: string;
 
   static ValidationError = BaseError.subclass("ValidationError", {
     props: {
-      _internalName: "StripeConfig.ValidationError" as const,
+      _internalName: "AdyenConfig.ValidationError" as const,
     },
   });
 
   private constructor(props: {
     name: string;
     id: string;
-    restrictedKey: StripeRestrictedKey;
-    publishableKey: StripePublishableKey;
-    webhookSecret: StripeWebhookSecret;
+    restrictedKey: AdyenRestrictedKey;
+    publishableKey: AdyenPublishableKey;
+    webhookSecret: AdyenWebhookSecret;
     webhookId: string;
   }) {
     this.name = props.name;
@@ -36,24 +36,24 @@ export class StripeConfig {
     this.webhookId = props.webhookId;
   }
 
-  getStripeEnvValue(): StripeEnv {
+  getAdyenEnvValue(): AdyenEnv {
     return this.publishableKey.startsWith("pk_test") ? "TEST" : "LIVE";
   }
 
   static create(args: {
     name: string;
     id: string;
-    webhookSecret: StripeWebhookSecret;
+    webhookSecret: AdyenWebhookSecret;
     webhookId: string;
-    restrictedKey: StripeRestrictedKey;
-    publishableKey: StripePublishableKey;
-  }): Result<StripeConfig, InstanceType<typeof StripeConfig.ValidationError>> {
+    restrictedKey: AdyenRestrictedKey;
+    publishableKey: AdyenPublishableKey;
+  }): Result<AdyenConfig, InstanceType<typeof AdyenConfig.ValidationError>> {
     if (args.name.length === 0) {
-      return err(new StripeConfig.ValidationError("Config name cannot be empty"));
+      return err(new AdyenConfig.ValidationError("Config name cannot be empty"));
     }
 
     if (args.id.length === 0) {
-      return err(new StripeConfig.ValidationError("Config id cannot be empty"));
+      return err(new AdyenConfig.ValidationError("Config id cannot be empty"));
     }
 
     const isPkTest = args.publishableKey.startsWith("pk_test");
@@ -68,14 +68,14 @@ export class StripeConfig {
 
     if (!isBothTestOrLive) {
       return err(
-        new StripeConfig.ValidationError(
+        new AdyenConfig.ValidationError(
           "Publishable key and restricted key must be of the same environment - TEST or LIVE",
         ),
       );
     }
 
     return ok(
-      new StripeConfig({
+      new AdyenConfig({
         name: args.name,
         id: args.id,
         restrictedKey: args.restrictedKey,
@@ -87,7 +87,7 @@ export class StripeConfig {
   }
 }
 
-export type StripeFrontendConfigSerializedFields = {
+export type AdyenFrontendConfigSerializedFields = {
   readonly name: string;
   readonly id: string;
   readonly restrictedKey: string;
@@ -99,14 +99,14 @@ export type StripeFrontendConfigSerializedFields = {
  * Safe class that only returns whats permitted to the UI.
  * It also allows to serialize and deserialize itself, so it can be easily transported via tRPC
  */
-export class StripeFrontendConfig implements StripeFrontendConfigSerializedFields {
+export class AdyenFrontendConfig implements AdyenFrontendConfigSerializedFields {
   readonly name: string;
   readonly id: string;
   readonly restrictedKey: string;
   readonly publishableKey: string;
-  webhookStatus?: StripeFrontendConfigSerializedFields["webhookStatus"];
+  webhookStatus?: AdyenFrontendConfigSerializedFields["webhookStatus"];
 
-  private constructor(fields: StripeFrontendConfigSerializedFields) {
+  private constructor(fields: AdyenFrontendConfigSerializedFields) {
     this.name = fields.name;
     this.id = fields.id;
     this.restrictedKey = fields.restrictedKey;
@@ -114,24 +114,24 @@ export class StripeFrontendConfig implements StripeFrontendConfigSerializedField
     this.webhookStatus = fields.webhookStatus;
   }
 
-  private static getMaskedKeyValue(key: StripeRestrictedKey) {
+  private static getMaskedKeyValue(key: AdyenRestrictedKey) {
     return `...${key.slice(-4)}`;
   }
 
-  getStripeEnvValue() {
+  getAdyenEnvValue() {
     return this.publishableKey.startsWith("pk_test") ? "TEST" : "LIVE";
   }
 
-  static createFromStripeConfig(stripeConfig: StripeConfig) {
-    return new StripeFrontendConfig({
-      name: stripeConfig.name,
-      id: stripeConfig.id,
-      publishableKey: stripeConfig.publishableKey,
-      restrictedKey: this.getMaskedKeyValue(stripeConfig.restrictedKey),
+  static createFromAdyenConfig(adyenConfig: AdyenConfig) {
+    return new AdyenFrontendConfig({
+      name: adyenConfig.name,
+      id: adyenConfig.id,
+      publishableKey: adyenConfig.publishableKey,
+      restrictedKey: this.getMaskedKeyValue(adyenConfig.restrictedKey),
     });
   }
 
-  static createFromSerializedFields(fields: StripeFrontendConfigSerializedFields) {
-    return new StripeFrontendConfig(fields);
+  static createFromSerializedFields(fields: AdyenFrontendConfigSerializedFields) {
+    return new AdyenFrontendConfig(fields);
   }
 }

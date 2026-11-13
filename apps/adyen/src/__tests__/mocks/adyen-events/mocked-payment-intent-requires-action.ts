@@ -1,12 +1,12 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
 
-import { mockedStripePaymentIntentId } from "../mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "../mocked-adyen-payment-intent-id";
 
 export const getMockedPaymentIntentRequiresActionEvent =
-  (): Stripe.PaymentIntentRequiresActionEvent => {
-    // Stripe returns timestamp in seconds
+  (): Adyen.PaymentIntentRequiresActionEvent => {
+    // Adyen returns timestamp in seconds
     const date = new Date(2025, 1, 1).getTime() / 1000;
 
     return {
@@ -20,7 +20,7 @@ export const getMockedPaymentIntentRequiresActionEvent =
       pending_webhooks: 0,
       data: {
         object: {
-          id: mockedStripePaymentIntentId,
+          id: mockedAdyenPaymentIntentId,
           amount: 1000,
           amount_received: 101234,
           amount_capturable: 0,
@@ -46,9 +46,9 @@ export const getMockedPaymentIntentRequiresActionEvent =
             saleor_source_type: "Checkout",
           },
           next_action: {
-            type: "use_stripe_sdk",
-            use_stripe_sdk: {
-              type: "stripe_3ds2_fingerprint",
+            type: "use_adyen_sdk",
+            use_adyen_sdk: {
+              type: "adyen_3ds2_fingerprint",
             },
           },
           on_behalf_of: null,

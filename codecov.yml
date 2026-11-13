@@ -24,6 +24,8 @@ coverage:
         flags: [segment]
       app-smtp:
         flags: [smtp]
+      app-payment-adyen:
+        flags: [adyen]
       app-payment-stripe:
         flags: [stripe]
       app-payment-np-atobarai:
@@ -88,6 +90,9 @@ flags:
   smtp:
     paths:
       - apps/smtp/
+  adyen:
+    paths:
+      - apps/adyen/
   stripe:
     paths:
       - apps/stripe/

@@ -7,7 +7,7 @@ export class ResponseMessageFormatter {
     this.appContext = appContext;
   }
 
-  private verboseErrorEnabled = () => this.appContext.stripeEnv === "TEST";
+  private verboseErrorEnabled = () => this.appContext.adyenEnv === "TEST";
 
   formatMessage = (message: string, error?: Error) => {
     if (this.verboseErrorEnabled() && error?.message) {

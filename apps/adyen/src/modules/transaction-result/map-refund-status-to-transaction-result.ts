@@ -1,10 +1,10 @@
 import { assertUnreachable } from "@/lib/assert-unreachable";
 
-import { type StripeRefundStatus } from "../adyen/adyen-refund-status";
+import { type AdyenRefundStatus } from "../adyen/adyen-refund-status";
 import { RefundFailureResult, RefundRequestResult, RefundSuccessResult } from "./refund-result";
 
-export const mapRefundStatusToTransactionResult = (stripeRefundStatus: StripeRefundStatus) => {
-  switch (stripeRefundStatus) {
+export const mapRefundStatusToTransactionResult = (adyenRefundStatus: AdyenRefundStatus) => {
+  switch (adyenRefundStatus) {
     case "succeeded":
       return new RefundSuccessResult();
     case "pending":
@@ -14,6 +14,6 @@ export const mapRefundStatusToTransactionResult = (stripeRefundStatus: StripeRef
     case "canceled":
       return new RefundFailureResult();
     default:
-      assertUnreachable(stripeRefundStatus);
+      assertUnreachable(adyenRefundStatus);
   }
 };

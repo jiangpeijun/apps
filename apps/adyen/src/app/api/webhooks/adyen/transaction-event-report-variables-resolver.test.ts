@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { getMockedSaleorMoney, mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
 import { getMockedPaymentIntentDashboardUrl } from "@/__tests__/mocks/mocked-payment-intent-dashboard-url";
 import { getMockedRefundDashboardUrl } from "@/__tests__/mocks/mocked-refund-dashboard-url";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripeRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
-import { createStripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
+import { createAdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 import {
   AuthorizationActionRequiredResult,
   ChargeActionRequiredResult,
@@ -37,9 +37,9 @@ describe("TransactionEventReportVariablesResolver", () => {
     const resolver = new TransactionEventReportVariablesResolver({
       saleorMoney: getMockedSaleorMoney(),
       transactionResult,
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl({
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
       }),
       saleorTransactionId: mockedSaleorTransactionId,
       timestamp: new Date("2023-10-01T00:00:00Z"),
@@ -55,7 +55,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent has been successful",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -71,10 +71,10 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       transactionResult,
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       saleorMoney: getMockedSaleorMoney(),
       externalUrl: getMockedPaymentIntentDashboardUrl({
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
       }),
       saleorTransactionId: mockedSaleorTransactionId,
       timestamp: new Date("2023-10-01T00:00:00Z"),
@@ -91,7 +91,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent has been successful",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -104,13 +104,13 @@ describe("TransactionEventReportVariablesResolver", () => {
 
   it("Resolves valid transaction report variables for transactionResult: ChargeActionRequired", () => {
     const transactionResult = new ChargeActionRequiredResult(
-      createStripePaymentIntentStatus("requires_action"),
+      createAdyenPaymentIntentStatus("requires_action"),
     );
 
     const resolver = new TransactionEventReportVariablesResolver({
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl({
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
       }),
       saleorMoney: getMockedSaleorMoney(),
       transactionResult,
@@ -128,7 +128,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent requires action",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -141,14 +141,14 @@ describe("TransactionEventReportVariablesResolver", () => {
 
   it("Resolves valid transaction report variables for transactionResult: AuthorizationActionRequired", () => {
     const transactionResult = new AuthorizationActionRequiredResult(
-      createStripePaymentIntentStatus("requires_action"),
+      createAdyenPaymentIntentStatus("requires_action"),
     );
 
     const resolver = new TransactionEventReportVariablesResolver({
       saleorMoney: getMockedSaleorMoney(),
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl({
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
       }),
       transactionResult,
       saleorTransactionId: mockedSaleorTransactionId,
@@ -165,7 +165,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent requires action",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -181,7 +181,7 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       saleorMoney: getMockedSaleorMoney(),
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl(),
       transactionResult,
       saleorTransactionId: mockedSaleorTransactionId,
@@ -196,7 +196,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/test/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/test/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent is processing",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -212,7 +212,7 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       saleorMoney: getMockedSaleorMoney(),
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl(),
       transactionResult,
       saleorTransactionId: mockedSaleorTransactionId,
@@ -227,7 +227,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/test/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/test/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent is processing",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -243,9 +243,9 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       saleorMoney: getMockedSaleorMoney(),
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl({
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
       }),
       transactionResult,
       saleorTransactionId: mockedSaleorTransactionId,
@@ -262,7 +262,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent failed",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -278,9 +278,9 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       transactionResult,
-      stripeObjectId: mockedStripePaymentIntentId,
+      adyenObjectId: mockedAdyenPaymentIntentId,
       externalUrl: getMockedPaymentIntentDashboardUrl({
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
       }),
       saleorMoney: getMockedSaleorMoney(),
       saleorTransactionId: mockedSaleorTransactionId,
@@ -297,7 +297,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
         "message": "Payment intent failed",
         "pspReference": "pi_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -313,7 +313,7 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       transactionResult,
-      stripeObjectId: mockedStripeRefundId,
+      adyenObjectId: mockedAdyenRefundId,
       externalUrl: getMockedRefundDashboardUrl(),
       saleorMoney: getMockedSaleorMoney(),
       saleorTransactionId: mockedSaleorTransactionId,
@@ -330,7 +330,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/refunds/re_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/refunds/re_TEST_TEST_TEST",
         "message": "Refund was successful",
         "pspReference": "re_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -346,7 +346,7 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       transactionResult,
-      stripeObjectId: mockedStripeRefundId,
+      adyenObjectId: mockedAdyenRefundId,
       externalUrl: getMockedRefundDashboardUrl(),
       saleorMoney: getMockedSaleorMoney(),
       saleorTransactionId: mockedSaleorTransactionId,
@@ -363,7 +363,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/refunds/re_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/refunds/re_TEST_TEST_TEST",
         "message": "Refund failed",
         "pspReference": "re_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,
@@ -379,7 +379,7 @@ describe("TransactionEventReportVariablesResolver", () => {
 
     const resolver = new TransactionEventReportVariablesResolver({
       transactionResult,
-      stripeObjectId: mockedStripeRefundId,
+      adyenObjectId: mockedAdyenRefundId,
       externalUrl: getMockedRefundDashboardUrl(),
       saleorMoney: getMockedSaleorMoney(),
       saleorTransactionId: mockedSaleorTransactionId,
@@ -394,7 +394,7 @@ describe("TransactionEventReportVariablesResolver", () => {
           "amount": 10,
           "currency": "USD",
         },
-        "externalUrl": "https://dashboard.stripe.com/refunds/re_TEST_TEST_TEST",
+        "externalUrl": "https://dashboard.adyen.com/refunds/re_TEST_TEST_TEST",
         "message": "Refund is processing",
         "pspReference": "re_TEST_TEST_TEST",
         "saleorPaymentMethodDetailsInput": null,

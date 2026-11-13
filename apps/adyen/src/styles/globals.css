@@ -1,11 +1,11 @@
 /**
- * Stripe brand tokens — single source for the Sandbox / Live accents used by the
+ * Adyen brand tokens — single source for the Sandbox / Live accents used by the
  * env badge on config cards and the mode legend swatches.
  *
- * Values follow Stripe Dashboard chrome: navy for sandbox, blurple for live.
+ * Values follow Adyen Dashboard chrome: navy for sandbox, blurple for live.
  */
 :root {
-  --stripe-color-sandbox: #0a2540;
-  --stripe-color-live: #635bff;
-  --stripe-color-on-brand: #fff;
+  --adyen-color-sandbox: #0a2540;
+  --adyen-color-live: #635bff;
+  --adyen-color-on-brand: #fff;
 }

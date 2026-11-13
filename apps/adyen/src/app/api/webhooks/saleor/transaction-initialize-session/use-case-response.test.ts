@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { getMockedSaleorMoney } from "@/__tests__/mocks/constants";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
-import { createStripeClientSecret } from "@/modules/adyen/adyen-client-secret";
-import { createStripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
+import { createAdyenClientSecret } from "@/modules/adyen/adyen-client-secret";
+import { createAdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 import {
   AuthorizationActionRequiredResult,
   ChargeActionRequiredResult,
@@ -19,16 +19,16 @@ import { TransactionInitializeSessionUseCaseResponses } from "./use-case-respons
 
 describe("TransactionInitializeSessionUseCaseResponses", () => {
   describe("Success with ChargeActionRequired as result", () => {
-    it("getResponse() returns valid Response with status 200 and formatted 'data' object containing Stripe client secret", async () => {
+    it("getResponse() returns valid Response with status 200 and formatted 'data' object containing Adyen client secret", async () => {
       const response = new TransactionInitializeSessionUseCaseResponses.Success({
         transactionResult: new ChargeActionRequiredResult(
-          createStripePaymentIntentStatus("requires_payment_method"),
+          createAdyenPaymentIntentStatus("requires_payment_method"),
         ),
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(10000),
-        stripeClientSecret: createStripeClientSecret("stripe-client-secret")._unsafeUnwrap(),
+        adyenClientSecret: createAdyenClientSecret("adyen-client-secret")._unsafeUnwrap(),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -42,10 +42,10 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
           "amount": 100,
           "data": {
             "paymentIntent": {
-              "stripeClientSecret": "stripe-client-secret",
+              "adyenClientSecret": "adyen-client-secret",
             },
           },
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent requires payment method",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_ACTION_REQUIRED",
@@ -55,17 +55,17 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
   });
 
   describe("Success with AuthorizationActionRequired as result", () => {
-    it("getResponse() returns valid Response with status 200 and formatted 'data' object containing Stripe client secret", async () => {
+    it("getResponse() returns valid Response with status 200 and formatted 'data' object containing Adyen client secret", async () => {
       const response = new TransactionInitializeSessionUseCaseResponses.Success({
         transactionResult: new AuthorizationActionRequiredResult(
-          createStripePaymentIntentStatus("requires_payment_method"),
+          createAdyenPaymentIntentStatus("requires_payment_method"),
         ),
 
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(10000),
-        stripeClientSecret: createStripeClientSecret("stripe-client-secret")._unsafeUnwrap(),
+        adyenClientSecret: createAdyenClientSecret("adyen-client-secret")._unsafeUnwrap(),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -79,10 +79,10 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
           "amount": 100,
           "data": {
             "paymentIntent": {
-              "stripeClientSecret": "stripe-client-secret",
+              "adyenClientSecret": "adyen-client-secret",
             },
           },
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent requires payment method",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "AUTHORIZATION_ACTION_REQUIRED",
@@ -97,7 +97,7 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
         transactionResult: new ChargeFailureResult(),
         error: new UnsupportedPaymentMethodError("UnsupportedPaymentMethodError"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -129,7 +129,7 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
         transactionResult: new ChargeFailureResult(),
         error: new ParseError("Invalid data"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -156,14 +156,14 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
       `);
     });
 
-    it("getResponse() returns valid Response with status 200 and message with failure reason and StripeCreatePaymentIntentError error inside data object", async () => {
+    it("getResponse() returns valid Response with status 200 and message with failure reason and AdyenCreatePaymentIntentError error inside data object", async () => {
       const successResponse = new TransactionInitializeSessionUseCaseResponses.Failure({
         transactionResult: new ChargeFailureResult(),
-        error: new StripeAPIError("Error from Stripe API", {
+        error: new AdyenAPIError("Error from Adyen API", {
           cause: new Error("Inner error"),
         }),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -178,26 +178,26 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
             "paymentIntent": {
               "errors": [
                 {
-                  "code": "StripeApiError",
-                  "message": "There is a problem with the request to Stripe API",
+                  "code": "AdyenApiError",
+                  "message": "There is a problem with the request to Adyen API",
                 },
               ],
             },
           },
-          "message": "There is a problem with the request to Stripe API",
+          "message": "There is a problem with the request to Adyen API",
           "result": "CHARGE_FAILURE",
         }
       `);
     });
 
-    it("getResponse() returns valid Response with status 200 and message with failure reason and StripeCreatePaymentIntentError error inside data object - TEST env passes Stripe error details", async () => {
+    it("getResponse() returns valid Response with status 200 and message with failure reason and AdyenCreatePaymentIntentError error inside data object - TEST env passes Adyen error details", async () => {
       const successResponse = new TransactionInitializeSessionUseCaseResponses.Failure({
         transactionResult: new ChargeFailureResult(),
-        error: new StripeAPIError("Error from Stripe API", {
+        error: new AdyenAPIError("Error from Adyen API", {
           cause: new Error("Inner error"),
         }),
         appContext: {
-          stripeEnv: "TEST",
+          adyenEnv: "TEST",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -212,15 +212,15 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
             "paymentIntent": {
               "errors": [
                 {
-                  "code": "StripeApiError",
-                  "message": "There is a problem with the request to Stripe API: Inner error
-        Error from Stripe API",
+                  "code": "AdyenApiError",
+                  "message": "There is a problem with the request to Adyen API: Inner error
+        Error from Adyen API",
                 },
               ],
             },
           },
-          "message": "There is a problem with the request to Stripe API: Inner error
-        Error from Stripe API",
+          "message": "There is a problem with the request to Adyen API: Inner error
+        Error from Adyen API",
           "result": "CHARGE_FAILURE",
         }
       `);
@@ -233,7 +233,7 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
         transactionResult: new AuthorizationFailureResult(),
         error: new UnsupportedPaymentMethodError("UnsupportedPaymentMethodError"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -265,7 +265,7 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
         transactionResult: new AuthorizationFailureResult(),
         error: new ParseError("Invalid data"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -292,12 +292,12 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
       `);
     });
 
-    it("getResponse() returns valid Response with status 200 and message with failure reason and StripeCreatePaymentIntentError error inside data object", async () => {
+    it("getResponse() returns valid Response with status 200 and message with failure reason and AdyenCreatePaymentIntentError error inside data object", async () => {
       const successResponse = new TransactionInitializeSessionUseCaseResponses.Failure({
         transactionResult: new AuthorizationFailureResult(),
-        error: new StripeAPIError("Error from Stripe API"),
+        error: new AdyenAPIError("Error from Adyen API"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -312,13 +312,13 @@ describe("TransactionInitializeSessionUseCaseResponses", () => {
             "paymentIntent": {
               "errors": [
                 {
-                  "code": "StripeApiError",
-                  "message": "There is a problem with the request to Stripe API",
+                  "code": "AdyenApiError",
+                  "message": "There is a problem with the request to Adyen API",
                 },
               ],
             },
           },
-          "message": "There is a problem with the request to Stripe API",
+          "message": "There is a problem with the request to Adyen API",
           "result": "AUTHORIZATION_FAILURE",
         }
       `);

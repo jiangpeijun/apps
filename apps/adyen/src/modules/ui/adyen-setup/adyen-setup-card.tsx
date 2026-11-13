@@ -7,20 +7,20 @@ import { Button, useTheme } from "@saleor/macaw-ui";
 import { BookOpen, CreditCard } from "lucide-react";
 import { useRouter } from "next/router";
 
-import { type StripeFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
 
-import { buildStripeSetupTasks, summarizeStripeSetupTasks } from "./adyen-setup-summary";
+import { buildAdyenSetupTasks, summarizeAdyenSetupTasks } from "./adyen-setup-summary";
 
 type Props = {
-  configs: StripeFrontendConfigSerializedFields[];
-  mapping: Record<string, StripeFrontendConfigSerializedFields>;
+  configs: AdyenFrontendConfigSerializedFields[];
+  mapping: Record<string, AdyenFrontendConfigSerializedFields>;
   onDismiss: () => void;
 };
 
-export const StripeSetupCard = ({ configs, mapping, onDismiss }: Props) => {
+export const AdyenSetupCard = ({ configs, mapping, onDismiss }: Props) => {
   const router = useRouter();
   const { theme } = useTheme();
-  const tasks = buildStripeSetupTasks({
+  const tasks = buildAdyenSetupTasks({
     configs,
     mapping,
     addConfigAction: (
@@ -35,29 +35,29 @@ export const StripeSetupCard = ({ configs, mapping, onDismiss }: Props) => {
     ),
   });
 
-  const { progress, nextUp } = summarizeStripeSetupTasks(tasks);
+  const { progress, nextUp } = summarizeAdyenSetupTasks(tasks);
 
   const reviewItems: SetupChecklistReviewItem[] = [
     {
       id: "docs",
       icon: <BookOpen size={16} />,
-      title: "Read the Stripe app docs",
+      title: "Read the Adyen app docs",
       description: "Configuration, webhooks, and storefront integration.",
       onClick: () => {
         window.open(
-          "https://docs.saleor.io/developer/app-store/apps/stripe/overview",
+          "https://docs.saleor.io/developer/app-store/apps/adyen/overview",
           "_blank",
           "noopener,noreferrer",
         );
       },
     },
     {
-      id: "stripe-dashboard",
+      id: "adyen-dashboard",
       icon: <CreditCard size={16} />,
-      title: "Open Stripe Dashboard",
+      title: "Open Adyen Dashboard",
       description: "Manage keys, webhooks, and payment methods.",
       onClick: () => {
-        window.open("https://dashboard.stripe.com", "_blank", "noopener,noreferrer");
+        window.open("https://dashboard.adyen.com", "_blank", "noopener,noreferrer");
       },
     },
   ];
@@ -70,9 +70,9 @@ export const StripeSetupCard = ({ configs, mapping, onDismiss }: Props) => {
       ]
         .filter(Boolean)
         .join(" ")}
-      data-test-id="stripe-setup-card"
-      title="Finish Stripe setup"
-      subtitle="Connect Stripe and assign channels on a configuration card before taking payments."
+      data-test-id="adyen-setup-card"
+      title="Finish Adyen setup"
+      subtitle="Connect Adyen and assign channels on a configuration card before taking payments."
       progress={progress}
       tasksSection={{ title: "Required for payments" }}
       tasks={tasks}

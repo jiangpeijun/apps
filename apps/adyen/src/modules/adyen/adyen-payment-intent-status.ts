@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const StripePaymentIntentStatusSchema = z
+const AdyenPaymentIntentStatusSchema = z
   .enum([
     "requires_action",
     "requires_confirmation",
@@ -10,9 +10,9 @@ const StripePaymentIntentStatusSchema = z
     "requires_capture",
     "succeeded",
   ])
-  .brand("StripePaymentIntentStatus");
+  .brand("AdyenPaymentIntentStatus");
 
-export const createStripePaymentIntentStatus = (raw: string) =>
-  StripePaymentIntentStatusSchema.parse(raw);
+export const createAdyenPaymentIntentStatus = (raw: string) =>
+  AdyenPaymentIntentStatusSchema.parse(raw);
 
-export type StripePaymentIntentStatus = z.infer<typeof StripePaymentIntentStatusSchema>;
+export type AdyenPaymentIntentStatus = z.infer<typeof AdyenPaymentIntentStatusSchema>;

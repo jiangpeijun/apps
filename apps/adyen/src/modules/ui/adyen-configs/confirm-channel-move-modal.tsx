@@ -1,15 +1,15 @@
 import { Box, Button, Modal, Text } from "@saleor/macaw-ui";
 
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
 
 import { type ChannelMove } from "./build-channel-move-plan";
-import { stripeEnvLabel } from "./adyen-env-label";
+import { adyenEnvLabel } from "./adyen-env-label";
 
 type Props = {
   /** Only moves that swap sandbox keys for live ones, or the other way around. */
   moves: ChannelMove[];
   targetConfigName: string;
-  targetEnv: StripeEnv;
+  targetEnv: AdyenEnv;
   isSaving?: boolean;
   onConfirm: () => void;
   onClose: () => void;
@@ -64,8 +64,8 @@ export const ConfirmChannelMoveModal = ({
                 {move.channelName}
               </Text>{" "}
               <Text size={2} color="default2">
-                — from {move.fromConfigName} ({stripeEnvLabel(move.fromEnv)}) to {targetConfigName}{" "}
-                ({stripeEnvLabel(targetEnv)})
+                — from {move.fromConfigName} ({adyenEnvLabel(move.fromEnv)}) to {targetConfigName}{" "}
+                ({adyenEnvLabel(targetEnv)})
               </Text>
             </Text>
           ))}

@@ -3,15 +3,15 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { mockedSaleorAppId, mockedSaleorChannelId } from "@/__tests__/mocks/constants";
 import { mockEncryptor } from "@/__tests__/mocks/mock-encryptor";
-import { mockedStripePublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
-import { mockedStripeRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
+import { mockedAdyenPublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
+import { mockedAdyenRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 import { RandomId } from "@/lib/random-id";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { DynamoDbChannelConfigMapping } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import { DynamodbAppConfigRepo } from "@/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo";
-import { DynamoDbStripeConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
+import { DynamoDbAdyenConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 
 const testLogger = createLogger();
 
@@ -19,13 +19,13 @@ describe("ConfigRepo with DynamoDB integration test", () => {
   const repo = new DynamodbAppConfigRepo({
     entities: {
       channelConfigMapping: DynamoDbChannelConfigMapping.entity,
-      stripeConfig: DynamoDbStripeConfig.entity,
+      adyenConfig: DynamoDbAdyenConfig.entity,
     },
     encryptor: mockEncryptor,
   });
 
   beforeEach(async () => {
-    const stripeConfig = await repo.getRootConfig({
+    const adyenConfig = await repo.getRootConfig({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
     });
@@ -33,8 +33,8 @@ describe("ConfigRepo with DynamoDB integration test", () => {
     /**
      * Ensure DB is clean before each test
      */
-    expect(stripeConfig._unsafeUnwrap().stripeConfigsById).toStrictEqual({});
-    expect(stripeConfig._unsafeUnwrap().chanelConfigMapping).toStrictEqual({});
+    expect(adyenConfig._unsafeUnwrap().adyenConfigsById).toStrictEqual({});
+    expect(adyenConfig._unsafeUnwrap().chanelConfigMapping).toStrictEqual({});
   });
 
   it("Creates and reads a configuration", async () => {
@@ -43,30 +43,30 @@ describe("ConfigRepo with DynamoDB integration test", () => {
 
     testLogger.info(`Will write config with ID: ${randomId}`);
 
-    await repo.saveStripeConfig({
+    await repo.saveAdyenConfig({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: mockedStripePublishableKey,
+      config: AdyenConfig.create({
+        publishableKey: mockedAdyenPublishableKey,
         name: "Config name",
         webhookId: "we_123",
-        restrictedKey: mockedStripeRestrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        restrictedKey: mockedAdyenRestrictedKey,
+        webhookSecret: mockAdyenWebhookSecret,
         id: randomId,
       })._unsafeUnwrap(),
     });
 
     testLogger.info(`Attempting to read config with ID: ${randomId}`);
 
-    const stripeConfig = await repo.getStripeConfig({
+    const adyenConfig = await repo.getAdyenConfig({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       configId: randomId,
     });
 
-    expect(stripeConfig.isOk()).toBe(true);
-    testLogger.info(`Read config with ID: ${stripeConfig._unsafeUnwrap()?.id}`);
-    expect(stripeConfig._unsafeUnwrap()?.id).toStrictEqual(randomId);
+    expect(adyenConfig.isOk()).toBe(true);
+    testLogger.info(`Read config with ID: ${adyenConfig._unsafeUnwrap()?.id}`);
+    expect(adyenConfig._unsafeUnwrap()?.id).toStrictEqual(randomId);
   });
 
   it("Creates 2 configurations, then assigns them sequentially to channel", async () => {
@@ -76,28 +76,28 @@ describe("ConfigRepo with DynamoDB integration test", () => {
     const config1id = new RandomId().generate();
     const config2id = new RandomId().generate();
 
-    await repo.saveStripeConfig({
+    await repo.saveAdyenConfig({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: mockedStripePublishableKey,
+      config: AdyenConfig.create({
+        publishableKey: mockedAdyenPublishableKey,
         name: "Config name",
         webhookId: "we_123",
-        restrictedKey: mockedStripeRestrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        restrictedKey: mockedAdyenRestrictedKey,
+        webhookSecret: mockAdyenWebhookSecret,
         id: config1id,
       })._unsafeUnwrap(),
     });
 
-    await repo.saveStripeConfig({
+    await repo.saveAdyenConfig({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: mockedStripePublishableKey,
+      config: AdyenConfig.create({
+        publishableKey: mockedAdyenPublishableKey,
         name: "Config name",
         webhookId: "we_123",
-        restrictedKey: mockedStripeRestrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        restrictedKey: mockedAdyenRestrictedKey,
+        webhookSecret: mockAdyenWebhookSecret,
         id: config2id,
       })._unsafeUnwrap(),
     });
@@ -158,15 +158,15 @@ describe("ConfigRepo with DynamoDB integration test", () => {
   it("Creates config and removes it", async () => {
     const config1id = new RandomId().generate();
 
-    await repo.saveStripeConfig({
+    await repo.saveAdyenConfig({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: mockedStripePublishableKey,
+      config: AdyenConfig.create({
+        publishableKey: mockedAdyenPublishableKey,
         name: "Config name",
         webhookId: "we_123",
-        restrictedKey: mockedStripeRestrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        restrictedKey: mockedAdyenRestrictedKey,
+        webhookSecret: mockAdyenWebhookSecret,
         id: config1id,
       })._unsafeUnwrap(),
     });
@@ -179,7 +179,7 @@ describe("ConfigRepo with DynamoDB integration test", () => {
     )._unsafeUnwrap();
 
     // Verify if data written first
-    expect(rootConfig.stripeConfigsById[config1id]).toBeDefined();
+    expect(rootConfig.adyenConfigsById[config1id]).toBeDefined();
 
     /*
      * WHEN
@@ -203,7 +203,7 @@ describe("ConfigRepo with DynamoDB integration test", () => {
     )._unsafeUnwrap();
 
     // Assert only config removal. Mapping is handled by separate command
-    expect(rootConfigRefetched.stripeConfigsById[config1id]).toBeUndefined();
+    expect(rootConfigRefetched.adyenConfigsById[config1id]).toBeUndefined();
   });
 
   it("Sets mapping and deletes it", async () => {

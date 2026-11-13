@@ -1,20 +1,20 @@
 import { captureMessage } from "@sentry/nextjs";
 import { z } from "zod";
 
-const StripeRefundIdSchema = z
+const AdyenRefundIdSchema = z
   .string()
   .refine((v) => {
     const expectedPrefix = [
-      // Standard Stripe refund
+      // Standard Adyen refund
       "re_",
       // Refund for an external system like PayPal
       "pyr_",
     ];
 
     if (!expectedPrefix.some((prefix) => v.startsWith(prefix))) {
-      captureMessage("Received unexpected Stripe Refund ID format", (scope) => {
+      captureMessage("Received unexpected Adyen Refund ID format", (scope) => {
         scope.setLevel("warning");
-        scope.setExtra("stripeRefundId", v);
+        scope.setExtra("adyenRefundId", v);
 
         return scope;
       });
@@ -22,8 +22,8 @@ const StripeRefundIdSchema = z
 
     return true;
   })
-  .brand("StripeRefundId");
+  .brand("AdyenRefundId");
 
-export const createStripeRefundId = (raw: string) => StripeRefundIdSchema.parse(raw);
+export const createAdyenRefundId = (raw: string) => AdyenRefundIdSchema.parse(raw);
 
-export type StripeRefundId = z.infer<typeof StripeRefundIdSchema>;
+export type AdyenRefundId = z.infer<typeof AdyenRefundIdSchema>;

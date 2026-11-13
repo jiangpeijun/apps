@@ -3,25 +3,25 @@ import { type Client } from "urql";
 
 import { createLogger } from "@/lib/logger";
 import {
-  type StripeApiError,
-  StripeAuthenticationError,
-  StripePermissionError,
+  type AdyenApiError,
+  AdyenAuthenticationError,
+  AdyenPermissionError,
 } from "@/modules/adyen/adyen-api-error";
 
-const logger = createLogger("StripeProblemReporter");
+const logger = createLogger("AdyenProblemReporter");
 
 export const PROBLEM_KEYS = {
-  authFailure: (configId: string) => `stripe-auth-failure:${configId}`,
-  permissionError: (configId: string) => `stripe-permission-error:${configId}`,
-  webhookSecretMismatch: (configId: string) => `stripe-webhook-secret-mismatch:${configId}`,
-  configMissing: (configId: string) => `stripe-config-missing:${configId}`,
-  legacyWebhookOrphaned: (configId: string) => `stripe-legacy-webhook-orphaned:${configId}`,
-  invalidPaymentMethod: (channelSlug: string) => `stripe-invalid-payment-method:${channelSlug}`,
+  authFailure: (configId: string) => `adyen-auth-failure:${configId}`,
+  permissionError: (configId: string) => `adyen-permission-error:${configId}`,
+  webhookSecretMismatch: (configId: string) => `adyen-webhook-secret-mismatch:${configId}`,
+  configMissing: (configId: string) => `adyen-config-missing:${configId}`,
+  legacyWebhookOrphaned: (configId: string) => `adyen-legacy-webhook-orphaned:${configId}`,
+  invalidPaymentMethod: (channelSlug: string) => `adyen-invalid-payment-method:${channelSlug}`,
   objectFromDifferentInstallation: (configId: string) =>
-    `stripe-object-from-different-installation:${configId}`,
+    `adyen-object-from-different-installation:${configId}`,
 } as const;
 
-export class StripeProblemReporter {
+export class AdyenProblemReporter {
   private reporter: AppProblemsReporter;
 
   constructor(client: Client) {
@@ -32,7 +32,7 @@ export class StripeProblemReporter {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.authFailure(configId),
       criticalThreshold: 1,
-      message: `Stripe restricted key for configuration "${configName}" is invalid or expired. Payments for channels using this configuration will fail. Please update the restricted key.`,
+      message: `Adyen restricted key for configuration "${configName}" is invalid or expired. Payments for channels using this configuration will fail. Please update the restricted key.`,
     });
 
     if (result.isErr()) {
@@ -44,7 +44,7 @@ export class StripeProblemReporter {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.permissionError(configId),
       criticalThreshold: 1,
-      message: `Stripe restricted key for configuration "${configName}" lacks required permissions. Payments for channels using this configuration will fail. Please verify the key has the necessary Stripe permissions.`,
+      message: `Adyen restricted key for configuration "${configName}" lacks required permissions. Payments for channels using this configuration will fail. Please verify the key has the necessary Adyen permissions.`,
     });
 
     if (result.isErr()) {
@@ -56,7 +56,7 @@ export class StripeProblemReporter {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.webhookSecretMismatch(configId),
       criticalThreshold: 1,
-      message: `Webhook signature verification failed for configuration "${configName}". Payment status updates from Stripe are not being processed. The webhook secret may have been rotated in Stripe. Please recreate the configuration.`,
+      message: `Webhook signature verification failed for configuration "${configName}". Payment status updates from Adyen are not being processed. The webhook secret may have been rotated in Adyen. Please recreate the configuration.`,
     });
 
     if (result.isErr()) {
@@ -68,7 +68,7 @@ export class StripeProblemReporter {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.configMissing(configId),
       criticalThreshold: 1,
-      message: `Stripe is sending webhook events for configuration "${configId}" but no matching configuration was found. The configuration may have been deleted while the Stripe webhook endpoint is still active. Please remove the orphaned webhook in your Stripe Dashboard.`,
+      message: `Adyen is sending webhook events for configuration "${configId}" but no matching configuration was found. The configuration may have been deleted while the Adyen webhook endpoint is still active. Please remove the orphaned webhook in your Adyen Dashboard.`,
     });
 
     if (result.isErr()) {
@@ -80,7 +80,7 @@ export class StripeProblemReporter {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.legacyWebhookOrphaned(configId),
       aggregationPeriod: 24 * 60,
-      message: `Stripe is sending webhook events for configuration "${configId}" from a previous app installation. The app can't remove this webhook because the old configuration no longer exists. Please remove the orphaned webhook in your Stripe Dashboard.`,
+      message: `Adyen is sending webhook events for configuration "${configId}" from a previous app installation. The app can't remove this webhook because the old configuration no longer exists. Please remove the orphaned webhook in your Adyen Dashboard.`,
     });
 
     if (result.isErr()) {
@@ -91,7 +91,7 @@ export class StripeProblemReporter {
   async reportInvalidPaymentMethod(channelSlug: string) {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.invalidPaymentMethod(channelSlug),
-      message: `Storefront is using Payment Method that is not supported. Verify app docs and disable not supported payment methods in Stripe. Channel: ${channelSlug}`,
+      message: `Storefront is using Payment Method that is not supported. Verify app docs and disable not supported payment methods in Adyen. Channel: ${channelSlug}`,
     });
 
     if (result.isErr()) {
@@ -102,7 +102,7 @@ export class StripeProblemReporter {
   async reportObjectFromDifferentInstallation(configId: string, configName: string): Promise<void> {
     const result = await this.reporter.reportProblem({
       key: PROBLEM_KEYS.objectFromDifferentInstallation(configId),
-      message: `Stripe is sending webhook events for payments created by a different Saleor environment to configuration "${configName}". These events are ignored. This happens when multiple Saleor environments use the same Stripe account in the same mode (test or live). Use a separate Stripe account or sandbox for each environment.`,
+      message: `Adyen is sending webhook events for payments created by a different Saleor environment to configuration "${configName}". These events are ignored. This happens when multiple Saleor environments use the same Adyen account in the same mode (test or live). Use a separate Adyen account or sandbox for each environment.`,
     });
 
     if (result.isErr()) {
@@ -128,12 +128,12 @@ export class StripeProblemReporter {
   }
 
   async reportApiProblem(
-    error: StripeApiError,
+    error: AdyenApiError,
     config: { id: string; name: string },
   ): Promise<void> {
-    if (error instanceof StripeAuthenticationError) {
+    if (error instanceof AdyenAuthenticationError) {
       await this.reportAuthFailure(config.id, config.name);
-    } else if (error instanceof StripePermissionError) {
+    } else if (error instanceof AdyenPermissionError) {
       await this.reportPermissionError(config.id, config.name);
     }
   }

@@ -14,15 +14,15 @@ import {
   mockedSaleorChannelId,
 } from "@/__tests__/mocks/constants";
 import { mockEncryptor } from "@/__tests__/mocks/mock-encryptor";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { AppConfigRepoError } from "@/modules/app-config/repositories/app-config-repo";
 import { mockedDynamoConfigItems } from "@/modules/app-config/repositories/dynamodb/__tests__/app-config-dynamodb-mocks";
 import { DynamoDbChannelConfigMapping } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import { DynamodbAppConfigRepo } from "@/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo";
-import { DynamoDbStripeConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
+import { DynamoDbAdyenConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { DynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 
 /**
@@ -39,15 +39,15 @@ describe("DynamodbAppConfigRepo", () => {
     const table = DynamoMainTable.create({
       // @ts-expect-error mocking DynamoDBDocumentClient
       documentClient: mockDocumentClient,
-      tableName: "stripe-test-table",
+      tableName: "adyen-test-table",
     });
 
     const channelMappingEntity = DynamoDbChannelConfigMapping.createEntity(table);
-    const stripeConfigEntity = DynamoDbStripeConfig.createEntity(table);
+    const adyenConfigEntity = DynamoDbAdyenConfig.createEntity(table);
 
     repo = new DynamodbAppConfigRepo({
       entities: {
-        stripeConfig: stripeConfigEntity,
+        adyenConfig: adyenConfigEntity,
         channelConfigMapping: channelMappingEntity,
       },
       encryptor: mockEncryptor,
@@ -61,7 +61,7 @@ describe("DynamodbAppConfigRepo", () => {
           ExpressionAttributeValues: {
             ":c0_1": "https://foo.bar.saleor.cloud/graphql/#saleor-app-id",
             ":c0_2": "CONFIG_ID#",
-            ":c1_1": "StripeConfig",
+            ":c1_1": "AdyenConfig",
           },
           KeyConditionExpression: "(#c0_1 = :c0_1) AND (begins_with(#c0_2, :c0_2))",
           FilterExpression: "#c1_1 = :c1_1",
@@ -69,9 +69,9 @@ describe("DynamodbAppConfigRepo", () => {
         })
         .resolvesOnce({
           Items: [
-            mockedDynamoConfigItems.mockedStripeConfig,
+            mockedDynamoConfigItems.mockedAdyenConfig,
             {
-              ...mockedDynamoConfigItems.mockedStripeConfig,
+              ...mockedDynamoConfigItems.mockedAdyenConfig,
               configId: "another-config-id",
             },
           ],
@@ -124,8 +124,8 @@ describe("DynamodbAppConfigRepo", () => {
             "Q2hhbm5lbDox": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
             "another-channel-id-2": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
           },
-          "stripeConfigsById": {
-            "81f323bd-91e2-4838-ab6e-5affd81ffc3b": StripeConfig {
+          "adyenConfigsById": {
+            "81f323bd-91e2-4838-ab6e-5affd81ffc3b": AdyenConfig {
               "id": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
               "name": "tasdafsdf",
               "publishableKey": "pk_test_51Ng2yKKFxIUko8m0IUBO8GvarTlXcNIpAATM9cE7S2GaoFLsTAsn5avHHjfLFVKewqTFwMb2wqOP87CEbgwljzf200aXXm38oM",
@@ -133,7 +133,7 @@ describe("DynamodbAppConfigRepo", () => {
               "webhookId": "we_1RHiPdKFxIUko8m01KAnXiRQ",
               "webhookSecret": "whsec_ZOsiN376Ahfo0N8lWg7PYXNGpnDXShS5",
             },
-            "another-config-id": StripeConfig {
+            "another-config-id": AdyenConfig {
               "id": "another-config-id",
               "name": "tasdafsdf",
               "publishableKey": "pk_test_51Ng2yKKFxIUko8m0IUBO8GvarTlXcNIpAATM9cE7S2GaoFLsTAsn5avHHjfLFVKewqTFwMb2wqOP87CEbgwljzf200aXXm38oM",
@@ -160,11 +160,11 @@ describe("DynamodbAppConfigRepo", () => {
     });
   });
 
-  describe("getStripeConfig", () => {
+  describe("getAdyenConfig", () => {
     it("Returns null if entry not found in DB", async () => {
       mockDocumentClient.on(GetCommand, {}).resolvesOnce({});
 
-      const result = await repo.getStripeConfig({
+      const result = await repo.getAdyenConfig({
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         configId: mockedConfigurationId,
@@ -173,20 +173,20 @@ describe("DynamodbAppConfigRepo", () => {
       expect(result._unsafeUnwrap()).toBeNull();
     });
 
-    it("Returns valid StripeConfig if entry found in DB", async () => {
+    it("Returns valid AdyenConfig if entry found in DB", async () => {
       mockDocumentClient.on(GetCommand, {}).resolvesOnce({
-        Item: mockedDynamoConfigItems.mockedStripeConfig,
+        Item: mockedDynamoConfigItems.mockedAdyenConfig,
       });
 
-      const result = await repo.getStripeConfig({
+      const result = await repo.getAdyenConfig({
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         configId: mockedConfigurationId,
       });
 
-      expect(result._unsafeUnwrap()).toBeInstanceOf(StripeConfig);
+      expect(result._unsafeUnwrap()).toBeInstanceOf(AdyenConfig);
       expect(result._unsafeUnwrap()).toMatchInlineSnapshot(`
-        StripeConfig {
+        AdyenConfig {
           "id": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
           "name": "tasdafsdf",
           "publishableKey": "pk_test_51Ng2yKKFxIUko8m0IUBO8GvarTlXcNIpAATM9cE7S2GaoFLsTAsn5avHHjfLFVKewqTFwMb2wqOP87CEbgwljzf200aXXm38oM",
@@ -197,7 +197,7 @@ describe("DynamodbAppConfigRepo", () => {
       `);
     });
 
-    it("Returns valid StripeConfig when queried by channelId", async () => {
+    it("Returns valid AdyenConfig when queried by channelId", async () => {
       mockDocumentClient
         .on(GetCommand, {
           Key: {
@@ -206,7 +206,7 @@ describe("DynamodbAppConfigRepo", () => {
           },
         })
         .resolvesOnce({
-          Item: mockedDynamoConfigItems.mockedStripeConfig,
+          Item: mockedDynamoConfigItems.mockedAdyenConfig,
         });
 
       mockDocumentClient
@@ -220,15 +220,15 @@ describe("DynamodbAppConfigRepo", () => {
           Item: mockedDynamoConfigItems.mockedMapping,
         });
 
-      const result = await repo.getStripeConfig({
+      const result = await repo.getAdyenConfig({
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         channelId: mockedSaleorChannelId,
       });
 
-      expect(result._unsafeUnwrap()).toBeInstanceOf(StripeConfig);
+      expect(result._unsafeUnwrap()).toBeInstanceOf(AdyenConfig);
       expect(result._unsafeUnwrap()).toMatchInlineSnapshot(`
-        StripeConfig {
+        AdyenConfig {
           "id": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
           "name": "tasdafsdf",
           "publishableKey": "pk_test_51Ng2yKKFxIUko8m0IUBO8GvarTlXcNIpAATM9cE7S2GaoFLsTAsn5avHHjfLFVKewqTFwMb2wqOP87CEbgwljzf200aXXm38oM",
@@ -249,7 +249,7 @@ describe("DynamodbAppConfigRepo", () => {
         })
         .resolvesOnce({});
 
-      const result = await repo.getStripeConfig({
+      const result = await repo.getAdyenConfig({
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         channelId: mockedSaleorChannelId,
@@ -273,7 +273,7 @@ describe("DynamodbAppConfigRepo", () => {
           },
         });
 
-      const result = await repo.getStripeConfig({
+      const result = await repo.getAdyenConfig({
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         channelId: mockedSaleorChannelId,
@@ -296,7 +296,7 @@ describe("DynamodbAppConfigRepo", () => {
           },
         });
 
-      const result = await repo.getStripeConfig({
+      const result = await repo.getAdyenConfig({
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         configId: mockedConfigurationId,
@@ -306,7 +306,7 @@ describe("DynamodbAppConfigRepo", () => {
     });
   });
 
-  describe("saveStripeConfig", () => {
+  describe("saveAdyenConfig", () => {
     it("Saves config to DB by calling method on entity", async () => {
       mockDocumentClient.on(PutCommand, {}).resolvesOnce({
         $metadata: {
@@ -314,8 +314,8 @@ describe("DynamodbAppConfigRepo", () => {
         },
       });
 
-      const result = await repo.saveStripeConfig({
-        config: mockedStripeConfig,
+      const result = await repo.saveAdyenConfig({
+        config: mockedAdyenConfig,
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
       });
@@ -325,37 +325,37 @@ describe("DynamodbAppConfigRepo", () => {
       /**
        * Assert args that are sent to DynamoDB
        *
-       * Warning: stripeRk and stripeWhSecret are encrypted and random
+       * Warning: adyenRk and adyenWhSecret are encrypted and random
        */
       // @ts-expect-error - Item is not defined on mock
       expect(mockDocumentClient.calls()[0].args[0].input.Item).toMatchInlineSnapshot(
         {
           createdAt: expect.any(String),
           modifiedAt: expect.any(String),
-          stripeRk: expect.any(String),
-          stripeWhSecret: expect.any(String),
+          adyenRk: expect.any(String),
+          adyenWhSecret: expect.any(String),
         },
         `
         {
           "PK": "https://foo.bar.saleor.cloud/graphql/#saleor-app-id",
           "SK": "CONFIG_ID#81f323bd-91e2-4838-ab6e-5affd81ffc3b",
-          "_et": "StripeConfig",
+          "_et": "AdyenConfig",
           "configId": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
           "configName": "config-name",
           "createdAt": Any<String>,
           "modifiedAt": Any<String>,
-          "stripePk": "pk_live_1",
-          "stripeRk": Any<String>,
-          "stripeWhId": "wh_123456789",
-          "stripeWhSecret": Any<String>,
+          "adyenPk": "pk_live_1",
+          "adyenRk": Any<String>,
+          "adyenWhId": "wh_123456789",
+          "adyenWhSecret": Any<String>,
         }
       `,
       );
     });
 
     it("Returns FailureSavingConfig if DB connection fails", async () => {
-      const result = await repo.saveStripeConfig({
-        config: mockedStripeConfig,
+      const result = await repo.saveAdyenConfig({
+        config: mockedAdyenConfig,
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
       });

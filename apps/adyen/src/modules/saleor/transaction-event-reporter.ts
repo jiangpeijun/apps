@@ -11,15 +11,15 @@ import {
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { type SaleorMoney } from "@/modules/saleor/saleor-money";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 
-import { type StripeRefundId } from "../adyen/adyen-refund-id";
+import { type AdyenRefundId } from "../adyen/adyen-refund-id";
 
 export type TransactionEventReportInput = {
   transactionId: string;
   message: string;
   amount: SaleorMoney;
-  pspReference: StripePaymentIntentId | StripeRefundId;
+  pspReference: AdyenPaymentIntentId | AdyenRefundId;
   time: string;
   type: TransactionEventTypeEnum;
   actions: TransactionActionEnum[] | null;

@@ -3,18 +3,18 @@ import { z } from "zod";
 import {
   keysShareEnvironment,
   MIXED_KEY_ENVIRONMENTS_MESSAGE,
-  stripePublishableKeyInputSchema,
-  stripeRestrictedKeyInputSchema,
+  adyenPublishableKeyInputSchema,
+  adyenRestrictedKeyInputSchema,
 } from "@/modules/app-config/trpc-handlers/adyen-key-input-schemas";
 
-export const newStripeConfigInputSchema = z
+export const newAdyenConfigInputSchema = z
   .object({
     name: z.string().min(1),
-    publishableKey: stripePublishableKeyInputSchema,
-    restrictedKey: stripeRestrictedKeyInputSchema,
+    publishableKey: adyenPublishableKeyInputSchema,
+    restrictedKey: adyenRestrictedKeyInputSchema,
   })
   .refine(keysShareEnvironment, {
     message: MIXED_KEY_ENVIRONMENTS_MESSAGE,
   });
 
-export type NewStripeConfigInput = z.infer<typeof newStripeConfigInputSchema>;
+export type NewAdyenConfigInput = z.infer<typeof newAdyenConfigInputSchema>;

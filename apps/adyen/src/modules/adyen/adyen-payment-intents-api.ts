@@ -1,42 +1,42 @@
 import { type Result, ResultAsync } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
-import { StripeClient } from "@/modules/adyen/adyen-client";
+import { AdyenClient } from "@/modules/adyen/adyen-client";
 
-import { type StripePaymentIntentId } from "./adyen-payment-intent-id";
-import { type StripeRestrictedKey } from "./adyen-restricted-key";
+import { type AdyenPaymentIntentId } from "./adyen-payment-intent-id";
+import { type AdyenRestrictedKey } from "./adyen-restricted-key";
 import {
-  type AllowedStripeObjectMetadata,
+  type AllowedAdyenObjectMetadata,
   type CreatePaymentIntentArgs,
-  type IStripePaymentIntentsApi,
+  type IAdyenPaymentIntentsApi,
 } from "./types";
 
-export class StripePaymentIntentsApi implements IStripePaymentIntentsApi {
-  private stripeApiWrapper: Pick<Stripe, "paymentIntents">;
+export class AdyenPaymentIntentsApi implements IAdyenPaymentIntentsApi {
+  private adyenApiWrapper: Pick<Adyen, "paymentIntents">;
 
-  private constructor(stripeApiWrapper: Pick<Stripe, "paymentIntents">) {
-    this.stripeApiWrapper = stripeApiWrapper;
+  private constructor(adyenApiWrapper: Pick<Adyen, "paymentIntents">) {
+    this.adyenApiWrapper = adyenApiWrapper;
   }
 
-  static createFromKey(args: { key: StripeRestrictedKey }) {
-    const stripeApiWrapper = StripeClient.createFromRestrictedKey(args.key);
+  static createFromKey(args: { key: AdyenRestrictedKey }) {
+    const adyenApiWrapper = AdyenClient.createFromRestrictedKey(args.key);
 
-    return new StripePaymentIntentsApi(stripeApiWrapper.nativeClient);
+    return new AdyenPaymentIntentsApi(adyenApiWrapper.nativeClient);
   }
 
-  static createFromClient(client: StripeClient) {
-    return new StripePaymentIntentsApi(client.nativeClient);
+  static createFromClient(client: AdyenClient) {
+    return new AdyenPaymentIntentsApi(client.nativeClient);
   }
 
   async createPaymentIntent(
     args: CreatePaymentIntentArgs,
-  ): Promise<Result<Stripe.PaymentIntent, unknown>> {
+  ): Promise<Result<Adyen.PaymentIntent, unknown>> {
     return ResultAsync.fromPromise(
-      this.stripeApiWrapper.paymentIntents.create(
+      this.adyenApiWrapper.paymentIntents.create(
         {
           ...args.intentParams,
-          amount: args.stripeMoney.amount,
-          currency: args.stripeMoney.currency,
+          amount: args.adyenMoney.amount,
+          currency: args.adyenMoney.currency,
           ...(args.metadata && { metadata: args.metadata }),
         },
         {
@@ -48,10 +48,10 @@ export class StripePaymentIntentsApi implements IStripePaymentIntentsApi {
   }
 
   async getPaymentIntent(args: {
-    id: StripePaymentIntentId;
-  }): Promise<Result<Stripe.PaymentIntent, unknown>> {
+    id: AdyenPaymentIntentId;
+  }): Promise<Result<Adyen.PaymentIntent, unknown>> {
     return ResultAsync.fromPromise(
-      this.stripeApiWrapper.paymentIntents.retrieve(args.id, {
+      this.adyenApiWrapper.paymentIntents.retrieve(args.id, {
         expand: ["payment_method"],
       }),
       (error) => error,
@@ -59,12 +59,12 @@ export class StripePaymentIntentsApi implements IStripePaymentIntentsApi {
   }
 
   async capturePaymentIntent(args: {
-    id: StripePaymentIntentId;
+    id: AdyenPaymentIntentId;
     idempotencyKey: string | undefined;
-    metadata?: AllowedStripeObjectMetadata;
-  }): Promise<Result<Stripe.PaymentIntent, unknown>> {
+    metadata?: AllowedAdyenObjectMetadata;
+  }): Promise<Result<Adyen.PaymentIntent, unknown>> {
     return ResultAsync.fromPromise(
-      this.stripeApiWrapper.paymentIntents.capture(
+      this.adyenApiWrapper.paymentIntents.capture(
         args.id,
         args.metadata && { metadata: args.metadata },
         {
@@ -76,11 +76,11 @@ export class StripePaymentIntentsApi implements IStripePaymentIntentsApi {
   }
 
   async cancelPaymentIntent(args: {
-    id: StripePaymentIntentId;
+    id: AdyenPaymentIntentId;
     idempotencyKey: string | undefined;
-  }): Promise<Result<Stripe.PaymentIntent, unknown>> {
+  }): Promise<Result<Adyen.PaymentIntent, unknown>> {
     return ResultAsync.fromPromise(
-      this.stripeApiWrapper.paymentIntents.cancel(args.id, undefined, {
+      this.adyenApiWrapper.paymentIntents.cancel(args.id, undefined, {
         idempotencyKey: args.idempotencyKey,
       }),
       (error) => error,

@@ -1,6 +1,6 @@
 import { type APL } from "@saleor/app-sdk/APL";
 import { err, ok } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
@@ -10,28 +10,28 @@ import {
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
 import { mockAuthData } from "@/__tests__/mocks/mock-auth-data";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripePaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
 import { MockedTransactionRecorder } from "@/__tests__/mocks/mocked-transaction-recorder";
 import { getMockedPaymentIntentSucceededEvent } from "@/__tests__/mocks/adyen-events/mocked-payment-intent-succeeded";
 import { BaseError } from "@/lib/errors";
-import { StripeProblemReporter } from "@/modules/app-problems";
+import { AdyenProblemReporter } from "@/modules/app-problems";
 import { createResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
 import { createSaleorTransactionFlow } from "@/modules/saleor/saleor-transaction-flow";
 import {
   type ITransactionEventReporter,
   type TransactionEventReportResultResult,
 } from "@/modules/saleor/transaction-event-reporter";
-import { createStripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import { StripeWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
+import { createAdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
 import {
-  type IStripeEventVerify,
-  type IStripePaymentIntentsApiFactory,
-  StripeEventParsingError,
+  type IAdyenEventVerify,
+  type IAdyenPaymentIntentsApiFactory,
+  AdyenEventParsingError,
 } from "@/modules/adyen/types";
 import { RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 
-import { StripeWebhookUseCase } from "./use-case";
+import { AdyenWebhookUseCase } from "./use-case";
 import { WebhookParams } from "./webhook-params";
 
 vi.mock("@saleor/app-problems", () => ({
@@ -54,7 +54,7 @@ vi.mock("@/lib/logger", () => ({
   }),
 }));
 
-describe("StripeWebhookUseCase - Error cases", () => {
+describe("AdyenWebhookUseCase - Error cases", () => {
   const rawEventBody = JSON.stringify({ id: 1 });
 
   const mockApl = {
@@ -64,11 +64,11 @@ describe("StripeWebhookUseCase - Error cases", () => {
     getAll: vi.fn(),
   } satisfies APL;
 
-  let instance: StripeWebhookUseCase;
+  let instance: AdyenWebhookUseCase;
 
   const eventVerify = {
     verifyEvent: vi.fn(),
-  } satisfies IStripeEventVerify;
+  } satisfies IAdyenEventVerify;
 
   const webhookParams = WebhookParams.createFromWebhookUrl(mockAdyenWebhookUrl)._unsafeUnwrap();
 
@@ -78,25 +78,25 @@ describe("StripeWebhookUseCase - Error cases", () => {
 
   const mockTransactionRecorder = new MockedTransactionRecorder();
 
-  const stripePaymentIntentsApiFactory = {
-    create: () => mockedStripePaymentIntentsApi,
-  } satisfies IStripePaymentIntentsApiFactory;
+  const adyenPaymentIntentsApiFactory = {
+    create: () => mockedAdyenPaymentIntentsApi,
+  } satisfies IAdyenPaymentIntentsApiFactory;
 
   beforeEach(() => {
     mockApl.get.mockImplementation(async () => mockAuthData);
     mockTransactionRecorder.reset();
 
-    instance = new StripeWebhookUseCase({
+    instance = new AdyenWebhookUseCase({
       apl: mockApl,
       appConfigRepo: mockedAppConfigRepo,
       webhookEventVerifyFactory: () => eventVerify,
       transactionEventReporterFactory() {
         return mockEventReporter;
       },
-      problemReporterFactory: () => new StripeProblemReporter({} as never),
+      problemReporterFactory: () => new AdyenProblemReporter({} as never),
       transactionRecorder: mockTransactionRecorder,
-      webhookManager: new StripeWebhookManager(),
-      stripePaymentIntentsApiFactory,
+      webhookManager: new AdyenWebhookManager(),
+      adyenPaymentIntentsApiFactory,
     });
   });
 
@@ -110,7 +110,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookAppIsNotConfiguredResponse {
+      AdyenWebhookAppIsNotConfiguredResponse {
         "message": "App is not configured",
         "statusCode": 400,
       }
@@ -118,7 +118,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
   });
 
   it("Returns error when Config can not be fetched", async () => {
-    vi.spyOn(mockedAppConfigRepo, "getStripeConfig").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAppConfigRepo, "getAdyenConfig").mockImplementationOnce(async () =>
       err(new BaseError("Test error - cant fetch config")),
     );
 
@@ -129,7 +129,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookAppIsNotConfiguredResponse {
+      AdyenWebhookAppIsNotConfiguredResponse {
         "message": "App is not configured",
         "statusCode": 400,
       }
@@ -137,7 +137,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
   });
 
   it("Returns error when Config for specific channel is empty", async () => {
-    vi.spyOn(mockedAppConfigRepo, "getStripeConfig").mockImplementationOnce(async () => ok(null));
+    vi.spyOn(mockedAppConfigRepo, "getAdyenConfig").mockImplementationOnce(async () => ok(null));
 
     const result = await instance.execute({
       rawBody: rawEventBody,
@@ -146,16 +146,16 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookAppIsNotConfiguredResponse {
+      AdyenWebhookAppIsNotConfiguredResponse {
         "message": "App is not configured",
         "statusCode": 400,
       }
     `);
   });
 
-  it("Returns error when event from Stripe can not be parsed", async () => {
+  it("Returns error when event from Adyen can not be parsed", async () => {
     eventVerify.verifyEvent.mockImplementationOnce(() =>
-      err(new StripeEventParsingError("Error because its test")),
+      err(new AdyenEventParsingError("Error because its test")),
     );
 
     const result = await instance.execute({
@@ -165,7 +165,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookMalformedRequestResponse {
+      AdyenWebhookMalformedRequestResponse {
         "message": "Malformed request",
         "statusCode": 400,
       }
@@ -184,7 +184,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookTransactionMissingResponse {
+      AdyenWebhookTransactionMissingResponse {
         "message": "Transaction is missing",
         "statusCode": 400,
       }
@@ -203,10 +203,10 @@ describe("StripeWebhookUseCase - Error cases", () => {
 
     eventVerify.verifyEvent.mockImplementationOnce(() => ok(event));
 
-    const dbSpy = vi.spyOn(mockTransactionRecorder, "getTransactionByStripePaymentIntentId");
+    const dbSpy = vi.spyOn(mockTransactionRecorder, "getTransactionByAdyenPaymentIntentId");
 
     const reportProblemSpy = vi
-      .spyOn(StripeProblemReporter.prototype, "reportObjectFromDifferentInstallation")
+      .spyOn(AdyenProblemReporter.prototype, "reportObjectFromDifferentInstallation")
       .mockResolvedValue();
 
     const result = await instance.execute({
@@ -216,7 +216,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrap()).toMatchInlineSnapshot(`
-      StripeWebhookSuccessResponse {
+      AdyenWebhookSuccessResponse {
         "message": "Ok",
         "statusCode": 200,
       }
@@ -234,7 +234,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
         object: {
           object: "refund",
           id: "re_id",
-          payment_intent: mockedStripePaymentIntentId.toString(),
+          payment_intent: mockedAdyenPaymentIntentId.toString(),
           metadata: {
             saleor_transaction_id: mockedSaleorTransactionId as string,
             saleor_source_id: "checkout-id-123",
@@ -243,14 +243,14 @@ describe("StripeWebhookUseCase - Error cases", () => {
           },
         },
       },
-    } as unknown as Stripe.ChargeRefundUpdatedEvent;
+    } as unknown as Adyen.ChargeRefundUpdatedEvent;
 
     eventVerify.verifyEvent.mockImplementationOnce(() => ok(event));
 
-    const dbSpy = vi.spyOn(mockTransactionRecorder, "getTransactionByStripePaymentIntentId");
+    const dbSpy = vi.spyOn(mockTransactionRecorder, "getTransactionByAdyenPaymentIntentId");
 
     const reportProblemSpy = vi
-      .spyOn(StripeProblemReporter.prototype, "reportObjectFromDifferentInstallation")
+      .spyOn(AdyenProblemReporter.prototype, "reportObjectFromDifferentInstallation")
       .mockResolvedValue();
 
     const result = await instance.execute({
@@ -260,7 +260,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrap()).toMatchInlineSnapshot(`
-      StripeWebhookSuccessResponse {
+      AdyenWebhookSuccessResponse {
         "message": "Ok",
         "statusCode": 200,
       }
@@ -281,14 +281,14 @@ describe("StripeWebhookUseCase - Error cases", () => {
       saleor_source_type: "Checkout",
     };
 
-    const stripePiId = createStripePaymentIntentId(event.data.object.id);
+    const adyenPiId = createAdyenPaymentIntentId(event.data.object.id);
 
     eventVerify.verifyEvent.mockImplementationOnce(() => ok(event));
 
     mockTransactionRecorder.transactions = {
-      [stripePiId]: new RecordedTransaction({
+      [adyenPiId]: new RecordedTransaction({
         saleorTransactionId: mockedSaleorTransactionId,
-        stripePaymentIntentId: stripePiId,
+        adyenPaymentIntentId: adyenPiId,
         saleorTransactionFlow: createSaleorTransactionFlow("CHARGE"),
         resolvedTransactionFlow: createResolvedTransactionFlow("CHARGE"),
         selectedPaymentMethod: "card",
@@ -296,7 +296,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
       }),
     };
 
-    vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
       ok({
         payment_method: null,
       }),
@@ -318,20 +318,20 @@ describe("StripeWebhookUseCase - Error cases", () => {
 
     // Should NOT be rejected - backward compatible
     expect(result._unsafeUnwrap()).toMatchInlineSnapshot(`
-      StripeWebhookSuccessResponse {
+      AdyenWebhookSuccessResponse {
         "message": "Ok",
         "statusCode": 200,
       }
     `);
   });
 
-  it("Returns error if event is not supported by StripePaymentIntentHandler", async () => {
+  it("Returns error if event is not supported by AdyenPaymentIntentHandler", async () => {
     const event = {
       type: "payment_intent.created",
       data: {
         object: {
           object: "payment_intent",
-          id: mockedStripePaymentIntentId.toString(),
+          id: mockedAdyenPaymentIntentId.toString(),
           metadata: {
             saleor_transaction_id: mockedSaleorTransactionId as string,
             saleor_source_id: "checkout-id-123",
@@ -339,16 +339,16 @@ describe("StripeWebhookUseCase - Error cases", () => {
           },
         },
       },
-    } as unknown as Stripe.PaymentIntentCreatedEvent;
+    } as unknown as Adyen.PaymentIntentCreatedEvent;
 
-    const stripePiId = mockedStripePaymentIntentId;
+    const adyenPiId = mockedAdyenPaymentIntentId;
 
     eventVerify.verifyEvent.mockImplementationOnce(() => ok(event));
 
     mockTransactionRecorder.transactions = {
-      [stripePiId]: new RecordedTransaction({
+      [adyenPiId]: new RecordedTransaction({
         saleorTransactionId: mockedSaleorTransactionId,
-        stripePaymentIntentId: stripePiId,
+        adyenPaymentIntentId: adyenPiId,
         saleorTransactionFlow: createSaleorTransactionFlow("CHARGE"),
         resolvedTransactionFlow: createResolvedTransactionFlow("CHARGE"),
         selectedPaymentMethod: "card",
@@ -371,21 +371,21 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookSeverErrorResponse {
+      AdyenWebhookSeverErrorResponse {
         "message": "Server error",
         "statusCode": 500,
       }
     `);
   });
 
-  it("Returns error if event is not supported by StripeRefundHandler", async () => {
+  it("Returns error if event is not supported by AdyenRefundHandler", async () => {
     const event = {
       type: "refund.created",
       data: {
         object: {
           object: "refund",
           id: "re_id",
-          payment_intent: mockedStripePaymentIntentId.toString(),
+          payment_intent: mockedAdyenPaymentIntentId.toString(),
           metadata: {
             saleor_transaction_id: mockedSaleorTransactionId as string,
             saleor_source_id: "checkout-id-123",
@@ -393,16 +393,16 @@ describe("StripeWebhookUseCase - Error cases", () => {
           },
         },
       },
-    } as unknown as Stripe.RefundCreatedEvent;
+    } as unknown as Adyen.RefundCreatedEvent;
 
-    const stripePiId = mockedStripePaymentIntentId;
+    const adyenPiId = mockedAdyenPaymentIntentId;
 
     eventVerify.verifyEvent.mockImplementationOnce(() => ok(event));
 
     mockTransactionRecorder.transactions = {
-      [stripePiId]: new RecordedTransaction({
+      [adyenPiId]: new RecordedTransaction({
         saleorTransactionId: mockedSaleorTransactionId,
-        stripePaymentIntentId: stripePiId,
+        adyenPaymentIntentId: adyenPiId,
         saleorTransactionFlow: createSaleorTransactionFlow("CHARGE"),
         resolvedTransactionFlow: createResolvedTransactionFlow("CHARGE"),
         selectedPaymentMethod: "card",
@@ -425,7 +425,7 @@ describe("StripeWebhookUseCase - Error cases", () => {
     });
 
     expect(result._unsafeUnwrapErr()).toMatchInlineSnapshot(`
-      StripeWebhookSeverErrorResponse {
+      AdyenWebhookSeverErrorResponse {
         "message": "Server error",
         "statusCode": 500,
       }

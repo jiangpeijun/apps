@@ -2,9 +2,9 @@ import { TextLink } from "@saleor/apps-ui";
 import { AppPageHeader, DetailPageLayout, SettingsPageContent } from "@saleor/apps-ui-next";
 import { type ReactNode } from "react";
 
-import { StripeModeLegend } from "@/modules/ui/adyen-setup/adyen-mode-legend";
+import { AdyenModeLegend } from "@/modules/ui/adyen-setup/adyen-mode-legend";
 
-const DOCS_URL = "https://docs.saleor.io/developer/app-store/apps/stripe/overview";
+const DOCS_URL = "https://docs.saleor.io/developer/app-store/apps/adyen/overview";
 
 /**
  * Static chrome of the configuration page.
@@ -14,7 +14,7 @@ const DOCS_URL = "https://docs.saleor.io/developer/app-store/apps/stripe/overvie
  * description or legend shifting around it.
  */
 export const ConfigPageShell = ({ children }: { children: ReactNode }) => (
-  <DetailPageLayout data-test-id="stripe-config-page">
+  <DetailPageLayout data-test-id="adyen-config-page">
     <AppPageHeader
       title="Configuration"
       actions={
@@ -27,11 +27,11 @@ export const ConfigPageShell = ({ children }: { children: ReactNode }) => (
       <SettingsPageContent
         description={
           <>
-            Create Stripe configurations, then assign which Saleor channels use each one. Checkout
+            Create Adyen configurations, then assign which Saleor channels use each one. Checkout
             uses the configuration mapped to that channel.
           </>
         }
-        aside={<StripeModeLegend />}
+        aside={<AdyenModeLegend />}
       >
         {children}
       </SettingsPageContent>

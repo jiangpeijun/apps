@@ -13,18 +13,18 @@ import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { loggerContext } from "@/lib/logger-context";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { type StripeProblemReporter } from "@/modules/app-problems";
-import { resolveSaleorMoneyFromStripePaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
+import { type AdyenProblemReporter } from "@/modules/app-problems";
+import { resolveSaleorMoneyFromAdyenPaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import {
   getChannelIdFromRequestedEventPayload,
   getIdempotencyKeyFromRequestedEventPayload,
   getTransactionFromRequestedEventPayload,
 } from "@/modules/saleor/transaction-requested-event-helpers";
-import { mapStripeErrorToApiError } from "@/modules/adyen/adyen-api-error";
-import { createStripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { mapAdyenErrorToApiError } from "@/modules/adyen/adyen-api-error";
+import { createAdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import { createTimestampFromPaymentIntent } from "@/modules/adyen/adyen-timestamps";
-import { type IStripePaymentIntentsApiFactory } from "@/modules/adyen/types";
+import { type IAdyenPaymentIntentsApiFactory } from "@/modules/adyen/types";
 import {
   CancelFailureResult,
   CancelSuccessResult,
@@ -43,21 +43,21 @@ type UseCaseExecuteResult = Result<
 export class TransactionCancelationRequestedUseCase {
   private logger = createLogger("TransactionCancelationRequestedUseCase");
   private appConfigRepo: AppConfigRepo;
-  private stripePaymentIntentsApiFactory: IStripePaymentIntentsApiFactory;
+  private adyenPaymentIntentsApiFactory: IAdyenPaymentIntentsApiFactory;
 
   constructor(deps: {
     appConfigRepo: AppConfigRepo;
-    stripePaymentIntentsApiFactory: IStripePaymentIntentsApiFactory;
+    adyenPaymentIntentsApiFactory: IAdyenPaymentIntentsApiFactory;
   }) {
     this.appConfigRepo = deps.appConfigRepo;
-    this.stripePaymentIntentsApiFactory = deps.stripePaymentIntentsApiFactory;
+    this.adyenPaymentIntentsApiFactory = deps.adyenPaymentIntentsApiFactory;
   }
 
   async execute(args: {
     appId: string;
     saleorApiUrl: SaleorApiUrl;
     event: TransactionCancelationRequestedEventFragment;
-    problemReporter: StripeProblemReporter;
+    problemReporter: AdyenProblemReporter;
   }): Promise<UseCaseExecuteResult> {
     const { appId, saleorApiUrl, event } = args;
 
@@ -66,26 +66,26 @@ export class TransactionCancelationRequestedUseCase {
 
     loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, transaction.pspReference);
 
-    const stripeConfigForThisChannel = await this.appConfigRepo.getStripeConfig({
+    const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
       channelId,
       appId,
       saleorApiUrl,
     });
 
-    if (stripeConfigForThisChannel.isErr()) {
+    if (adyenConfigForThisChannel.isErr()) {
       this.logger.error("Failed to get configuration", {
-        error: stripeConfigForThisChannel.error,
+        error: adyenConfigForThisChannel.error,
       });
 
       return err(
         new BrokenAppResponse(
           appContextContainer.getContextValue(),
-          stripeConfigForThisChannel.error,
+          adyenConfigForThisChannel.error,
         ),
       );
     }
 
-    if (!stripeConfigForThisChannel.value) {
+    if (!adyenConfigForThisChannel.value) {
       this.logger.warn("Config for channel not found", {
         channelId,
       });
@@ -99,32 +99,32 @@ export class TransactionCancelationRequestedUseCase {
     }
 
     appContextContainer.set({
-      stripeEnv: stripeConfigForThisChannel.value.getStripeEnvValue(),
+      adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
     });
 
-    const restrictedKey = stripeConfigForThisChannel.value.restrictedKey;
+    const restrictedKey = adyenConfigForThisChannel.value.restrictedKey;
 
-    const stripePaymentIntentsApi = this.stripePaymentIntentsApiFactory.create({
+    const adyenPaymentIntentsApi = this.adyenPaymentIntentsApiFactory.create({
       key: restrictedKey,
     });
 
-    this.logger.debug("Canceling Stripe payment intent with id", {
+    this.logger.debug("Canceling Adyen payment intent with id", {
       id: transaction.pspReference,
     });
 
-    const stripePaymentIntentId = createStripePaymentIntentId(transaction.pspReference);
+    const adyenPaymentIntentId = createAdyenPaymentIntentId(transaction.pspReference);
 
-    const cancelPaymentIntentResult = await stripePaymentIntentsApi.cancelPaymentIntent({
-      id: stripePaymentIntentId,
+    const cancelPaymentIntentResult = await adyenPaymentIntentsApi.cancelPaymentIntent({
+      id: adyenPaymentIntentId,
       idempotencyKey: getIdempotencyKeyFromRequestedEventPayload(event),
     });
 
     if (cancelPaymentIntentResult.isErr()) {
-      const error = mapStripeErrorToApiError(cancelPaymentIntentResult.error);
+      const error = mapAdyenErrorToApiError(cancelPaymentIntentResult.error);
 
       const config = {
-        id: stripeConfigForThisChannel.value.id,
-        name: stripeConfigForThisChannel.value.name,
+        id: adyenConfigForThisChannel.value.id,
+        name: adyenConfigForThisChannel.value.name,
       };
 
       after(() => args.problemReporter.reportApiProblem(error, config));
@@ -135,7 +135,7 @@ export class TransactionCancelationRequestedUseCase {
 
       return ok(
         new TransactionCancelationRequestedUseCaseResponses.Failure({
-          stripePaymentIntentId,
+          adyenPaymentIntentId,
           transactionResult: new CancelFailureResult(),
           error,
           appContext: appContextContainer.getContextValue(),
@@ -143,7 +143,7 @@ export class TransactionCancelationRequestedUseCase {
       );
     }
 
-    const saleorMoneyResult = resolveSaleorMoneyFromStripePaymentIntent(
+    const saleorMoneyResult = resolveSaleorMoneyFromAdyenPaymentIntent(
       cancelPaymentIntentResult.value,
     );
 
@@ -160,7 +160,7 @@ export class TransactionCancelationRequestedUseCase {
     return ok(
       new TransactionCancelationRequestedUseCaseResponses.Success({
         saleorMoney: saleorMoneyResult.value,
-        stripePaymentIntentId,
+        adyenPaymentIntentId,
         transactionResult: new CancelSuccessResult(),
         timestamp: createTimestampFromPaymentIntent(cancelPaymentIntentResult.value),
         appContext: appContextContainer.getContextValue(),

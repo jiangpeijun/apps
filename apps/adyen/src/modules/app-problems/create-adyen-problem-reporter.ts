@@ -2,10 +2,10 @@ import { type AuthData } from "@saleor/app-sdk/APL";
 
 import { createInstrumentedGraphqlClient } from "@/lib/graphql-client";
 
-import { StripeProblemReporter } from "./adyen-problem-reporter";
+import { AdyenProblemReporter } from "./adyen-problem-reporter";
 
-export function createStripeProblemReporter(authData: AuthData): StripeProblemReporter {
+export function createAdyenProblemReporter(authData: AuthData): AdyenProblemReporter {
   const client = createInstrumentedGraphqlClient(authData);
 
-  return new StripeProblemReporter(client);
+  return new AdyenProblemReporter(client);
 }

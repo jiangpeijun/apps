@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { z } from "zod";
 
 import {
@@ -10,7 +10,7 @@ import { type SaleorTransationFlow } from "@/modules/saleor/saleor-transaction-f
 import { type PaymentMethod } from "./types";
 
 /**
- * https://stripe.com/docs/apple-pay
+ * https://adyen.com/docs/apple-pay
  */
 export class ApplePayPaymentMethod implements PaymentMethod {
   // Under the hood, Apple Pay is a card payment method
@@ -28,7 +28,7 @@ export class ApplePayPaymentMethod implements PaymentMethod {
   }
   getCreatePaymentIntentMethodOptions(
     saleorTransactionFlow: SaleorTransationFlow,
-  ): Stripe.PaymentIntentCreateParams.PaymentMethodOptions {
+  ): Adyen.PaymentIntentCreateParams.PaymentMethodOptions {
     const transactionFlow = this.getResolvedTransactionFlow(saleorTransactionFlow);
 
     return {

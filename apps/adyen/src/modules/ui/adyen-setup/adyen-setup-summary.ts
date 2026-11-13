@@ -1,12 +1,12 @@
 import { type SetupChecklistTask } from "@saleor/apps-ui-next";
 
-import { type StripeFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
 
-type Configs = StripeFrontendConfigSerializedFields[];
-type Mapping = Record<string, StripeFrontendConfigSerializedFields>;
+type Configs = AdyenFrontendConfigSerializedFields[];
+type Mapping = Record<string, AdyenFrontendConfigSerializedFields>;
 
 /** Shared task model for the full checklist and the parked affordance. */
-export const buildStripeSetupTasks = ({
+export const buildAdyenSetupTasks = ({
   configs,
   mapping,
   addConfigAction,
@@ -24,11 +24,11 @@ export const buildStripeSetupTasks = ({
   return [
     {
       id: "add-config",
-      title: "Add a Stripe configuration",
-      description: "Connect publishable and restricted API keys from Stripe.",
+      title: "Add a Adyen configuration",
+      description: "Connect publishable and restricted API keys from Adyen.",
       status: addStatus,
       details:
-        "Each configuration can be test or live mode. Keys must be from the same Stripe environment.",
+        "Each configuration can be test or live mode. Keys must be from the same Adyen environment.",
       action: addStatus === "active" ? addConfigAction : undefined,
     },
     {
@@ -38,12 +38,12 @@ export const buildStripeSetupTasks = ({
       status: mapStatus,
       requirement: !hasConfig ? "Requires a configuration" : undefined,
       details:
-        "Multiple channels can share one configuration. Channels without an assignment cannot take Stripe payments.",
+        "Multiple channels can share one configuration. Channels without an assignment cannot take Adyen payments.",
     },
   ];
 };
 
-export const summarizeStripeSetupTasks = (tasks: SetupChecklistTask[]) => {
+export const summarizeAdyenSetupTasks = (tasks: SetupChecklistTask[]) => {
   const done = tasks.filter((t) => t.status === "completed").length;
   const nextTask = tasks.find((t) => t.status === "active" || t.status === "pending");
   const nextTitle = typeof nextTask?.title === "string" ? nextTask.title : undefined;

@@ -9,15 +9,15 @@ import {
   mockedSaleorChannelId,
 } from "@/__tests__/mocks/constants";
 import { mockedGraphqlClient } from "@/__tests__/mocks/graphql-client";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { TEST_Procedure } from "@/__tests__/trpc-testing-procedure";
 import { BaseError } from "@/lib/errors";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { RemoveStripeConfigTrpcHandler } from "@/modules/app-config/trpc-handlers/remove-adyen-config-trpc-handler";
+import { RemoveAdyenConfigTrpcHandler } from "@/modules/app-config/trpc-handlers/remove-adyen-config-trpc-handler";
 import {
-  StripeWebhookManager,
-  StripeWebhookManagerErrors,
+  AdyenWebhookManager,
+  AdyenWebhookManagerErrors,
 } from "@/modules/adyen/adyen-webhook-manager";
 import { router } from "@/modules/trpc/trpc-server";
 
@@ -25,11 +25,11 @@ import { router } from "@/modules/trpc/trpc-server";
  * TODO: Probably create some test abstraction to bootstrap trpc handler for testing
  */
 const getTestCaller = () => {
-  const webhookManager = new StripeWebhookManager();
+  const webhookManager = new AdyenWebhookManager();
 
   vi.spyOn(webhookManager, "removeWebhook").mockImplementation(async () => ok(null));
 
-  const instance = new RemoveStripeConfigTrpcHandler({
+  const instance = new RemoveAdyenConfigTrpcHandler({
     webhookManager,
   });
 
@@ -66,11 +66,11 @@ const getMockedRootConfig = () =>
       [mockedSaleorChannelId]: mockedConfigurationId,
     },
     {
-      [mockedConfigurationId]: mockedStripeConfig,
+      [mockedConfigurationId]: mockedAdyenConfig,
     },
   );
 
-describe("RemoveStripeConfigTrpcHandler", () => {
+describe("RemoveAdyenConfigTrpcHandler", () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });
@@ -102,8 +102,8 @@ describe("RemoveStripeConfigTrpcHandler", () => {
     await expect(caller.testProcedure({ configId: mockedConfigurationId })).resolves.not.toThrow();
 
     expect(webhookManager.removeWebhook).toHaveBeenCalledWith({
-      webhookId: mockedStripeConfig.webhookId,
-      restrictedKey: mockedStripeConfig.restrictedKey,
+      webhookId: mockedAdyenConfig.webhookId,
+      restrictedKey: mockedAdyenConfig.restrictedKey,
     });
   });
 
@@ -141,7 +141,7 @@ describe("RemoveStripeConfigTrpcHandler", () => {
     const { caller, webhookManager, mockedAppConfigRepo } = getTestCaller();
 
     vi.mocked(webhookManager.removeWebhook).mockImplementationOnce(async () =>
-      err(new StripeWebhookManagerErrors.CantRemoveWebhookError("Test error")),
+      err(new AdyenWebhookManagerErrors.CantRemoveWebhookError("Test error")),
     );
 
     await expect(caller.testProcedure({ configId: mockedConfigurationId })).resolves.not.toThrow();
@@ -181,7 +181,7 @@ describe("RemoveStripeConfigTrpcHandler", () => {
     );
   });
 
-  it("Returns internal server error if config failed to update: stripe config unit", async () => {
+  it("Returns internal server error if config failed to update: adyen config unit", async () => {
     const { caller, mockedAppConfigRepo } = getTestCaller();
 
     vi.spyOn(mockedAppConfigRepo, "removeConfig").mockImplementationOnce(async () =>
@@ -191,7 +191,7 @@ describe("RemoveStripeConfigTrpcHandler", () => {
     await expect(
       caller.testProcedure({ configId: mockedConfigurationId }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
-      `[TRPCError: Failed to remove Stripe configuration. Please try again.]`,
+      `[TRPCError: Failed to remove Adyen configuration. Please try again.]`,
     );
   });
 });

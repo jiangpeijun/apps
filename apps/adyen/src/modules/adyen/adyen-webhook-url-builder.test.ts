@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { mockedConfigurationId, mockedSaleorAppId } from "@/__tests__/mocks/constants";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { WebhookParams } from "@/app/api/webhooks/adyen/webhook-params";
-import { StripeWebhookUrlBuilder } from "@/modules/adyen/adyen-webhook-url-builder";
+import { AdyenWebhookUrlBuilder } from "@/modules/adyen/adyen-webhook-url-builder";
 
-describe("StripeWebhookUrlBuilder", () => {
+describe("AdyenWebhookUrlBuilder", () => {
   describe("buildUrl method", () => {
     it("Builds valid url from provided app origin and params", () => {
       const webhookParams = WebhookParams.createFromParams({
@@ -14,7 +14,7 @@ describe("StripeWebhookUrlBuilder", () => {
         appId: mockedSaleorAppId,
       });
 
-      const urlBuilder = new StripeWebhookUrlBuilder();
+      const urlBuilder = new AdyenWebhookUrlBuilder();
 
       const result = urlBuilder.buildUrl({
         webhookParams,
@@ -22,7 +22,7 @@ describe("StripeWebhookUrlBuilder", () => {
       });
 
       expect(result._unsafeUnwrap()).toMatchInlineSnapshot(
-        `"http://localhost:3000/api/webhooks/stripe?configurationId=81f323bd-91e2-4838-ab6e-5affd81ffc3b&saleorApiUrl=https%3A%2F%2Ffoo.bar.saleor.cloud%2Fgraphql%2F&appId=saleor-app-id"`,
+        `"http://localhost:3000/api/webhooks/adyen?configurationId=81f323bd-91e2-4838-ab6e-5affd81ffc3b&saleorApiUrl=https%3A%2F%2Ffoo.bar.saleor.cloud%2Fgraphql%2F&appId=saleor-app-id"`,
       );
 
       /**

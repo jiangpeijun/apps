@@ -14,9 +14,9 @@ import { loggerContext, withLoggerContext } from "@/lib/logger-context";
 import { setObservabilitySaleorApiUrl } from "@/lib/observability-saleor-api-url";
 import { setObservabilitySourceObjectId } from "@/lib/observability-source-object-id";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
-import { createStripeProblemReporter } from "@/modules/app-problems";
+import { createAdyenProblemReporter } from "@/modules/app-problems";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { StripePaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
+import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
 import { transactionRecorder } from "@/modules/transactions-recording/repositories/transaction-recorder-impl";
 
 import { withRecipientVerification } from "../with-recipient-verification";
@@ -25,7 +25,7 @@ import { transactionInitializeSessionWebhookDefinition } from "./webhook-definit
 
 const useCase = new TransactionInitializeSessionUseCase({
   appConfigRepo: appConfigRepoImpl,
-  stripePaymentIntentsApiFactory: new StripePaymentIntentsApiFactory(),
+  adyenPaymentIntentsApiFactory: new AdyenPaymentIntentsApiFactory(),
   transactionRecorder: transactionRecorder,
 });
 
@@ -69,7 +69,7 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
         return response.getResponse();
       }
 
-      const problemReporter = createStripeProblemReporter(ctx.authData);
+      const problemReporter = createAdyenProblemReporter(ctx.authData);
 
       const result = await useCase.execute({
         appId: ctx.authData.appId,
@@ -84,7 +84,7 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
           logger.info("Successfully processed webhook request", {
             httpsStatusCode: result.statusCode,
             resolvedEvent: result.transactionResult.result,
-            // todo: would be good to print stripeEnv here as well, but it's not available
+            // todo: would be good to print adyenEnv here as well, but it's not available
           });
 
           return result.getResponse();

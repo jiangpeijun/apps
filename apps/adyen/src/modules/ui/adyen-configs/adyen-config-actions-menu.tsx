@@ -47,7 +47,7 @@ type Props = {
 };
 
 /** Card overflow for edit and delete. Kept local so it does not collide with SMTP’s menu. */
-export const StripeConfigActionsMenu = ({
+export const AdyenConfigActionsMenu = ({
   configId,
   configName,
   disabled = false,

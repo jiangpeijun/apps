@@ -5,7 +5,7 @@ import { type Control, type FieldErrors } from "react-hook-form";
 
 import { KeyPrefix } from "../key-prefix";
 
-export type StripeConfigFormShape = {
+export type AdyenConfigFormShape = {
   name: string;
   publishableKey: string;
   restrictedKey: string;
@@ -33,8 +33,8 @@ export const FieldHint = ({ term, children }: { term: string; children: ReactNod
 );
 
 type Props = {
-  control: Control<StripeConfigFormShape>;
-  errors: FieldErrors<StripeConfigFormShape>;
+  control: Control<AdyenConfigFormShape>;
+  errors: FieldErrors<AdyenConfigFormShape>;
   disabled?: boolean;
   /**
    * Editing an existing configuration cannot prefill the restricted key - only its last
@@ -47,7 +47,7 @@ type Props = {
   };
 };
 
-export const StripeConfigFields = ({
+export const AdyenConfigFields = ({
   control,
   errors,
   disabled = false,
@@ -73,7 +73,7 @@ export const StripeConfigFields = ({
       helperText={
         errors.publishableKey?.message ?? (
           <FieldHint term="Publishable key">
-            generated in Stripe Dashboard (starting with <KeyPrefix size={2}>pk_live</KeyPrefix> or{" "}
+            generated in Adyen Dashboard (starting with <KeyPrefix size={2}>pk_live</KeyPrefix> or{" "}
             <KeyPrefix size={2}>pk_test</KeyPrefix>).
           </FieldHint>
         )
@@ -90,7 +90,7 @@ export const StripeConfigFields = ({
         errors.restrictedKey?.message ??
         restrictedKey.helperText ?? (
           <FieldHint term="Restricted key">
-            generated in Stripe Dashboard (starting with <KeyPrefix size={2}>rk_live</KeyPrefix> or{" "}
+            generated in Adyen Dashboard (starting with <KeyPrefix size={2}>rk_live</KeyPrefix> or{" "}
             <KeyPrefix size={2}>rk_test</KeyPrefix>). Not the secret key.
           </FieldHint>
         )

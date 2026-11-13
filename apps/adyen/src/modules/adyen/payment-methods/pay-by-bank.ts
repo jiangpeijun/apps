@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { z } from "zod";
 
 import {
@@ -10,7 +10,7 @@ import { type SaleorTransationFlow } from "@/modules/saleor/saleor-transaction-f
 import { type PaymentMethod } from "./types";
 
 /**
- * https://docs.stripe.com/payments/pay-by-bank
+ * https://docs.adyen.com/payments/pay-by-bank
  */
 export class PayByBankPaymentMethod implements PaymentMethod {
   type = "pay_by_bank" as const;
@@ -30,7 +30,7 @@ export class PayByBankPaymentMethod implements PaymentMethod {
 
   getCreatePaymentIntentMethodOptions(
     _saleorTransactionFlow: SaleorTransationFlow,
-  ): Stripe.PaymentIntentCreateParams.PaymentMethodOptions {
+  ): Adyen.PaymentIntentCreateParams.PaymentMethodOptions {
     return {
       pay_by_bank: {},
     };

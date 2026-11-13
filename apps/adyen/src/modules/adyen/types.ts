@@ -1,35 +1,35 @@
 import { type Result } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { BaseError } from "@/lib/errors";
 import { type SaleorTransationId } from "@/modules/saleor/saleor-transaction-id";
-import { type StripeWebhookSecret } from "@/modules/adyen/stripe-webhook-secret";
+import { type AdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 
-import { type StripeMoney } from "./adyen-money";
-import { type StripePaymentIntentId } from "./adyen-payment-intent-id";
-import { type StripeRestrictedKey } from "./adyen-restricted-key";
+import { type AdyenMoney } from "./adyen-money";
+import { type AdyenPaymentIntentId } from "./adyen-payment-intent-id";
+import { type AdyenRestrictedKey } from "./adyen-restricted-key";
 
-export interface IStripePaymentIntentsApiFactory {
-  create(args: { key: StripeRestrictedKey }): IStripePaymentIntentsApi;
+export interface IAdyenPaymentIntentsApiFactory {
+  create(args: { key: AdyenRestrictedKey }): IAdyenPaymentIntentsApi;
 }
 
-export interface IStripeRefundsApiFactory {
-  create(args: { key: StripeRestrictedKey }): IStripeRefundsApi;
+export interface IAdyenRefundsApiFactory {
+  create(args: { key: AdyenRestrictedKey }): IAdyenRefundsApi;
 }
 
-export interface IStripeRefundsApi {
+export interface IAdyenRefundsApi {
   createRefund(args: {
-    paymentIntentId: StripePaymentIntentId;
-    stripeMoney: StripeMoney;
+    paymentIntentId: AdyenPaymentIntentId;
+    adyenMoney: AdyenMoney;
     idempotencyKey: string | undefined;
-    metadata?: AllowedStripeObjectMetadata;
-  }): Promise<Result<Stripe.Refund, unknown>>;
+    metadata?: AllowedAdyenObjectMetadata;
+  }): Promise<Result<Adyen.Refund, unknown>>;
 }
 
 /**
- * Fixed metadata keys that are allowed on Stripe objects - intent and refund.
+ * Fixed metadata keys that are allowed on Adyen objects - intent and refund.
  */
-export type AllowedStripeObjectMetadata = {
+export type AllowedAdyenObjectMetadata = {
   saleor_transaction_id?: SaleorTransationId;
   saleor_source_id?: string;
   saleor_source_type?: "Checkout" | "Order";
@@ -41,9 +41,9 @@ export type AllowedStripeObjectMetadata = {
 };
 
 export interface CreatePaymentIntentArgs {
-  stripeMoney: StripeMoney;
+  adyenMoney: AdyenMoney;
   intentParams: Pick<
-    Stripe.PaymentIntentCreateParams,
+    Adyen.PaymentIntentCreateParams,
     | "automatic_payment_methods"
     | "payment_method_options"
     | "confirm"
@@ -52,28 +52,28 @@ export interface CreatePaymentIntentArgs {
     | "description"
   >;
   idempotencyKey: string;
-  metadata?: AllowedStripeObjectMetadata;
+  metadata?: AllowedAdyenObjectMetadata;
 }
 
-export interface IStripePaymentIntentsApi {
+export interface IAdyenPaymentIntentsApi {
   createPaymentIntent(
     args: CreatePaymentIntentArgs,
-  ): Promise<Result<Stripe.PaymentIntent, unknown>>;
+  ): Promise<Result<Adyen.PaymentIntent, unknown>>;
   getPaymentIntent(args: {
-    id: StripePaymentIntentId;
-  }): Promise<Result<Stripe.PaymentIntent, unknown>>;
+    id: AdyenPaymentIntentId;
+  }): Promise<Result<Adyen.PaymentIntent, unknown>>;
   capturePaymentIntent(args: {
-    id: StripePaymentIntentId;
+    id: AdyenPaymentIntentId;
     idempotencyKey: string | undefined;
-    metadata?: AllowedStripeObjectMetadata;
-  }): Promise<Result<Stripe.PaymentIntent, unknown>>;
+    metadata?: AllowedAdyenObjectMetadata;
+  }): Promise<Result<Adyen.PaymentIntent, unknown>>;
   cancelPaymentIntent(args: {
-    id: StripePaymentIntentId;
+    id: AdyenPaymentIntentId;
     idempotencyKey: string | undefined;
-  }): Promise<Result<Stripe.PaymentIntent, unknown>>;
+  }): Promise<Result<Adyen.PaymentIntent, unknown>>;
 }
 
-export interface IStripeEventVerify {
+export interface IAdyenEventVerify {
   verifyEvent({
     signatureHeader,
     webhookSecret,
@@ -81,12 +81,12 @@ export interface IStripeEventVerify {
   }: {
     rawBody: string;
     signatureHeader: string;
-    webhookSecret: StripeWebhookSecret;
-  }): Result<Stripe.Event, InstanceType<typeof StripeEventParsingError>>;
+    webhookSecret: AdyenWebhookSecret;
+  }): Result<Adyen.Event, InstanceType<typeof AdyenEventParsingError>>;
 }
 
-export const StripeEventParsingError = BaseError.subclass("StripeEventParsingError", {
+export const AdyenEventParsingError = BaseError.subclass("AdyenEventParsingError", {
   props: {
-    internalName: "StripeEventParsingError" as const,
+    internalName: "AdyenEventParsingError" as const,
   },
 });

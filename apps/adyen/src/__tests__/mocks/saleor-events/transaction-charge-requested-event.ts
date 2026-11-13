@@ -5,7 +5,7 @@ import {
   mockedSaleorChannelId,
   mockedSaleorTransactionId,
 } from "../constants";
-import { mockedStripePaymentIntentId } from "../mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "../mocked-adyen-payment-intent-id";
 
 export const getMockedTransactionChargeRequestedEvent =
   (): TransactionChargeRequestedEventFragment => ({
@@ -15,7 +15,7 @@ export const getMockedTransactionChargeRequestedEvent =
     },
     transaction: {
       id: mockedSaleorTransactionId,
-      pspReference: mockedStripePaymentIntentId,
+      pspReference: mockedAdyenPaymentIntentId,
       checkout: {
         id: "mock-channel-1",
         channel: {

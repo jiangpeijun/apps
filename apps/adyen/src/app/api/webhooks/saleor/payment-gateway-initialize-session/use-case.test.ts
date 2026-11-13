@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
 import { mockedSaleorAppId, mockedSaleorChannelId } from "@/__tests__/mocks/constants";
-import { mockedStripePublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
+import { mockedAdyenPublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { AppIsNotConfiguredResponse } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
 
@@ -30,14 +30,14 @@ describe("PaymentGatewayInitializeSessionUseCase", () => {
 
     expect(jsonResponse).toStrictEqual({
       data: {
-        stripePublishableKey: mockedStripePublishableKey,
+        adyenPublishableKey: mockedAdyenPublishableKey,
       },
     });
   });
 
   it("Returns MissingConfigErrorResponse if config not found for specified channel", async () => {
     const spy = vi
-      .spyOn(mockedAppConfigRepo, "getStripeConfig")
+      .spyOn(mockedAppConfigRepo, "getAdyenConfig")
       .mockImplementationOnce(async () => ok(null));
 
     const uc = new PaymentGatewayInitializeSessionUseCase({

@@ -1,28 +1,28 @@
 import { err, ok } from "neverthrow";
-import Stripe from "stripe";
+import Adyen from "adyen";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
 import { mockedAppToken, mockedSaleorAppId } from "@/__tests__/mocks/constants";
 import { mockedGraphqlClient } from "@/__tests__/mocks/graphql-client";
-import { mockedStripePublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
-import { mockedStripeRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
+import { mockedAdyenPublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
+import { mockedAdyenRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 import { TEST_Procedure } from "@/__tests__/trpc-testing-procedure";
 import { BaseError } from "@/lib/errors";
-import { NewStripeConfigTrpcHandler } from "@/modules/app-config/trpc-handlers/new-adyen-config-trpc-handler";
-import { StripeClient } from "@/modules/adyen/adyen-client";
-import { StripeWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
+import { NewAdyenConfigTrpcHandler } from "@/modules/app-config/trpc-handlers/new-adyen-config-trpc-handler";
+import { AdyenClient } from "@/modules/adyen/adyen-client";
+import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
 import { router } from "@/modules/trpc/trpc-server";
 
-const webhookCreator = new StripeWebhookManager();
+const webhookCreator = new AdyenWebhookManager();
 
 /**
  * TODO: Probably create some test abstraction to bootstrap trpc handler for testing
  */
 const getTestCaller = () => {
-  const instance = new NewStripeConfigTrpcHandler({
+  const instance = new NewAdyenConfigTrpcHandler({
     webhookManager: webhookCreator,
   });
 
@@ -47,24 +47,24 @@ const getTestCaller = () => {
   };
 };
 
-describe("NewStripeConfigTrpcHandler", () => {
-  const stripe = new Stripe("key");
+describe("NewAdyenConfigTrpcHandler", () => {
+  const adyen = new Adyen("key");
 
   beforeEach(() => {
     vi.resetAllMocks();
 
-    vi.spyOn(stripe.paymentIntents, "list").mockImplementation(() => {
-      return Promise.resolve({}) as Stripe.ApiListPromise<Stripe.PaymentIntent>;
+    vi.spyOn(adyen.paymentIntents, "list").mockImplementation(() => {
+      return Promise.resolve({}) as Adyen.ApiListPromise<Adyen.PaymentIntent>;
     });
-    vi.spyOn(StripeClient, "createFromRestrictedKey").mockImplementation(() => {
+    vi.spyOn(AdyenClient, "createFromRestrictedKey").mockImplementation(() => {
       return {
-        nativeClient: stripe,
+        nativeClient: adyen,
       };
     });
     vi.spyOn(webhookCreator, "createWebhook").mockImplementation(async () =>
       ok({
         id: "whid_1234",
-        secret: mockStripeWebhookSecret,
+        secret: mockAdyenWebhookSecret,
       }),
     );
   });
@@ -72,32 +72,32 @@ describe("NewStripeConfigTrpcHandler", () => {
   it("Returns error 500 if repository fails to save config", async () => {
     const { caller, mockedAppConfigRepo } = getTestCaller();
 
-    vi.spyOn(mockedAppConfigRepo, "saveStripeConfig").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAppConfigRepo, "saveAdyenConfig").mockImplementationOnce(async () =>
       err(new BaseError("TEST")),
     );
 
     return expect(() =>
       caller.testProcedure({
         name: "Test config",
-        publishableKey: mockedStripePublishableKey,
-        restrictedKey: mockedStripeRestrictedKey,
+        publishableKey: mockedAdyenPublishableKey,
+        restrictedKey: mockedAdyenRestrictedKey,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
-      `[TRPCError: Failed to create Stripe configuration. Data can't be saved.]`,
+      `[TRPCError: Failed to create Adyen configuration. Data can't be saved.]`,
     );
   });
 
   it("Returns 404 if config is in invalid shape (model can't be created)", () => {
     const { caller, mockedAppConfigRepo } = getTestCaller();
 
-    vi.spyOn(mockedAppConfigRepo, "saveStripeConfig").mockImplementationOnce(async () => ok(null));
+    vi.spyOn(mockedAppConfigRepo, "saveAdyenConfig").mockImplementationOnce(async () => ok(null));
 
     // todo expect pretty zod error with zod-validation-error
     return expect(
       caller.testProcedure({
         name: "", //empty name should throw
-        publishableKey: mockedStripePublishableKey,
-        restrictedKey: mockedStripeRestrictedKey,
+        publishableKey: mockedAdyenPublishableKey,
+        restrictedKey: mockedAdyenRestrictedKey,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(`
       [TRPCError: [
@@ -119,17 +119,17 @@ describe("NewStripeConfigTrpcHandler", () => {
   it("Doesn't throw if everything set properly. Config repo is called to save data", async () => {
     const { caller, mockedAppConfigRepo } = getTestCaller();
 
-    vi.spyOn(mockedAppConfigRepo, "saveStripeConfig").mockImplementationOnce(async () => ok(null));
+    vi.spyOn(mockedAppConfigRepo, "saveAdyenConfig").mockImplementationOnce(async () => ok(null));
 
     await expect(
       caller.testProcedure({
         name: "Test config",
-        publishableKey: mockedStripePublishableKey,
-        restrictedKey: mockedStripeRestrictedKey,
+        publishableKey: mockedAdyenPublishableKey,
+        restrictedKey: mockedAdyenRestrictedKey,
       }),
     ).resolves.not.toThrow();
 
-    const mockCallArg = vi.mocked(mockedAppConfigRepo.saveStripeConfig).mock.calls[0][0];
+    const mockCallArg = vi.mocked(mockedAppConfigRepo.saveAdyenConfig).mock.calls[0][0];
 
     expect(mockCallArg).toMatchInlineSnapshot(
       {
@@ -154,10 +154,10 @@ describe("NewStripeConfigTrpcHandler", () => {
     );
   });
 
-  describe("Stripe Auth", () => {
-    it("Calls auth service and returns error if Stripe RK is invalid", () => {
-      // @ts-expect-error - mocking stripe client
-      vi.spyOn(stripe.paymentIntents, "list").mockImplementationOnce(async () => {
+  describe("Adyen Auth", () => {
+    it("Calls auth service and returns error if Adyen RK is invalid", () => {
+      // @ts-expect-error - mocking adyen client
+      vi.spyOn(adyen.paymentIntents, "list").mockImplementationOnce(async () => {
         throw new Error("Invalid key");
       });
 
@@ -166,14 +166,14 @@ describe("NewStripeConfigTrpcHandler", () => {
       return expect(() =>
         caller.testProcedure({
           name: "Test config",
-          publishableKey: mockedStripePublishableKey,
-          restrictedKey: mockedStripeRestrictedKey,
+          publishableKey: mockedAdyenPublishableKey,
+          restrictedKey: mockedAdyenRestrictedKey,
         }),
       ).rejects.toThrowErrorMatchingInlineSnapshot(
-        `[TRPCError: Failed to create Stripe configuration. Restricted key is invalid]`,
+        `[TRPCError: Failed to create Adyen configuration. Restricted key is invalid]`,
       );
 
-      expect(stripe.paymentIntents.list).toHaveBeenCalledOnce();
+      expect(adyen.paymentIntents.list).toHaveBeenCalledOnce();
     });
   });
 });

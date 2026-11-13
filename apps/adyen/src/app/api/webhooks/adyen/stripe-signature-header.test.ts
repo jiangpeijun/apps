@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { getAndParseStripeSignatureHeader, stripeSignatureHeader } from "./stripe-signature-header";
+import { getAndParseAdyenSignatureHeader, adyenSignatureHeader } from "./adyen-signature-header";
 
-describe("getAndParseStripeSignatureHeader", () => {
+describe("getAndParseAdyenSignatureHeader", () => {
   it("Returns raw value from headers", () => {
     expect(
-      getAndParseStripeSignatureHeader(
+      getAndParseAdyenSignatureHeader(
         new Headers({
-          [stripeSignatureHeader]: "AABBCC",
+          [adyenSignatureHeader]: "AABBCC",
         }),
       )._unsafeUnwrap(),
     ).toStrictEqual("AABBCC");
@@ -15,17 +15,17 @@ describe("getAndParseStripeSignatureHeader", () => {
 
   it("Throws if value is missing", () => {
     expect(
-      getAndParseStripeSignatureHeader(new Headers({}))._unsafeUnwrapErr(),
-    ).toMatchInlineSnapshot(`[MissingStripeHeaderError: Stripe-Signature header is invalid]`);
+      getAndParseAdyenSignatureHeader(new Headers({}))._unsafeUnwrapErr(),
+    ).toMatchInlineSnapshot(`[MissingAdyenHeaderError: Adyen-Signature header is invalid]`);
   });
 
   it("Throws if value is empty", () => {
     expect(
-      getAndParseStripeSignatureHeader(
+      getAndParseAdyenSignatureHeader(
         new Headers({
-          [stripeSignatureHeader]: "",
+          [adyenSignatureHeader]: "",
         }),
       )._unsafeUnwrapErr(),
-    ).toMatchInlineSnapshot(`[MissingStripeHeaderError: Stripe-Signature header is invalid]`);
+    ).toMatchInlineSnapshot(`[MissingAdyenHeaderError: Adyen-Signature header is invalid]`);
   });
 });

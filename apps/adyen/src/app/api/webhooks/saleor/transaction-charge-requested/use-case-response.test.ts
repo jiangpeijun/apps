@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { getMockedSaleorMoney } from "@/__tests__/mocks/constants";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
 import { ChargeFailureResult } from "@/modules/transaction-result/failure-result";
 import { ChargeSuccessResult } from "@/modules/transaction-result/success-result";
 
@@ -13,10 +13,10 @@ describe("TransactionChargeRequestedUseCaseResponses", () => {
     it("getResponse() returns valid Response with status 200", async () => {
       const successResponse = new TransactionChargeRequestedUseCaseResponses.Success({
         transactionResult: new ChargeSuccessResult(),
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         saleorMoney: getMockedSaleorMoney(),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -28,7 +28,7 @@ describe("TransactionChargeRequestedUseCaseResponses", () => {
             "REFUND",
           ],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent has been successful",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_SUCCESS",
@@ -41,10 +41,10 @@ describe("TransactionChargeRequestedUseCaseResponses", () => {
     it("getResponse() returns valid Response with status 200", async () => {
       const successResponse = new TransactionChargeRequestedUseCaseResponses.Failure({
         transactionResult: new ChargeFailureResult(),
-        stripePaymentIntentId: mockedStripePaymentIntentId,
-        error: new StripeAPIError("Error from stripe"),
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
+        error: new AdyenAPIError("Error from adyen"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -55,7 +55,7 @@ describe("TransactionChargeRequestedUseCaseResponses", () => {
           "actions": [
             "CHARGE",
           ],
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent failed",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CHARGE_FAILURE",

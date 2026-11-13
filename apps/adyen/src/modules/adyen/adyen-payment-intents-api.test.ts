@@ -1,17 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
-import { mockedStripeRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
-import { StripeClient } from "@/modules/adyen/adyen-client";
-import { StripeMoney } from "@/modules/adyen/adyen-money";
+import { mockedAdyenRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
+import { AdyenClient } from "@/modules/adyen/adyen-client";
+import { AdyenMoney } from "@/modules/adyen/adyen-money";
 
-import { StripePaymentIntentsApi } from "./adyen-payment-intents-api";
+import { AdyenPaymentIntentsApi } from "./adyen-payment-intents-api";
 
-describe("StripePaymentIntentsApi", () => {
+describe("AdyenPaymentIntentsApi", () => {
   describe("createPaymentIntent", () => {
-    it("Calls inner Stripe SDK with expected params", async () => {
-      const clientWrapper = StripeClient.createFromRestrictedKey(mockedStripeRestrictedKey);
-      const instance = StripePaymentIntentsApi.createFromClient(clientWrapper);
+    it("Calls inner Adyen SDK with expected params", async () => {
+      const clientWrapper = AdyenClient.createFromRestrictedKey(mockedAdyenRestrictedKey);
+      const instance = AdyenPaymentIntentsApi.createFromClient(clientWrapper);
 
       vi.spyOn(clientWrapper.nativeClient.paymentIntents, "create").mockResolvedValue(
         // @ts-expect-error - in this test we dont care about the response
@@ -20,7 +20,7 @@ describe("StripePaymentIntentsApi", () => {
 
       await instance.createPaymentIntent({
         idempotencyKey: "IK",
-        stripeMoney: StripeMoney.createFromSaleorAmount({
+        adyenMoney: AdyenMoney.createFromSaleorAmount({
           amount: 12.34,
           currency: "USD",
         })._unsafeUnwrap(),
@@ -61,9 +61,9 @@ describe("StripePaymentIntentsApi", () => {
       );
     });
 
-    it("Calls inner Stripe SDK without metadata when not provided", async () => {
-      const clientWrapper = StripeClient.createFromRestrictedKey(mockedStripeRestrictedKey);
-      const instance = StripePaymentIntentsApi.createFromClient(clientWrapper);
+    it("Calls inner Adyen SDK without metadata when not provided", async () => {
+      const clientWrapper = AdyenClient.createFromRestrictedKey(mockedAdyenRestrictedKey);
+      const instance = AdyenPaymentIntentsApi.createFromClient(clientWrapper);
 
       vi.spyOn(clientWrapper.nativeClient.paymentIntents, "create").mockResolvedValue(
         // @ts-expect-error - in this test we dont care about the response
@@ -72,7 +72,7 @@ describe("StripePaymentIntentsApi", () => {
 
       await instance.createPaymentIntent({
         idempotencyKey: "IK",
-        stripeMoney: StripeMoney.createFromSaleorAmount({
+        adyenMoney: AdyenMoney.createFromSaleorAmount({
           amount: 12.34,
           currency: "USD",
         })._unsafeUnwrap(),
@@ -95,10 +95,10 @@ describe("StripePaymentIntentsApi", () => {
   });
 
   describe("createFromKey", () => {
-    it("creates instance of StripePaymentIntentsApi", () => {
-      const api = StripePaymentIntentsApi.createFromKey({ key: mockedStripeRestrictedKey });
+    it("creates instance of AdyenPaymentIntentsApi", () => {
+      const api = AdyenPaymentIntentsApi.createFromKey({ key: mockedAdyenRestrictedKey });
 
-      expect(api).toBeInstanceOf(StripePaymentIntentsApi);
+      expect(api).toBeInstanceOf(AdyenPaymentIntentsApi);
     });
   });
 });

@@ -1,3 +1,3 @@
-import { createStripeWebhookSecret } from "@/modules/adyen/stripe-webhook-secret";
+import { createAdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 
-export const mockStripeWebhookSecret = createStripeWebhookSecret("whsec_XYZ")._unsafeUnwrap();
+export const mockAdyenWebhookSecret = createAdyenWebhookSecret("whsec_XYZ")._unsafeUnwrap();

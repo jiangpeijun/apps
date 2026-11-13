@@ -21,7 +21,7 @@ const handler = createManifestHandler({
 
     const manifest: AppManifest = {
       about:
-        "App that allows merchants using the Saleor e-commerce platform to accept online payments from customers using Stripe as their payment processor.",
+        "App that allows merchants using the Saleor e-commerce platform to accept online payments from customers using Adyen as their payment processor.",
       appUrl: iframeBaseUrl,
       author: "Saleor Commerce",
       brand: {

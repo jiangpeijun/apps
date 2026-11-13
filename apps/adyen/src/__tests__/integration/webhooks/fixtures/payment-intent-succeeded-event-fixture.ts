@@ -1,13 +1,13 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
-import { mockedStripeCardPaymentMethod } from "@/__tests__/mocks/mocked-adyen-payment-method";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { mockedAdyenCardPaymentMethod } from "@/__tests__/mocks/mocked-adyen-payment-method";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 
 export const paymentIntentSucceededEventFixture = (
-  stripePaymentIntentId: StripePaymentIntentId,
-): Stripe.PaymentIntentSucceededEvent => {
-  // Stripe returns timestamp in seconds
+  adyenPaymentIntentId: AdyenPaymentIntentId,
+): Adyen.PaymentIntentSucceededEvent => {
+  // Adyen returns timestamp in seconds
   const date = new Date(2025, 1, 1).getTime() / 1000;
 
   return {
@@ -27,7 +27,7 @@ export const paymentIntentSucceededEventFixture = (
         amount_capturable: 1511,
         object: "payment_intent",
         amount: 1000,
-        id: stripePaymentIntentId,
+        id: adyenPaymentIntentId,
         created: date,
         livemode: false,
         amount_details: {},
@@ -50,7 +50,7 @@ export const paymentIntentSucceededEventFixture = (
         },
         next_action: null,
         on_behalf_of: null,
-        payment_method: mockedStripeCardPaymentMethod,
+        payment_method: mockedAdyenCardPaymentMethod,
         payment_method_configuration_details: null,
         payment_method_options: null,
         payment_method_types: [],

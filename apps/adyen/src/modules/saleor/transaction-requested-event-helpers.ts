@@ -59,11 +59,11 @@ export const getChannelIdFromRequestedEventPayload = (
 
 /**
  * Saleor sends `idempotencyKey` on transaction action requested events since 3.23. It is stable
- * across Saleor's delivery retries of the same request, so passing it to Stripe prevents the action
+ * across Saleor's delivery retries of the same request, so passing it to Adyen prevents the action
  * from being performed twice.
  *
  * Installations that didn't migrate their webhook subscription query yet don't send it. In that case
- * Stripe SDK generates its own key, which only covers retries within a single request - the
+ * Adyen SDK generates its own key, which only covers retries within a single request - the
  * pre-3.23 behavior.
  */
 export const getIdempotencyKeyFromRequestedEventPayload = (
@@ -74,7 +74,7 @@ export const getIdempotencyKeyFromRequestedEventPayload = (
 ): string | undefined => {
   if (!event.idempotencyKey) {
     logger.warn(
-      "Event has no idempotencyKey, Stripe action can't be deduplicated across Saleor delivery retries. Webhook subscription query is outdated - run webhooks migration",
+      "Event has no idempotencyKey, Adyen action can't be deduplicated across Saleor delivery retries. Webhook subscription query is outdated - run webhooks migration",
     );
 
     return undefined;

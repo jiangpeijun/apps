@@ -14,29 +14,29 @@ import { Box, Modal } from "@saleor/macaw-ui";
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
-import { type StripeFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
 import { trpcClient } from "@/modules/trpc/trpc-client";
 import { KeyPrefix } from "@/modules/ui/key-prefix";
-import { editStripeConfigFormSchema } from "@/modules/ui/adyen-configs/edit-adyen-config-form-schema";
+import { editAdyenConfigFormSchema } from "@/modules/ui/adyen-configs/edit-adyen-config-form-schema";
 import {
-  inferStripeEnvFromKeys,
-  stripeEnvFromKeyPrefix,
+  inferAdyenEnvFromKeys,
+  adyenEnvFromKeyPrefix,
 } from "@/modules/ui/adyen-configs/infer-adyen-env-from-keys";
 import {
   FieldHint,
-  StripeConfigFields,
-  type StripeConfigFormShape,
+  AdyenConfigFields,
+  type AdyenConfigFormShape,
 } from "@/modules/ui/adyen-configs/adyen-config-fields";
-import { StripeEnvBadge } from "@/modules/ui/adyen-configs/adyen-env-badge";
-import { StripeModeLegend } from "@/modules/ui/adyen-setup/adyen-mode-legend";
+import { AdyenEnvBadge } from "@/modules/ui/adyen-configs/adyen-env-badge";
+import { AdyenModeLegend } from "@/modules/ui/adyen-setup/adyen-mode-legend";
 
-const FORM_ID = "edit_stripe_config_form";
+const FORM_ID = "edit_adyen_config_form";
 const CONFIG_LIST_PATH = "/config";
 
-export const EditStripeConfigView = ({
+export const EditAdyenConfigView = ({
   config,
 }: {
-  config: StripeFrontendConfigSerializedFields;
+  config: AdyenFrontendConfigSerializedFields;
 }) => {
   const { notifyError, notifySuccess } = useDashboardNotification();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -45,22 +45,22 @@ export const EditStripeConfigView = ({
     handleSubmit,
     control,
     formState: { errors, isDirty },
-  } = useForm<StripeConfigFormShape>({
+  } = useForm<AdyenConfigFormShape>({
     defaultValues: {
       name: config.name,
       publishableKey: config.publishableKey,
       /** Only the last characters of the saved key are known here, so it starts empty. */
       restrictedKey: "",
     },
-    resolver: zodResolver(editStripeConfigFormSchema),
+    resolver: zodResolver(editAdyenConfigFormSchema),
   });
 
   const publishableKey = useWatch({ control, name: "publishableKey" });
   const restrictedKey = useWatch({ control, name: "restrictedKey" });
-  const envHint = inferStripeEnvFromKeys({
+  const envHint = inferAdyenEnvFromKeys({
     publishableKey,
     restrictedKey,
-    keptRestrictedKeyEnv: stripeEnvFromKeyPrefix(config.publishableKey),
+    keptRestrictedKeyEnv: adyenEnvFromKeyPrefix(config.publishableKey),
   });
 
   /**
@@ -75,7 +75,7 @@ export const EditStripeConfigView = ({
     mutate: updateConfig,
     isLoading: isSaving,
     isError: isSaveError,
-  } = trpcClient.appConfig.updateStripeConfig.useMutation({
+  } = trpcClient.appConfig.updateAdyenConfig.useMutation({
     onSuccess() {
       notifySuccess("Configuration updated");
       setIsSaved(true);
@@ -88,7 +88,7 @@ export const EditStripeConfigView = ({
   });
 
   const { mutate: removeConfig, isLoading: isDeleting } =
-    trpcClient.appConfig.removeStripeConfig.useMutation({
+    trpcClient.appConfig.removeAdyenConfig.useMutation({
       onSuccess() {
         notifySuccess("Configuration deleted");
         setIsSaved(true);
@@ -108,11 +108,11 @@ export const EditStripeConfigView = ({
         <SettingsPageContent
           description={
             <>
-              Rename this configuration or replace its Stripe keys. Which channels use it stays on
+              Rename this configuration or replace its Adyen keys. Which channels use it stays on
               the configuration list.
             </>
           }
-          aside={<StripeModeLegend />}
+          aside={<AdyenModeLegend />}
         >
           <Modal open={isDeleteModalOpen} onChange={() => setIsDeleteModalOpen(false)}>
             <DeleteConfigurationModalContent
@@ -136,14 +136,14 @@ export const EditStripeConfigView = ({
             )}
           >
             <SettingsSection
-              title="Stripe keys"
+              title="Adyen keys"
               ownership="channel"
               description="Keys are used by every channel assigned to this configuration."
-              headerEnd={envHint ? <StripeEnvBadge env={envHint} /> : undefined}
-              data-test-id="stripe-edit-config-card"
+              headerEnd={envHint ? <AdyenEnvBadge env={envHint} /> : undefined}
+              data-test-id="adyen-edit-config-card"
             >
               <SettingsFieldStack>
-                <StripeConfigFields
+                <AdyenConfigFields
                   control={control}
                   errors={errors}
                   disabled={isBusy}

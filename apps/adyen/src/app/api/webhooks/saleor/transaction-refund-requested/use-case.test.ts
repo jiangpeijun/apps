@@ -1,5 +1,5 @@
 import { err, ok } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
@@ -8,10 +8,10 @@ import {
   mockedSaleorAppId,
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
-import { mockStripeProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripeRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
-import { mockedStripeRefundsApi } from "@/__tests__/mocks/mocked-adyen-refunds-api";
+import { mockAdyenProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
+import { mockedAdyenRefundsApi } from "@/__tests__/mocks/mocked-adyen-refunds-api";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { getMockedTransactionRefundRequestedEvent } from "@/__tests__/mocks/saleor-events/transaction-refund-request-event";
 import {
@@ -19,9 +19,9 @@ import {
   BrokenAppResponse,
   MalformedRequestResponse,
 } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
-import { StripeMoney } from "@/modules/adyen/adyen-money";
-import { type IStripeRefundsApiFactory } from "@/modules/adyen/types";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
+import { AdyenMoney } from "@/modules/adyen/adyen-money";
+import { type IAdyenRefundsApiFactory } from "@/modules/adyen/types";
 
 import { TransactionRefundRequestedUseCase } from "./use-case";
 import { TransactionRefundRequestedUseCaseResponses } from "./use-case-response";
@@ -47,30 +47,30 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("TransactionRefundRequestedUseCase", () => {
-  const stripeRefundsApiFactory = {
-    create: () => mockedStripeRefundsApi,
-  } satisfies IStripeRefundsApiFactory;
+  const adyenRefundsApiFactory = {
+    create: () => mockedAdyenRefundsApi,
+  } satisfies IAdyenRefundsApiFactory;
 
-  it("Calls Stripe Refunds API to create refund and returns Success when refund is created successfully", async () => {
-    const spy = vi.spyOn(mockedStripeRefundsApi, "createRefund").mockImplementationOnce(async () =>
+  it("Calls Adyen Refunds API to create refund and returns Success when refund is created successfully", async () => {
+    const spy = vi.spyOn(mockedAdyenRefundsApi, "createRefund").mockImplementationOnce(async () =>
       ok({
         status: "succeeded",
         amount: 100,
         currency: "usd",
-        id: mockedStripeRefundId.toString(),
-      } as Stripe.Refund),
+        id: mockedAdyenRefundId.toString(),
+      } as Adyen.Refund),
     );
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     const result = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(result._unsafeUnwrap()).toBeInstanceOf(
@@ -78,8 +78,8 @@ describe("TransactionRefundRequestedUseCase", () => {
     );
 
     expect(spy).toHaveBeenCalledWith({
-      paymentIntentId: mockedStripePaymentIntentId,
-      stripeMoney: expect.any(StripeMoney),
+      paymentIntentId: mockedAdyenPaymentIntentId,
+      adyenMoney: expect.any(AdyenMoney),
       idempotencyKey: mockedSaleorActionIdempotencyKey,
       metadata: {
         saleor_source_id: "mock-channel-1",
@@ -92,21 +92,21 @@ describe("TransactionRefundRequestedUseCase", () => {
     });
   });
 
-  it("Calls Stripe Refunds API to create refund and returns Failure with RefundFailureResult when refund creation fails", async () => {
+  it("Calls Adyen Refunds API to create refund and returns Failure with RefundFailureResult when refund creation fails", async () => {
     const spy = vi
-      .spyOn(mockedStripeRefundsApi, "createRefund")
-      .mockImplementationOnce(async () => err(new StripeAPIError("Error from stripe")));
+      .spyOn(mockedAdyenRefundsApi, "createRefund")
+      .mockImplementationOnce(async () => err(new AdyenAPIError("Error from adyen")));
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     const result = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(result._unsafeUnwrap()).toBeInstanceOf(
@@ -114,8 +114,8 @@ describe("TransactionRefundRequestedUseCase", () => {
     );
 
     expect(spy).toHaveBeenCalledWith({
-      paymentIntentId: mockedStripePaymentIntentId,
-      stripeMoney: expect.any(StripeMoney),
+      paymentIntentId: mockedAdyenPaymentIntentId,
+      adyenMoney: expect.any(AdyenMoney),
       idempotencyKey: mockedSaleorActionIdempotencyKey,
       metadata: {
         saleor_source_id: "mock-channel-1",
@@ -130,19 +130,19 @@ describe("TransactionRefundRequestedUseCase", () => {
 
   it("Returns 'MissingConfigErrorResponse' if config not found for specified channel", async () => {
     const spy = vi
-      .spyOn(mockedAppConfigRepo, "getStripeConfig")
+      .spyOn(mockedAppConfigRepo, "getAdyenConfig")
       .mockImplementationOnce(async () => ok(null));
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     const responsePayload = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     const err = responsePayload._unsafeUnwrapErr();
@@ -162,36 +162,36 @@ describe("TransactionRefundRequestedUseCase", () => {
     };
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     const response = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: saleorEvent,
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(response._unsafeUnwrapErr()).toBeInstanceOf(MalformedRequestResponse);
   });
 
-  it("Returns 'BrokenAppResponse' when currency coming from Stripe is not supported", async () => {
-    vi.spyOn(mockedStripeRefundsApi, "createRefund").mockImplementation(async () =>
+  it("Returns 'BrokenAppResponse' when currency coming from Adyen is not supported", async () => {
+    vi.spyOn(mockedAdyenRefundsApi, "createRefund").mockImplementation(async () =>
       ok({
         amount: 100,
         currency: "abc",
-      } as Stripe.Refund),
+      } as Adyen.Refund),
     );
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     const response = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionRefundRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(response._unsafeUnwrapErr()).toBeInstanceOf(BrokenAppResponse);
@@ -202,7 +202,7 @@ describe("TransactionRefundRequestedUseCase", () => {
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     await expect(
@@ -210,7 +210,7 @@ describe("TransactionRefundRequestedUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `[MissingTransactionError: Transaction not found in event]`,
@@ -223,14 +223,14 @@ describe("TransactionRefundRequestedUseCase", () => {
       transaction: {
         checkout: null,
         order: null,
-        pspReference: mockedStripePaymentIntentId,
+        pspReference: mockedAdyenPaymentIntentId,
         id: mockedSaleorTransactionId,
       },
     };
 
     const uc = new TransactionRefundRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripeRefundsApiFactory,
+      adyenRefundsApiFactory,
     });
 
     await expect(
@@ -238,7 +238,7 @@ describe("TransactionRefundRequestedUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `[MissingChannelIdError: Channel ID not found in event Checkout or Order]`,

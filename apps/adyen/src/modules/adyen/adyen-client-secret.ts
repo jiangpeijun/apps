@@ -3,20 +3,20 @@ import { z } from "zod";
 
 import { BaseError } from "@/lib/errors";
 
-export const StripeClientSecretValidationError = BaseError.subclass(
-  "StripeClientSecretValidationError",
+export const AdyenClientSecretValidationError = BaseError.subclass(
+  "AdyenClientSecretValidationError",
   {
     props: {
-      _internalName: "StripeClientSecretValidationError" as const,
+      _internalName: "AdyenClientSecretValidationError" as const,
     },
   },
 );
 
-export const StripeClientSecretSchema = z.string().min(1).brand("StripeClientSecret");
+export const AdyenClientSecretSchema = z.string().min(1).brand("AdyenClientSecret");
 
-export const createStripeClientSecret = (raw: string | null) =>
-  fromThrowable(StripeClientSecretSchema.parse, (error) =>
-    StripeClientSecretValidationError.normalize(error),
+export const createAdyenClientSecret = (raw: string | null) =>
+  fromThrowable(AdyenClientSecretSchema.parse, (error) =>
+    AdyenClientSecretValidationError.normalize(error),
   )(raw);
 
-export type StripeClientSecret = z.infer<typeof StripeClientSecretSchema>;
+export type AdyenClientSecret = z.infer<typeof AdyenClientSecretSchema>;

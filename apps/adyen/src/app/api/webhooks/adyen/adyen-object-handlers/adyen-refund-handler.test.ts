@@ -1,35 +1,35 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { describe, expect, it } from "vitest";
 
 import { getMockedRecordedTransaction } from "@/__tests__/mocks/mocked-recorded-transaction";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripeRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
 import { MockedTransactionRecorder } from "@/__tests__/mocks/mocked-transaction-recorder";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { getMockedChargeRefundUpdatedEvent } from "@/__tests__/mocks/adyen-events/mocked-charge-refund-updated";
 import { createResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
 
-import { StripeRefundHandler } from "./adyen-refund-handler";
+import { AdyenRefundHandler } from "./adyen-refund-handler";
 
-describe("StripeRefundHandler", () => {
+describe("AdyenRefundHandler", () => {
   describe("processRefundEvent", () => {
     it("should return NotSupportedEventError for unsupported event", async () => {
       const mockTransactionRecorder = new MockedTransactionRecorder();
       const event = {
         type: "refund.created",
-      } as unknown as Stripe.Event;
+      } as unknown as Adyen.Event;
 
-      const handler = new StripeRefundHandler();
+      const handler = new AdyenRefundHandler();
 
       const result = await handler.processRefundEvent({
         event,
-        stripeEnv: "LIVE",
+        adyenEnv: "LIVE",
         transactionRecorder: mockTransactionRecorder,
         appId: "appId",
         saleorApiUrl: mockedSaleorApiUrl,
       });
 
-      expect(result._unsafeUnwrapErr()).toBeInstanceOf(StripeRefundHandler.NotSupportedEventError);
+      expect(result._unsafeUnwrapErr()).toBeInstanceOf(AdyenRefundHandler.NotSupportedEventError);
     });
 
     describe("charge.refund.updated", () => {
@@ -37,13 +37,13 @@ describe("StripeRefundHandler", () => {
         createResolvedTransactionFlow("AUTHORIZATION"),
         createResolvedTransactionFlow("CHARGE"),
       ])(
-        "should resolve fields from Stripe event properly for '%s' flow",
+        "should resolve fields from Adyen event properly for '%s' flow",
         async (resolvedTransactionFlow) => {
           const event = getMockedChargeRefundUpdatedEvent();
           const mockTransactionRecorder = new MockedTransactionRecorder();
 
           mockTransactionRecorder.transactions = {
-            [mockedStripePaymentIntentId]: getMockedRecordedTransaction({
+            [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction({
               resolvedTransactionFlow,
             }),
           };
@@ -53,14 +53,14 @@ describe("StripeRefundHandler", () => {
 
           event.data.object.amount = amountToUse;
 
-          const handler = new StripeRefundHandler();
+          const handler = new AdyenRefundHandler();
 
           const result = await handler.processRefundEvent({
             event,
             transactionRecorder: mockTransactionRecorder,
             appId: "appId",
             saleorApiUrl: mockedSaleorApiUrl,
-            stripeEnv: "LIVE",
+            adyenEnv: "LIVE",
           });
 
           const { type, amount, pspReference, time } = result
@@ -84,25 +84,25 @@ describe("StripeRefundHandler", () => {
               payment_intent: null,
             },
           },
-        } as unknown as Stripe.ChargeRefundUpdatedEvent;
+        } as unknown as Adyen.ChargeRefundUpdatedEvent;
 
         const mockTransactionRecorder = new MockedTransactionRecorder();
 
         mockTransactionRecorder.transactions = {
-          [mockedStripePaymentIntentId]: getMockedRecordedTransaction(),
+          [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction(),
         };
 
-        const handler = new StripeRefundHandler();
+        const handler = new AdyenRefundHandler();
 
         const result = await handler.processRefundEvent({
           event,
           transactionRecorder: mockTransactionRecorder,
           appId: "appId",
           saleorApiUrl: mockedSaleorApiUrl,
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         });
 
-        expect(result._unsafeUnwrapErr()).toBeInstanceOf(StripeRefundHandler.MalformedEventError);
+        expect(result._unsafeUnwrapErr()).toBeInstanceOf(AdyenRefundHandler.MalformedEventError);
       });
 
       it("should resolve payment_intent from object", async () => {
@@ -112,31 +112,31 @@ describe("StripeRefundHandler", () => {
             object: {
               ...getMockedChargeRefundUpdatedEvent().data.object,
               payment_intent: {
-                id: mockedStripePaymentIntentId.toString(),
+                id: mockedAdyenPaymentIntentId.toString(),
               },
             },
           },
-        } as unknown as Stripe.ChargeRefundUpdatedEvent;
+        } as unknown as Adyen.ChargeRefundUpdatedEvent;
 
         const mockTransactionRecorder = new MockedTransactionRecorder();
 
         mockTransactionRecorder.transactions = {
-          [mockedStripePaymentIntentId]: getMockedRecordedTransaction(),
+          [mockedAdyenPaymentIntentId]: getMockedRecordedTransaction(),
         };
 
-        const handler = new StripeRefundHandler();
+        const handler = new AdyenRefundHandler();
 
         const result = await handler.processRefundEvent({
           event,
           transactionRecorder: mockTransactionRecorder,
           appId: "appId",
           saleorApiUrl: mockedSaleorApiUrl,
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         });
 
         const { pspReference } = result._unsafeUnwrap().resolveEventReportVariables();
 
-        expect(pspReference).toStrictEqual(mockedStripeRefundId);
+        expect(pspReference).toStrictEqual(mockedAdyenRefundId);
       });
     });
   });

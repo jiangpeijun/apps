@@ -12,7 +12,7 @@ export default async function setup(_project: TestProject) {
   const configPath = path.join(__dirname, "./docker-compose.yml");
 
   if (!process.env.CI) {
-    execSync(`docker compose -f ${configPath} -p stripe-dynamodb-integration up -d`);
+    execSync(`docker compose -f ${configPath} -p adyen-dynamodb-integration up -d`);
 
     /*
      * Dirty way to make a container ready. There should be a better way.
@@ -22,7 +22,7 @@ export default async function setup(_project: TestProject) {
 
     return async () => {
       console.log("stopping docker compose");
-      execSync(`docker compose -p stripe-dynamodb-integration down`);
+      execSync(`docker compose -p adyen-dynamodb-integration down`);
     };
   }
 }

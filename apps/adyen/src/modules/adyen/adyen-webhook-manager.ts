@@ -1,56 +1,56 @@
 import { captureException } from "@sentry/nextjs";
 import { err, ok, type Result } from "neverthrow";
-import Stripe from "stripe";
+import Adyen from "adyen";
 
 import { WebhookParams } from "@/app/api/webhooks/adyen/webhook-params";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
-import { type NewStripeConfigInput } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
+import { type NewAdyenConfigInput } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { StripeClient } from "@/modules/adyen/adyen-client";
-import { type StripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { StripeWebhookUrlBuilder } from "@/modules/adyen/adyen-webhook-url-builder";
-import { supportedStripeEvents } from "@/modules/adyen/supported-stripe-events";
+import { AdyenClient } from "@/modules/adyen/adyen-client";
+import { type AdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { AdyenWebhookUrlBuilder } from "@/modules/adyen/adyen-webhook-url-builder";
+import { supportedAdyenEvents } from "@/modules/adyen/supported-adyen-events";
 
-import { STRIPE_API_VERSION } from "./adyen-api-version";
+import { ADYEN_API_VERSION } from "./adyen-api-version";
 
 const CantCreateWebhookUrlError = BaseError.subclass("CantCreateWebhookUrlError", {
   props: {
-    _internalName: "StripeWebhookManagerErrors.CantCreateWebhookUrlError" as const,
+    _internalName: "AdyenWebhookManagerErrors.CantCreateWebhookUrlError" as const,
   },
 });
 
 const InvalidDataError = BaseError.subclass("InvalidDataError", {
   props: {
-    _internalName: "StripeWebhookManagerErrors.InvalidDataError" as const,
+    _internalName: "AdyenWebhookManagerErrors.InvalidDataError" as const,
   },
 });
 
 const CantCreateWebhookError = BaseError.subclass("CantCreateWebhookError", {
   props: {
-    _internalName: "StripeWebhookManagerErrors.CantCreateWebhookError" as const,
+    _internalName: "AdyenWebhookManagerErrors.CantCreateWebhookError" as const,
   },
 });
 
 const CantRemoveWebhookError = BaseError.subclass("CantRemoveWebhookError", {
   props: {
-    _internalName: "StripeWebhookManagerErrors.CantRemoveWebhookError" as const,
+    _internalName: "AdyenWebhookManagerErrors.CantRemoveWebhookError" as const,
   },
 });
 
 const CantFetchWebhookError = BaseError.subclass("CantFetchWebhookError", {
   props: {
-    _internalName: "StripeWebhookManagerErrors.CantFetchWebhookError" as const,
+    _internalName: "AdyenWebhookManagerErrors.CantFetchWebhookError" as const,
   },
 });
 
 const CantUpdateWebhookError = BaseError.subclass("CantUpdateWebhookError", {
   props: {
-    _internalName: "StripeWebhookManagerErrors.CantUpdateWebhookError" as const,
+    _internalName: "AdyenWebhookManagerErrors.CantUpdateWebhookError" as const,
   },
 });
 
-export const StripeWebhookManagerErrors = {
+export const AdyenWebhookManagerErrors = {
   CantCreateWebhookUrlError,
   CantCreateWebhookError,
   CantRemoveWebhookError,
@@ -59,21 +59,21 @@ export const StripeWebhookManagerErrors = {
 };
 
 const buildWebhookDescription = (configName: string) =>
-  `Created by Saleor App Payment Stripe, config name: ${configName}`;
+  `Created by Saleor App Payment Adyen, config name: ${configName}`;
 
-export class StripeWebhookManager {
-  private logger = createLogger("StripeWebhookManager");
-  private urlBuilder = new StripeWebhookUrlBuilder();
+export class AdyenWebhookManager {
+  private logger = createLogger("AdyenWebhookManager");
+  private urlBuilder = new AdyenWebhookUrlBuilder();
 
   async getWebhook({
     webhookId,
     restrictedKey,
   }: {
     webhookId: string;
-    restrictedKey: StripeRestrictedKey;
+    restrictedKey: AdyenRestrictedKey;
   }) {
     try {
-      const client = StripeClient.createFromRestrictedKey(restrictedKey);
+      const client = AdyenClient.createFromRestrictedKey(restrictedKey);
 
       const webhook = await client.nativeClient.webhookEndpoints.retrieve(webhookId);
 
@@ -89,11 +89,11 @@ export class StripeWebhookManager {
 
   /**
    * Tells whether the webhook created for a configuration is still reachable with the given
-   * restricted key. Used when keys are rotated: a key from another Stripe account (or another
+   * restricted key. Used when keys are rotated: a key from another Adyen account (or another
    * mode) cannot see the endpoint, so a new one has to be created.
    *
    * Only a missing resource resolves to `false`. Any other failure is returned as an error,
-   * because recreating a webhook on a transient Stripe error would leave two endpoints pushing
+   * because recreating a webhook on a transient Adyen error would leave two endpoints pushing
    * the same events, and only one of them matching the stored signing secret.
    */
   async isWebhookReachableWithKey({
@@ -101,18 +101,18 @@ export class StripeWebhookManager {
     restrictedKey,
   }: {
     webhookId: string;
-    restrictedKey: StripeRestrictedKey;
+    restrictedKey: AdyenRestrictedKey;
   }): Promise<
-    Result<boolean, InstanceType<typeof StripeWebhookManagerErrors.CantFetchWebhookError>>
+    Result<boolean, InstanceType<typeof AdyenWebhookManagerErrors.CantFetchWebhookError>>
   > {
     try {
-      const client = StripeClient.createFromRestrictedKey(restrictedKey);
+      const client = AdyenClient.createFromRestrictedKey(restrictedKey);
 
       await client.nativeClient.webhookEndpoints.retrieve(webhookId);
 
       return ok(true);
     } catch (e) {
-      if (e instanceof Stripe.errors.StripeInvalidRequestError && e.code === "resource_missing") {
+      if (e instanceof Adyen.errors.AdyenInvalidRequestError && e.code === "resource_missing") {
         this.logger.info("Webhook not found for given restricted key", { webhookId });
 
         return ok(false);
@@ -130,11 +130,11 @@ export class StripeWebhookManager {
     configName,
   }: {
     webhookId: string;
-    restrictedKey: StripeRestrictedKey;
+    restrictedKey: AdyenRestrictedKey;
     configName: string;
   }) {
     try {
-      const client = StripeClient.createFromRestrictedKey(restrictedKey);
+      const client = AdyenClient.createFromRestrictedKey(restrictedKey);
 
       await client.nativeClient.webhookEndpoints.update(webhookId, {
         description: buildWebhookDescription(configName),
@@ -153,14 +153,14 @@ export class StripeWebhookManager {
     restrictedKey,
   }: {
     webhookId: string;
-    restrictedKey: StripeRestrictedKey;
+    restrictedKey: AdyenRestrictedKey;
   }) {
     try {
-      const client = StripeClient.createFromRestrictedKey(restrictedKey);
+      const client = AdyenClient.createFromRestrictedKey(restrictedKey);
 
       await client.nativeClient.webhookEndpoints.del(webhookId);
 
-      this.logger.info("Successfully removed Stripe webhook", { id: webhookId });
+      this.logger.info("Successfully removed Adyen webhook", { id: webhookId });
 
       return ok(null);
     } catch (e) {
@@ -171,7 +171,7 @@ export class StripeWebhookManager {
   }
 
   async createWebhook(
-    config: NewStripeConfigInput & {
+    config: NewAdyenConfigInput & {
       configurationId: string;
     },
     { appUrl, saleorApiUrl, appId }: { appUrl: string; saleorApiUrl: SaleorApiUrl; appId: string },
@@ -182,13 +182,13 @@ export class StripeWebhookManager {
         id: string;
       },
       InstanceType<
-        | typeof StripeWebhookManagerErrors.CantCreateWebhookUrlError
-        | typeof StripeWebhookManagerErrors.CantCreateWebhookError
+        | typeof AdyenWebhookManagerErrors.CantCreateWebhookUrlError
+        | typeof AdyenWebhookManagerErrors.CantCreateWebhookError
       >
     >
   > {
-    this.logger.debug("Will create Stripe webhook");
-    const client = StripeClient.createFromRestrictedKey(config.restrictedKey);
+    this.logger.debug("Will create Adyen webhook");
+    const client = AdyenClient.createFromRestrictedKey(config.restrictedKey);
 
     const webhookUrl = this.urlBuilder.buildUrl({
       appUrl,
@@ -217,16 +217,16 @@ export class StripeWebhookManager {
       const result = await client.nativeClient.webhookEndpoints.create({
         url: webhookUrl.value.toString(),
         description: buildWebhookDescription(config.name),
-        enabled_events: supportedStripeEvents,
+        enabled_events: supportedAdyenEvents,
         metadata: {
           saleorAppConfigurationId: config.configurationId,
         },
-        api_version: STRIPE_API_VERSION,
+        api_version: ADYEN_API_VERSION,
       });
 
       const { secret, id } = result;
 
-      this.logger.info("Successfully created Stripe webhook", { id });
+      this.logger.info("Successfully created Adyen webhook", { id });
 
       if (!secret) {
         /**
@@ -235,7 +235,7 @@ export class StripeWebhookManager {
          * If not, this is Panic
          */
         throw new InvalidDataError(
-          "Stripe did not return secret from webhook. This should not happen",
+          "Adyen did not return secret from webhook. This should not happen",
         );
       }
 
@@ -246,7 +246,7 @@ export class StripeWebhookManager {
       if (e instanceof InvalidDataError) {
         captureException(e);
 
-        return err(new CantCreateWebhookError("Result from Stripe was unexpected"));
+        return err(new CantCreateWebhookError("Result from Adyen was unexpected"));
       }
 
       // todo handle exact errors

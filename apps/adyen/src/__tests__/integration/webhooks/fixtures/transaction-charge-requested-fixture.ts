@@ -5,10 +5,10 @@ import {
 } from "@/__tests__/mocks/constants";
 import { type TransactionChargeRequestedEventFragment } from "@/generated/graphql";
 import { RandomId } from "@/lib/random-id";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 
 export const transactionChargeRequestedFixture = (args: {
-  stripePaymentIntentId: StripePaymentIntentId;
+  adyenPaymentIntentId: AdyenPaymentIntentId;
   amount: number;
 }): TransactionChargeRequestedEventFragment => {
   return {
@@ -18,7 +18,7 @@ export const transactionChargeRequestedFixture = (args: {
     },
     transaction: {
       id: mockedSaleorTransactionId,
-      pspReference: args.stripePaymentIntentId,
+      pspReference: args.adyenPaymentIntentId,
       checkout: {
         id: "checkout-id",
         channel: {

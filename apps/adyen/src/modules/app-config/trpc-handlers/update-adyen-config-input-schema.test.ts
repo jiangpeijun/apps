@@ -2,52 +2,52 @@ import { describe, expect, it } from "vitest";
 
 import { mockedConfigurationId } from "@/__tests__/mocks/constants";
 import {
-  mockedStripePublishableKey,
-  mockedStripePublishableKeyTest,
+  mockedAdyenPublishableKey,
+  mockedAdyenPublishableKeyTest,
 } from "@/__tests__/mocks/mocked-adyen-publishable-key";
 import {
-  mockedStripeRestrictedKey,
-  mockedStripeRestrictedKeyTest,
+  mockedAdyenRestrictedKey,
+  mockedAdyenRestrictedKeyTest,
 } from "@/__tests__/mocks/mocked-adyen-restricted-key";
-import { updateStripeConfigInputSchema } from "@/modules/app-config/trpc-handlers/update-adyen-config-input-schema";
+import { updateAdyenConfigInputSchema } from "@/modules/app-config/trpc-handlers/update-adyen-config-input-schema";
 
-describe("updateStripeConfigInputSchema", () => {
+describe("updateAdyenConfigInputSchema", () => {
   it("Accepts a full key pair from the same environment", () => {
     expect(
-      updateStripeConfigInputSchema.parse({
+      updateAdyenConfigInputSchema.parse({
         configId: mockedConfigurationId,
         name: "Renamed",
-        publishableKey: mockedStripePublishableKey,
-        restrictedKey: mockedStripeRestrictedKey,
+        publishableKey: mockedAdyenPublishableKey,
+        restrictedKey: mockedAdyenRestrictedKey,
       }),
     ).toStrictEqual({
       configId: mockedConfigurationId,
       name: "Renamed",
-      publishableKey: mockedStripePublishableKey,
-      restrictedKey: mockedStripeRestrictedKey,
+      publishableKey: mockedAdyenPublishableKey,
+      restrictedKey: mockedAdyenRestrictedKey,
     });
   });
 
   it("Accepts a full test key pair", () => {
     expect(
-      updateStripeConfigInputSchema.parse({
+      updateAdyenConfigInputSchema.parse({
         configId: mockedConfigurationId,
         name: "Sandbox",
-        publishableKey: mockedStripePublishableKeyTest,
-        restrictedKey: mockedStripeRestrictedKeyTest,
+        publishableKey: mockedAdyenPublishableKeyTest,
+        restrictedKey: mockedAdyenRestrictedKeyTest,
       }),
     ).toMatchObject({
-      publishableKey: mockedStripePublishableKeyTest,
-      restrictedKey: mockedStripeRestrictedKeyTest,
+      publishableKey: mockedAdyenPublishableKeyTest,
+      restrictedKey: mockedAdyenRestrictedKeyTest,
     });
   });
 
   it("Accepts null restrictedKey so the stored key is kept", () => {
     expect(
-      updateStripeConfigInputSchema.parse({
+      updateAdyenConfigInputSchema.parse({
         configId: mockedConfigurationId,
         name: "Renamed",
-        publishableKey: mockedStripePublishableKey,
+        publishableKey: mockedAdyenPublishableKey,
         restrictedKey: null,
       }),
     ).toMatchObject({
@@ -57,10 +57,10 @@ describe("updateStripeConfigInputSchema", () => {
 
   it("Rejects an empty name", () => {
     expect(() =>
-      updateStripeConfigInputSchema.parse({
+      updateAdyenConfigInputSchema.parse({
         configId: mockedConfigurationId,
         name: "",
-        publishableKey: mockedStripePublishableKey,
+        publishableKey: mockedAdyenPublishableKey,
         restrictedKey: null,
       }),
     ).toThrowErrorMatchingInlineSnapshot(`
@@ -82,11 +82,11 @@ describe("updateStripeConfigInputSchema", () => {
 
   it("Rejects mixing live and test keys when a new restricted key is provided", () => {
     expect(() =>
-      updateStripeConfigInputSchema.parse({
+      updateAdyenConfigInputSchema.parse({
         configId: mockedConfigurationId,
         name: "Renamed",
-        publishableKey: mockedStripePublishableKeyTest,
-        restrictedKey: mockedStripeRestrictedKey,
+        publishableKey: mockedAdyenPublishableKeyTest,
+        restrictedKey: mockedAdyenRestrictedKey,
       }),
     ).toThrowErrorMatchingInlineSnapshot(`
       [ZodError: [
@@ -105,14 +105,14 @@ describe("updateStripeConfigInputSchema", () => {
      * "keep", so the schema only validates the publishable key format.
      */
     expect(
-      updateStripeConfigInputSchema.parse({
+      updateAdyenConfigInputSchema.parse({
         configId: mockedConfigurationId,
         name: "Renamed",
-        publishableKey: mockedStripePublishableKeyTest,
+        publishableKey: mockedAdyenPublishableKeyTest,
         restrictedKey: null,
       }),
     ).toMatchObject({
-      publishableKey: mockedStripePublishableKeyTest,
+      publishableKey: mockedAdyenPublishableKeyTest,
       restrictedKey: null,
     });
   });

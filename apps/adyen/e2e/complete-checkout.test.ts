@@ -2,21 +2,21 @@ import { expect, test } from "@playwright/test";
 
 import { SaleorApi } from "./api/saleor-api";
 import { env } from "./env";
-import { StripeCheckoutFormPage } from "./pages/stripe-checkout-form-page";
+import { AdyenCheckoutFormPage } from "./pages/adyen-checkout-form-page";
 import { SummaryPage } from "./pages/summary-page";
 
 test("Complete checkout with transactionFlowStrategy: charge", async ({ request, page }) => {
   const saleorApi = new SaleorApi(request);
-  const stripeCheckoutFormPage = new StripeCheckoutFormPage(page);
+  const adyenCheckoutFormPage = new AdyenCheckoutFormPage(page);
   const summaryPage = new SummaryPage(page);
 
   const checkoutId = await saleorApi.createCheckout({
     channelSlug: env.E2E_CHARGE_CHANNEL_SLUG,
   });
 
-  await stripeCheckoutFormPage.goto({ checkoutId });
-  await stripeCheckoutFormPage.fillPaymentInformation();
-  await stripeCheckoutFormPage.pay();
+  await adyenCheckoutFormPage.goto({ checkoutId });
+  await adyenCheckoutFormPage.fillPaymentInformation();
+  await adyenCheckoutFormPage.pay();
 
   await summaryPage.processSession();
   await expect(summaryPage.successToast).toBeVisible();
@@ -37,16 +37,16 @@ test.use({ baseURL: env.E2E_BASE_URL });
 
 test("Complete checkout with transactionFlowStrategy: authorize", async ({ request, page }) => {
   const saleorApi = new SaleorApi(request);
-  const stripeCheckoutFormPage = new StripeCheckoutFormPage(page);
+  const adyenCheckoutFormPage = new AdyenCheckoutFormPage(page);
   const summaryPage = new SummaryPage(page);
 
   const checkoutId = await saleorApi.createCheckout({
     channelSlug: env.E2E_AUTHORIZATION_CHANNEL_SLUG,
   });
 
-  await stripeCheckoutFormPage.goto({ checkoutId });
-  await stripeCheckoutFormPage.fillPaymentInformation();
-  await stripeCheckoutFormPage.pay();
+  await adyenCheckoutFormPage.goto({ checkoutId });
+  await adyenCheckoutFormPage.fillPaymentInformation();
+  await adyenCheckoutFormPage.pay();
 
   await summaryPage.processSession();
   await expect(summaryPage.successToast).toBeVisible();

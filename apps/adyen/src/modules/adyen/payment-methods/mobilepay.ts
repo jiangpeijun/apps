@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { z } from "zod";
 
 import {
@@ -10,7 +10,7 @@ import { type SaleorTransationFlow } from "@/modules/saleor/saleor-transaction-f
 import { type PaymentMethod } from "./types";
 
 /**
- * https://docs.stripe.com/payments/mobilepay
+ * https://docs.adyen.com/payments/mobilepay
  */
 export class MobilePayPaymentMethod implements PaymentMethod {
   type = "mobilepay" as const;
@@ -28,7 +28,7 @@ export class MobilePayPaymentMethod implements PaymentMethod {
 
   getCreatePaymentIntentMethodOptions(
     saleorTransactionFlow: SaleorTransationFlow,
-  ): Stripe.PaymentIntentCreateParams.PaymentMethodOptions {
+  ): Adyen.PaymentIntentCreateParams.PaymentMethodOptions {
     const transactionFlow = this.getResolvedTransactionFlow(saleorTransactionFlow);
 
     return {

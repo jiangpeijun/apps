@@ -12,7 +12,7 @@ export const transactionRefundRequestedWebhookDefinition =
   new SaleorSyncWebhook<TransactionRefundRequestedEventFragment>({
     apl: saleorApp.apl,
     event: "TRANSACTION_REFUND_REQUESTED",
-    name: "Stripe Transaction Refund Requested",
+    name: "Adyen Transaction Refund Requested",
     isActive: true,
     query: TransactionRefundRequestedDocument,
     webhookPath: "api/webhooks/saleor/transaction-refund-requested",

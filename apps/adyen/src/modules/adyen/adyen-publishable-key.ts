@@ -4,23 +4,23 @@ import { z } from "zod";
 
 import { BaseError } from "@/lib/errors";
 
-export const StripePublishableKeyValidationError = BaseError.subclass(
-  "StripePublishableKeyValidationError",
+export const AdyenPublishableKeyValidationError = BaseError.subclass(
+  "AdyenPublishableKeyValidationError",
   {
     props: {
-      _internalName: "StripePublishableKeyValidationError" as const,
+      _internalName: "AdyenPublishableKeyValidationError" as const,
     },
   },
 );
 
-export const StripePublishableKeySchema = z
+export const AdyenPublishableKeySchema = z
   .string()
   .min(1)
   .refine((value) => {
     const expected = value.startsWith("pk_test_") || value.startsWith("pk_live_");
 
     if (!expected) {
-      captureMessage("Received unexpected Stripe PK format", (scope) => {
+      captureMessage("Received unexpected Adyen PK format", (scope) => {
         scope.setLevel("warning");
         scope.setExtra("first8letters", value.slice(0, 8));
 
@@ -30,11 +30,11 @@ export const StripePublishableKeySchema = z
 
     return true;
   })
-  .brand("StripePublishableKey");
+  .brand("AdyenPublishableKey");
 
-export const createStripePublishableKey = (raw: string | null) =>
-  fromThrowable(StripePublishableKeySchema.parse, (error) =>
-    StripePublishableKeyValidationError.normalize(error),
+export const createAdyenPublishableKey = (raw: string | null) =>
+  fromThrowable(AdyenPublishableKeySchema.parse, (error) =>
+    AdyenPublishableKeyValidationError.normalize(error),
   )(raw);
 
-export type StripePublishableKey = z.infer<typeof StripePublishableKeySchema>;
+export type AdyenPublishableKey = z.infer<typeof AdyenPublishableKeySchema>;

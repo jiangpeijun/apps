@@ -4,13 +4,13 @@ import { err, ok, type Result } from "neverthrow";
 
 import { BaseError } from "@/lib/errors";
 
-export class StripeMoney {
+export class AdyenMoney {
   public readonly amount: number;
   public readonly currency: string;
 
   static ValdationError = BaseError.subclass("ValidationError", {
     props: {
-      _internalName: "StripeMoney.ValidationError" as const,
+      _internalName: "AdyenMoney.ValidationError" as const,
     },
   });
 
@@ -22,26 +22,26 @@ export class StripeMoney {
   static createFromSaleorAmount(args: {
     amount: number;
     currency: string;
-  }): Result<StripeMoney, InstanceType<typeof StripeMoney.ValdationError>> {
+  }): Result<AdyenMoney, InstanceType<typeof AdyenMoney.ValdationError>> {
     if (args.amount < 0) {
-      return err(new StripeMoney.ValdationError("Amount must be greater than 0"));
+      return err(new AdyenMoney.ValdationError("Amount must be greater than 0"));
     }
 
     if (args.currency.length !== 3) {
-      return err(new StripeMoney.ValdationError("Currency code must be 3 characters long"));
+      return err(new AdyenMoney.ValdationError("Currency code must be 3 characters long"));
     }
 
     const currencyCodeData = currencyCodesData.code(args.currency);
 
     if (currencyCodeData === undefined) {
-      return err(new StripeMoney.ValdationError("Currency code is not supported"));
+      return err(new AdyenMoney.ValdationError("Currency code is not supported"));
     }
     const convertedAmount = currencyJs(args.amount, {
       precision: currencyCodeData.digits,
     });
 
     return ok(
-      new StripeMoney({
+      new AdyenMoney({
         amount: convertedAmount.intValue,
         currency: args.currency.toLowerCase(),
       }),

@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 
 import { type ConfigChannelFragment } from "@/generated/graphql";
 import {
-  StripeFrontendConfig,
-  type StripeFrontendConfigSerializedFields,
+  AdyenFrontendConfig,
+  type AdyenFrontendConfigSerializedFields,
 } from "@/modules/app-config/domain/adyen-config";
 
 import {
@@ -17,15 +17,15 @@ import {
 import { buildChannelMovePlan } from "./build-channel-move-plan";
 import { ConfigCardChannelList } from "./config-card-channel-list";
 import { ConfirmChannelMoveModal } from "./confirm-channel-move-modal";
-import { StripeConfigActionsMenu } from "./adyen-config-actions-menu";
-import styles from "./stripe-config-cards.module.css";
-import { StripeEnvBadge } from "./adyen-env-badge";
-import { stripeEnvLabel } from "./adyen-env-label";
+import { AdyenConfigActionsMenu } from "./adyen-config-actions-menu";
+import styles from "./adyen-config-cards.module.css";
+import { AdyenEnvBadge } from "./adyen-env-badge";
+import { adyenEnvLabel } from "./adyen-env-label";
 
 type ChannelOption = { label: string; value: string };
 
 type Props = {
-  config: StripeFrontendConfigSerializedFields;
+  config: AdyenFrontendConfigSerializedFields;
   channels: ConfigChannelFragment[];
   mapping: ChannelMapping;
   assignedChannels: ConfigChannelFragment[];
@@ -52,7 +52,7 @@ const toOptions = (
     };
   });
 
-export const StripeConfigCard = ({
+export const AdyenConfigCard = ({
   config,
   channels,
   mapping,
@@ -66,8 +66,8 @@ export const StripeConfigCard = ({
   const [editing, setEditing] = useState(false);
   const router = useRouter();
   const { theme } = useTheme();
-  const configInstance = StripeFrontendConfig.createFromSerializedFields(config);
-  const envValue = configInstance.getStripeEnvValue();
+  const configInstance = AdyenFrontendConfig.createFromSerializedFields(config);
+  const envValue = configInstance.getAdyenEnvValue();
 
   const cardClassName = [
     styles.card,
@@ -157,7 +157,7 @@ export const StripeConfigCard = ({
   };
 
   return (
-    <Box className={cardClassName} data-test-id={`stripe-config-card-${configInstance.id}`}>
+    <Box className={cardClassName} data-test-id={`adyen-config-card-${configInstance.id}`}>
       {isMoveConfirmOpen ? (
         <ConfirmChannelMoveModal
           moves={envChangingMoves}
@@ -185,7 +185,7 @@ export const StripeConfigCard = ({
           >
             {configInstance.name}
           </TextLink>
-          <StripeEnvBadge env={envValue} />
+          <AdyenEnvBadge env={envValue} />
         </Box>
 
         <Box className={styles.cardHeaderActions}>
@@ -215,7 +215,7 @@ export const StripeConfigCard = ({
               >
                 Assign channels
               </Button>
-              <StripeConfigActionsMenu
+              <AdyenConfigActionsMenu
                 configId={configInstance.id}
                 configName={configInstance.name}
                 disabled={isDeleting}
@@ -270,11 +270,11 @@ export const StripeConfigCard = ({
                   {moves.map((move) => (
                     <Text key={move.channelId} size={1} color="default2">
                       {move.channelName} — now on {move.fromConfigName} (
-                      {stripeEnvLabel(move.fromEnv)})
+                      {adyenEnvLabel(move.fromEnv)})
                       {move.changesEnv ? (
                         <Text size={1} color="warning1">
                           {" "}
-                          · switches to {stripeEnvLabel(envValue)} keys
+                          · switches to {adyenEnvLabel(envValue)} keys
                         </Text>
                       ) : null}
                     </Text>

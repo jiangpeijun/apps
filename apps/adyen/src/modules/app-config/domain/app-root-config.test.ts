@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { mockedConfigurationId } from "@/__tests__/mocks/constants";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 
 describe("AppRootConfig", () => {
   describe("getAllConfigsAsList", () => {
@@ -13,13 +13,13 @@ describe("AppRootConfig", () => {
           "channel-1": "config-1",
         },
         {
-          [mockedStripeConfig.id]: mockedStripeConfig,
-          "config-2": StripeConfig.create({
+          [mockedAdyenConfig.id]: mockedAdyenConfig,
+          "config-2": AdyenConfig.create({
             name: "c2",
-            webhookId: mockedStripeConfig.webhookId,
-            webhookSecret: mockedStripeConfig.webhookSecret,
-            publishableKey: mockedStripeConfig.publishableKey,
-            restrictedKey: mockedStripeConfig.restrictedKey,
+            webhookId: mockedAdyenConfig.webhookId,
+            webhookSecret: mockedAdyenConfig.webhookSecret,
+            publishableKey: mockedAdyenConfig.publishableKey,
+            restrictedKey: mockedAdyenConfig.restrictedKey,
             id: "config-2",
           })._unsafeUnwrap(),
         },
@@ -27,7 +27,7 @@ describe("AppRootConfig", () => {
 
       expect(appRootConfig.getAllConfigsAsList()).toMatchInlineSnapshot(`
         [
-          StripeConfig {
+          AdyenConfig {
             "id": "81f323bd-91e2-4838-ab6e-5affd81ffc3b",
             "name": "config-name",
             "publishableKey": "pk_live_1",
@@ -35,7 +35,7 @@ describe("AppRootConfig", () => {
             "webhookId": "wh_123456789",
             "webhookSecret": "whsec_XYZ",
           },
-          StripeConfig {
+          AdyenConfig {
             "id": "config-2",
             "name": "c2",
             "publishableKey": "pk_live_1",

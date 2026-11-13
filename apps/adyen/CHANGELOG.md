@@ -1,17 +1,17 @@
-# saleor-app-payment-stripe
+# saleor-app-payment-adyen
 
 ## 2.12.0
 
 ### Minor Changes
 
-- d87f0b4: You can now find Saleor orders and checkouts from the Stripe Dashboard. Payment intents and refunds now include `saleor_order_id`, `saleor_order_number` and `saleor_checkout_id` metadata when the app knows them. Payments started for an existing order also get the description "Saleor Order #<number>".
+- d87f0b4: You can now find Saleor orders and checkouts from the Adyen Dashboard. Payment intents and refunds now include `saleor_order_id`, `saleor_order_number` and `saleor_checkout_id` metadata when the app knows them. Payments started for an existing order also get the description "Saleor Order #<number>".
 
-  Before, payment intents only had the ID of the Saleor checkout or order they were started for. Payments created from a checkout get the order details when the payment is captured or refunded. Payments captured right away during checkout still don't have the order number, because the order doesn't exist yet when Stripe creates the payment. Order details are added after the app's webhooks are migrated, which happens on the app's deployment.
+  Before, payment intents only had the ID of the Saleor checkout or order they were started for. Payments created from a checkout get the order details when the payment is captured or refunded. Payments captured right away during checkout still don't have the order number, because the order doesn't exist yet when Adyen creates the payment. Order details are added after the app's webhooks are migrated, which happens on the app's deployment.
 
 ### Patch Changes
 
 - 4cff73c: Updated Macaw UI to v3. Configuration screens keep the same layout and behavior; dialogs, dropdowns, tooltips and popovers now run on newer versions of their underlying components.
-- 7e746f3: If the app can't report a problem to your Saleor Dashboard, it now logs a warning instead of an error. Before, this case was logged as an error even though payment processing was not affected. One example is when the Saleor environment that a Stripe webhook points to was deleted.
+- 7e746f3: If the app can't report a problem to your Saleor Dashboard, it now logs a warning instead of an error. Before, this case was logged as an error even though payment processing was not affected. One example is when the Saleor environment that a Adyen webhook points to was deleted.
 
 ## 2.11.5
 
@@ -33,30 +33,30 @@
 ### Patch Changes
 
 - 14691bc: Upgraded neverthrow from v6.2.1 to v8.1.1 and zod from v3.21.4 to v3.24.1. App behavior doesn't change.
-- 8a86989: Fixed Stripe reporting failed webhook deliveries for events the app should ignore. Stripe sends events for every payment in the account to each webhook endpoint, so the app also receives events for payments it didn't create:
+- 8a86989: Fixed Adyen reporting failed webhook deliveries for events the app should ignore. Adyen sends events for every payment in the account to each webhook endpoint, so the app also receives events for payments it didn't create:
 
   - payments created outside of Saleor, for example Payment Links or other integrations
-  - payments created by a different Saleor environment connected to the same Stripe account in the same mode
+  - payments created by a different Saleor environment connected to the same Adyen account in the same mode
 
-  Before: the app answered these events with HTTP 400. Stripe kept retrying them for up to 3 days, sent "having trouble delivering webhooks" emails, and could eventually disable the endpoint.
+  Before: the app answered these events with HTTP 400. Adyen kept retrying them for up to 3 days, sent "having trouble delivering webhooks" emails, and could eventually disable the endpoint.
 
   After: the app acknowledges these events with HTTP 200 and ignores them. Payments created by the environment itself are processed as before.
 
-  When events come from a different Saleor environment, the app also shows an App Problem in the Dashboard for the affected configuration. It recommends using a separate Stripe account or sandbox for each environment. The problem is cleared when the configuration is updated or removed.
+  When events come from a different Saleor environment, the app also shows an App Problem in the Dashboard for the affected configuration. It recommends using a separate Adyen account or sandbox for each environment. The problem is cleared when the configuration is updated or removed.
 
 ## 2.11.2
 
 ### Patch Changes
 
 - a2fbe4a: Upgraded Next.js from v15.5.27 to v16.3.8. Apps keep building with Webpack for now; the switch to Turbopack will ship separately.
-- c5db97f: You now see an App Problem when Stripe keeps sending webhook events from a previous installation of the app whose configuration no longer exists. This happens when the app is reinstalled while the old webhook endpoint is still active in Stripe. The app can't remove that webhook without the old configuration, so the problem asks you to delete it in your Stripe Dashboard. Repeated events are grouped into one problem per day. Before, this was only logged as an internal error.
+- c5db97f: You now see an App Problem when Adyen keeps sending webhook events from a previous installation of the app whose configuration no longer exists. This happens when the app is reinstalled while the old webhook endpoint is still active in Adyen. The app can't remove that webhook without the old configuration, so the problem asks you to delete it in your Adyen Dashboard. Repeated events are grouped into one problem per day. Before, this was only logged as an internal error.
 
 ## 2.11.1
 
 ### Patch Changes
 
 - 60f11e2: Upgrade next.js to 16.3.8 or 15.5.27
-- d3e9a93: Fixed payment method details (e.g. card brand and last digits) missing on transactions for Saleor 3.23 and newer. Before, the Stripe webhook sent payment method details only on Saleor 3.22. If the Stripe webhook arrived before the shopper returned to the storefront, or Saleor completed the checkout itself, the transaction had no payment method. Now the details are always sent from the Stripe webhook.
+- d3e9a93: Fixed payment method details (e.g. card brand and last digits) missing on transactions for Saleor 3.23 and newer. Before, the Adyen webhook sent payment method details only on Saleor 3.22. If the Adyen webhook arrived before the shopper returned to the storefront, or Saleor completed the checkout itself, the transaction had no payment method. Now the details are always sent from the Adyen webhook.
 
 ## 2.11.0
 
@@ -82,7 +82,7 @@
 
 ### Minor Changes
 
-- 57acbeb: Refunds, captures and cancellations are no longer performed twice when Saleor re-delivers the same request. Saleor retries a transaction action webhook up to five times when the app is slow or returns an error, and until now each retry reached Stripe as a brand new call - a retry that arrived after Stripe had already accepted a refund created a second, duplicate refund. The app now forwards the `idempotencyKey` that Saleor sends with the request, so Stripe returns the original refund instead of creating another one. Two separate refunds of the same amount are still processed independently, because Saleor assigns each requested action its own key.
+- 57acbeb: Refunds, captures and cancellations are no longer performed twice when Saleor re-delivers the same request. Saleor retries a transaction action webhook up to five times when the app is slow or returns an error, and until now each retry reached Adyen as a brand new call - a retry that arrived after Adyen had already accepted a refund created a second, duplicate refund. The app now forwards the `idempotencyKey` that Saleor sends with the request, so Adyen returns the original refund instead of creating another one. Two separate refunds of the same amount are still processed independently, because Saleor assigns each requested action its own key.
 
   Requires Saleor 3.23 or newer, which is where `idempotencyKey` was added to the transaction action webhook payloads.
 
@@ -152,7 +152,7 @@
 ### Patch Changes
 
 - b44a659: Opening the app from Saleor Dashboard no longer flashes unstyled bare "Loading..."
-- b44a659: Reloading a Stripe configuration page no longer briefly claims you lack permission. Before: the app
+- b44a659: Reloading a Adyen configuration page no longer briefly claims you lack permission. Before: the app
   treated "Dashboard has not sent the user yet" the same as "user is missing a permission", so
   reloading or deep-linking into a configuration page flashed "You do not have permission to access
   this page" before the real page appeared. Now: the app waits until permissions are actually known
@@ -168,22 +168,22 @@
   configuration is a card that shows the channels using it, with a Sandbox/Live badge, a
   connected-channel count, per-channel disconnect, and a fold at the bottom of the card listing
   channels that are not assigned yet. Each card’s overflow menu has Edit and Delete, instead of a
-  standalone remove control. A "Finish Stripe setup" checklist walks through adding keys and
+  standalone remove control. A "Finish Adyen setup" checklist walks through adding keys and
   assigning channels, and stays reachable as a compact summary row after
   being dismissed. Saving a new configuration now locks the form and save bar while it is in
   flight, so a double click can no longer create a duplicate configuration. Key fields also name
   the value they expect and the prefix it starts with, so pasting a secret key instead of a
   restricted one is easier to catch before saving. After a key is pasted, a Sandbox or Live
   pill appears in the form header so the environment is visible before save.
-- d78dcb0: Stripe configurations can now be edited. Before: a configuration was read-only once created, so
-  fixing a typo in its name or rotating leaked Stripe keys meant deleting it and creating a new one,
+- d78dcb0: Adyen configurations can now be edited. Before: a configuration was read-only once created, so
+  fixing a typo in its name or rotating leaked Adyen keys meant deleting it and creating a new one,
   which also lost every channel assignment. Now: clicking a configuration name opens its own page
   where the name and keys can be changed and the configuration can be deleted, while its channels
   stay assigned. Pasting a new restricted key is optional — leaving the field empty keeps the saved
-  one. Switching a configuration to another Stripe account or between sandbox and live re-creates
-  its Stripe webhook automatically, and rotating keys clears any credential problems the app
+  one. Switching a configuration to another Adyen account or between sandbox and live re-creates
+  its Adyen webhook automatically, and rotating keys clears any credential problems the app
   reported for that configuration.
-- d78dcb0: Assigning one channel to a Stripe configuration is quicker, and taking a channel from another
+- d78dcb0: Assigning one channel to a Adyen configuration is quicker, and taking a channel from another
   configuration is now spelled out. Before: the only way to connect a channel was to open a
   configuration card and pick channels from a multiselect, and a channel silently disappeared from
   whichever configuration held it before. Now: every channel in the "channels not assigned" list has
@@ -208,7 +208,7 @@
 ### Patch Changes
 
 - 546b559: Updated Macaw UI to v2. Icons that used to come from Macaw UI (close, trash, edit, chevrons, arrows, copy, external link, and others) now come from Lucide, so a few icons look slightly different but keep the same meaning and placement.
-- 0080cce: Stripe no longer raises an error alert when it receives webhook events for a configuration that no longer exists. This happens when a configuration is deleted but its webhook endpoint is still active in Stripe — something outside the app's control. The situation is now surfaced to you as an App Problem, prompting you to remove the orphaned webhook in your Stripe Dashboard.
+- 0080cce: Adyen no longer raises an error alert when it receives webhook events for a configuration that no longer exists. This happens when a configuration is deleted but its webhook endpoint is still active in Adyen — something outside the app's control. The situation is now surfaced to you as an App Problem, prompting you to remove the orphaned webhook in your Adyen Dashboard.
 
 ## 2.6.9
 
@@ -251,7 +251,7 @@
 
   For more details read `packages/shared/src/key-rotation/README.md` documentation
 
-- af75011: Fixed: when the dashboard session/JWT expires, the Stripe app now shows a clear "Session expired" message instead of a cryptic internal error. The backend correctly responds with HTTP 403 instead of 500, so expired sessions no longer show up as server errors in logs.
+- af75011: Fixed: when the dashboard session/JWT expires, the Adyen app now shows a clear "Session expired" message instead of a cryptic internal error. The backend correctly responds with HTTP 403 instead of 500, so expired sessions no longer show up as server errors in logs.
 - Updated dependencies [0744721]
   - @saleor/apps-shared@1.14.5
   - @saleor/apps-trpc@4.0.5
@@ -315,7 +315,7 @@
 
 ### Minor Changes
 
-- 9c3453dd: Added AppProblems support - now Stripe will report common issues (like invalid secrets) directly to Saleor and Dashboard will display them for the user
+- 9c3453dd: Added AppProblems support - now Adyen will report common issues (like invalid secrets) directly to Saleor and Dashboard will display them for the user
 
 ### Patch Changes
 
@@ -357,7 +357,7 @@
 ### Minor Changes
 
 - cf9c50af: Added support for _Link_ payment method. Storefront should include `link` payment method in mutation `data`
-- a628f53f: Now app will cancel Payment Intent (on Stripe side) when it fails to finish saving transaction on app's side (record in DynamoDB). That behavior was partially broken and webhooks couldn't be resolved. Now if DynamoDB write fails, app cleans the orphaned intent. This happens on TransactionInitializeSession
+- a628f53f: Now app will cancel Payment Intent (on Adyen side) when it fails to finish saving transaction on app's side (record in DynamoDB). That behavior was partially broken and webhooks couldn't be resolved. Now if DynamoDB write fails, app cleans the orphaned intent. This happens on TransactionInitializeSession
 
 ### Patch Changes
 
@@ -384,7 +384,7 @@
 - be1fcf20: Fixed race condition in transaction recording that caused `ConditionalCheckFailedException` errors.
   Previously, when two concurrent requests with the same idempotency key arrived (e.g., user clicking pay button multiple times),
   the second request would fail with a DynamoDB error.
-  Now, duplicate write attempts are treated as idempotent success since Stripe already ensures the payment intent is not charged multiple times.
+  Now, duplicate write attempts are treated as idempotent success since Adyen already ensures the payment intent is not charged multiple times.
 
 ## 2.3.9
 
@@ -454,10 +454,10 @@
 
 ### Minor Changes
 
-- 6b9305d3: Add support for payment method details in transaction events. The Stripe app now fetches and includes payment method information (card brand, last digits, expiration date, etc.) when reporting transaction events to Saleor. This feature is only available for Saleor 3.22+ and includes:
+- 6b9305d3: Add support for payment method details in transaction events. The Adyen app now fetches and includes payment method information (card brand, last digits, expiration date, etc.) when reporting transaction events to Saleor. This feature is only available for Saleor 3.22+ and includes:
 
-  - New `SaleorPaymentMethodDetails` class for converting Stripe payment method data to Saleor format
-  - Automatic fetching of payment method details from Stripe PaymentIntent
+  - New `SaleorPaymentMethodDetails` class for converting Adyen payment method data to Saleor format
+  - Automatic fetching of payment method details from Adyen PaymentIntent
   - Support for card payment methods (brand, last 4 digits, expiration month/year) and other payment method types
   - Payment method details included in transaction event reports sent to Saleor
   - Version compatibility check using `SaleorVersionCompatibilityValidator` to ensure the feature is only used with compatible Saleor versions
@@ -484,8 +484,8 @@
 
 ### Minor Changes
 
-- 46ed6766: Add support for [ACH Direct Debit](https://docs.stripe.com/payments/ach-direct-debit) and [SEPA Direct Debit](https://docs.stripe.com/payments/sepa-debit) payment methods.
-  Also fixed issue where app was using incorrect amount when handling processing event from Stripe (previously it was using `amount_received` and after this change it is using `amount` from Stripe event).
+- 46ed6766: Add support for [ACH Direct Debit](https://docs.adyen.com/payments/ach-direct-debit) and [SEPA Direct Debit](https://docs.adyen.com/payments/sepa-debit) payment methods.
+  Also fixed issue where app was using incorrect amount when handling processing event from Adyen (previously it was using `amount_received` and after this change it is using `amount` from Adyen event).
 
 ### Patch Changes
 
@@ -495,7 +495,7 @@
 
 ### Patch Changes
 
-- 45be18b8: Pass metadata to Stripe when creating PaymentIntents to fix webhook validation errors.
+- 45be18b8: Pass metadata to Adyen when creating PaymentIntents to fix webhook validation errors.
 
 ## 2.1.2
 
@@ -519,7 +519,7 @@
 
 ### Minor Changes
 
-- 30813d53: Events from Stripe that doesn't contain metadata are now gracefully ignored. App will not try to proceed such event, which eventually ended with TransactionNotFound error. Instead it's early returned, not DB is called and proper status is returned to Stripe.
+- 30813d53: Events from Adyen that doesn't contain metadata are now gracefully ignored. App will not try to proceed such event, which eventually ended with TransactionNotFound error. Instead it's early returned, not DB is called and proper status is returned to Adyen.
 
 ## 2.0.7
 
@@ -569,10 +569,10 @@
 
 ### Patch Changes
 
-- 68425b40: Updated how app handles transaction not found in internal DB - after this change app will responds with 400 status code meaning that Stripe won't retry webhook request.
+- 68425b40: Updated how app handles transaction not found in internal DB - after this change app will responds with 400 status code meaning that Adyen won't retry webhook request.
 - b5420bcf: Add additional Sentry / observability attributes
 - 5b4a6f36: Fixed broken validation for PK and RK on the UI side. Now prefix is validated for early feedback
-- c1a04e31: Fixed Stripe webhook route handler not wrapped in app context & added saleorApiUrl to Sentry when handling tRPC errors.
+- c1a04e31: Fixed Adyen webhook route handler not wrapped in app context & added saleorApiUrl to Sentry when handling tRPC errors.
 
 ## 2.0.2
 
@@ -585,4 +585,4 @@
 
 ### Patch Changes
 
-- af4f38ec: App doesn't throw anymore when ID from Stripe doesn't match expected format. Previously app was checking format like "pk*live*" or "whsec\_". Now it will inform Sentry that it faced unexpected value, but continue to work.
+- af4f38ec: App doesn't throw anymore when ID from Adyen doesn't match expected format. Previously app was checking format like "pk*live*" or "whsec\_". Now it will inform Sentry that it faced unexpected value, but continue to work.

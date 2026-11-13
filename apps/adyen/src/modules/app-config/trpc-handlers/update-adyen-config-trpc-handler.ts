@@ -4,34 +4,34 @@ import { after } from "next/server";
 
 import { BaseError } from "@/lib/errors";
 import { createInstrumentedGraphqlClient } from "@/lib/graphql-client";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { stripeKeyEnv } from "@/modules/app-config/trpc-handlers/adyen-key-input-schemas";
-import { updateStripeConfigInputSchema } from "@/modules/app-config/trpc-handlers/update-adyen-config-input-schema";
-import { StripeProblemReporter } from "@/modules/app-problems/adyen-problem-reporter";
+import { adyenKeyEnv } from "@/modules/app-config/trpc-handlers/adyen-key-input-schemas";
+import { updateAdyenConfigInputSchema } from "@/modules/app-config/trpc-handlers/update-adyen-config-input-schema";
+import { AdyenProblemReporter } from "@/modules/app-problems/adyen-problem-reporter";
 import { createSaleorApiUrl, type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { StripeAuthValidator } from "@/modules/adyen/adyen-auth-validator";
-import { StripeClient } from "@/modules/adyen/adyen-client";
-import { type StripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { type StripeWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
-import { createStripeWebhookSecret } from "@/modules/adyen/stripe-webhook-secret";
+import { AdyenAuthValidator } from "@/modules/adyen/adyen-auth-validator";
+import { AdyenClient } from "@/modules/adyen/adyen-client";
+import { type AdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { type AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
+import { createAdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
-export class UpdateStripeConfigTrpcHandler {
+export class UpdateAdyenConfigTrpcHandler {
   baseProcedure = protectedClientProcedure;
 
-  private readonly webhookManager: StripeWebhookManager;
+  private readonly webhookManager: AdyenWebhookManager;
 
-  constructor(deps: { webhookManager: StripeWebhookManager }) {
+  constructor(deps: { webhookManager: AdyenWebhookManager }) {
     this.webhookManager = deps.webhookManager;
   }
 
-  private validateRk(rk: StripeRestrictedKey) {
-    const validator = StripeAuthValidator.createFromClient(
-      StripeClient.createFromRestrictedKey(rk),
+  private validateRk(rk: AdyenRestrictedKey) {
+    const validator = AdyenAuthValidator.createFromClient(
+      AdyenClient.createFromRestrictedKey(rk),
     );
 
-    return validator.validateStripeAuth();
+    return validator.validateAdyenAuth();
   }
 
   private async getRootConfigOrThrow({
@@ -48,7 +48,7 @@ export class UpdateStripeConfigTrpcHandler {
     if (rootConfig.isErr()) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to update Stripe configuration. Please try again.",
+        message: "Failed to update Adyen configuration. Please try again.",
       });
     }
 
@@ -57,7 +57,7 @@ export class UpdateStripeConfigTrpcHandler {
 
   getTrpcProcedure() {
     return this.baseProcedure
-      .input(updateStripeConfigInputSchema)
+      .input(updateAdyenConfigInputSchema)
       .mutation(async ({ input, ctx }) => {
         const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
 
@@ -86,7 +86,7 @@ export class UpdateStripeConfigTrpcHandler {
           saleorApiUrl: saleorApiUrl.value,
         });
 
-        const existingConfig = rootConfig.stripeConfigsById[input.configId];
+        const existingConfig = rootConfig.adyenConfigsById[input.configId];
 
         if (!existingConfig) {
           throw new TRPCError({
@@ -98,7 +98,7 @@ export class UpdateStripeConfigTrpcHandler {
         /** Empty restricted key input means "keep the one already stored". */
         const restrictedKey = input.restrictedKey ?? existingConfig.restrictedKey;
 
-        if (stripeKeyEnv(input.publishableKey) !== stripeKeyEnv(restrictedKey)) {
+        if (adyenKeyEnv(input.publishableKey) !== adyenKeyEnv(restrictedKey)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message:
@@ -119,7 +119,7 @@ export class UpdateStripeConfigTrpcHandler {
           if (rkValidationResult.isErr()) {
             throw new TRPCError({
               code: "UNAUTHORIZED",
-              message: "Failed to update Stripe configuration. Restricted key is invalid",
+              message: "Failed to update Adyen configuration. Restricted key is invalid",
             });
           }
 
@@ -132,12 +132,12 @@ export class UpdateStripeConfigTrpcHandler {
             throw new TRPCError({
               code: "BAD_REQUEST",
               message:
-                "Couldn't verify the existing Stripe webhook with the new key. Ensure the key can read and write webhook endpoints, then try again.",
+                "Couldn't verify the existing Adyen webhook with the new key. Ensure the key can read and write webhook endpoints, then try again.",
             });
           }
 
           /**
-           * The stored webhook lives on the Stripe account the previous key pointed to. If the new
+           * The stored webhook lives on the Adyen account the previous key pointed to. If the new
            * key cannot see it, the configuration needs its own webhook on the new account.
            */
           if (!webhookReachable.value) {
@@ -159,15 +159,15 @@ export class UpdateStripeConfigTrpcHandler {
               throw new TRPCError({
                 code: "BAD_REQUEST",
                 message:
-                  "Failed to create Stripe webhook. Please validate your credentials or contact support.",
+                  "Failed to create Adyen webhook. Please validate your credentials or contact support.",
               });
             }
 
-            const newWebhookSecret = createStripeWebhookSecret(webhookCreationResult.value.secret);
+            const newWebhookSecret = createAdyenWebhookSecret(webhookCreationResult.value.secret);
 
             if (newWebhookSecret.isErr()) {
               captureException(
-                new BaseError("Secret from Stripe doesnt match expected format", {
+                new BaseError("Secret from Adyen doesnt match expected format", {
                   cause: newWebhookSecret.error,
                 }),
               );
@@ -175,7 +175,7 @@ export class UpdateStripeConfigTrpcHandler {
               throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message:
-                  "Failed to create Stripe webhook. Secret is invalid. Please contact support.",
+                  "Failed to create Adyen webhook. Secret is invalid. Please contact support.",
               });
             }
 
@@ -193,7 +193,7 @@ export class UpdateStripeConfigTrpcHandler {
           }
         }
 
-        const configToSave = StripeConfig.create({
+        const configToSave = AdyenConfig.create({
           id: existingConfig.id,
           name: input.name,
           publishableKey: input.publishableKey,
@@ -205,11 +205,11 @@ export class UpdateStripeConfigTrpcHandler {
         if (configToSave.isErr()) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `Failed to update Stripe configuration: ${configToSave.error.message}`,
+            message: `Failed to update Adyen configuration: ${configToSave.error.message}`,
           });
         }
 
-        const saveResult = await ctx.configRepo.saveStripeConfig({
+        const saveResult = await ctx.configRepo.saveAdyenConfig({
           config: configToSave.value,
           saleorApiUrl: saleorApiUrl.value,
           appId: ctx.appId,
@@ -220,11 +220,11 @@ export class UpdateStripeConfigTrpcHandler {
 
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to update Stripe configuration. Data can't be saved.",
+            message: "Failed to update Adyen configuration. Data can't be saved.",
           });
         }
 
-        /** Keeps the endpoint recognizable in the Stripe dashboard. Cosmetic, so failures are ignored. */
+        /** Keeps the endpoint recognizable in the Adyen dashboard. Cosmetic, so failures are ignored. */
         if (input.name !== existingConfig.name) {
           after(() =>
             this.webhookManager.updateWebhookDescription({
@@ -240,7 +240,7 @@ export class UpdateStripeConfigTrpcHandler {
          * configuration - the Dashboard should stop showing it.
          */
         if (keysChanged) {
-          const reporter = new StripeProblemReporter(
+          const reporter = new AdyenProblemReporter(
             createInstrumentedGraphqlClient({
               saleorApiUrl: ctx.saleorApiUrl,
               token: ctx.appToken,

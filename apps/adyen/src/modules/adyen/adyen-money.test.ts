@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { StripeMoney } from "./adyen-money";
+import { AdyenMoney } from "./adyen-money";
 
-describe("StripeMoney", () => {
+describe("AdyenMoney", () => {
   describe("createFromSaleorAmount", () => {
-    it("creates a valid StripeMoney instance", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+    it("creates a valid AdyenMoney instance", () => {
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 10.0,
         currency: "USD",
       })._unsafeUnwrap();
@@ -15,7 +15,7 @@ describe("StripeMoney", () => {
     });
 
     it("handles different currency precisions correctly", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 10.0,
         currency: "JPY",
       })._unsafeUnwrap();
@@ -25,36 +25,36 @@ describe("StripeMoney", () => {
     });
 
     it("returns error for negative amount", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: -10.0,
         currency: "USD",
       });
 
-      expect(money._unsafeUnwrapErr()).toBeInstanceOf(StripeMoney.ValdationError);
+      expect(money._unsafeUnwrapErr()).toBeInstanceOf(AdyenMoney.ValdationError);
     });
 
     it("returns error for invalid currency code length", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 100.0,
         currency: "USDD",
       });
 
-      expect(money._unsafeUnwrapErr()).toBeInstanceOf(StripeMoney.ValdationError);
+      expect(money._unsafeUnwrapErr()).toBeInstanceOf(AdyenMoney.ValdationError);
     });
 
     it("returns error for unsupported currency", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 100.0,
         currency: "ABC",
       });
 
-      expect(money._unsafeUnwrapErr()).toBeInstanceOf(StripeMoney.ValdationError);
+      expect(money._unsafeUnwrapErr()).toBeInstanceOf(AdyenMoney.ValdationError);
     });
   });
 
   describe("getAmount", () => {
     it("handles 0-digit currencies", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 2137,
         currency: "JPY",
       })._unsafeUnwrap();
@@ -63,7 +63,7 @@ describe("StripeMoney", () => {
     });
 
     it("handles 2-digit currencies", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 10.99,
         currency: "USD",
       })._unsafeUnwrap();
@@ -72,7 +72,7 @@ describe("StripeMoney", () => {
     });
 
     it("handles 3-digit currencies", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 10.123,
         currency: "IQD",
       })._unsafeUnwrap();
@@ -81,7 +81,7 @@ describe("StripeMoney", () => {
     });
 
     it("handles 4-digit currencies", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 10.1234,
         currency: "UYW",
       })._unsafeUnwrap();
@@ -92,7 +92,7 @@ describe("StripeMoney", () => {
 
   describe("getCurrency", () => {
     it("returns lowercase currency code", () => {
-      const money = StripeMoney.createFromSaleorAmount({
+      const money = AdyenMoney.createFromSaleorAmount({
         amount: 1000,
         currency: "EUR",
       })._unsafeUnwrap();

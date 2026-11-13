@@ -1,14 +1,14 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import { type StripeRefundId } from "@/modules/adyen/adyen-refund-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenRefundId } from "@/modules/adyen/adyen-refund-id";
 
 export const chargeRefundUpdatedEventFixture = (
-  mockedStripeRefundId: StripeRefundId,
-  mockedStripePaymentIntentId: StripePaymentIntentId,
-): Stripe.ChargeRefundUpdatedEvent => {
-  // Stripe returns timestamp in seconds
+  mockedAdyenRefundId: AdyenRefundId,
+  mockedAdyenPaymentIntentId: AdyenPaymentIntentId,
+): Adyen.ChargeRefundUpdatedEvent => {
+  // Adyen returns timestamp in seconds
   const date = new Date(2025, 1, 1).getTime() / 1000;
 
   return {
@@ -26,7 +26,7 @@ export const chargeRefundUpdatedEventFixture = (
         currency: "usd",
         object: "refund",
         amount: 1000,
-        id: mockedStripeRefundId,
+        id: mockedAdyenRefundId,
         created: date,
         metadata: {
           saleor_transaction_id: mockedSaleorTransactionId,
@@ -37,7 +37,7 @@ export const chargeRefundUpdatedEventFixture = (
         status: "succeeded",
         balance_transaction: null,
         charge: "ch_charge-id",
-        payment_intent: mockedStripePaymentIntentId,
+        payment_intent: mockedAdyenPaymentIntentId,
         reason: null,
         receipt_number: null,
         source_transfer_reversal: null,

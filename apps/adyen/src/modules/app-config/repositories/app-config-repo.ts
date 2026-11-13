@@ -4,7 +4,7 @@ import { BaseError } from "@/lib/errors";
 import { type AppRootConfig } from "@/modules/app-config/domain/app-root-config";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
-import { type StripeConfig } from "../domain/adyen-config";
+import { type AdyenConfig } from "../domain/adyen-config";
 
 export type BaseAccessPattern = {
   saleorApiUrl: SaleorApiUrl;
@@ -12,22 +12,22 @@ export type BaseAccessPattern = {
 };
 
 /**
- * Stripe webhook will provide ID of config from URL. Repo must be able to access it
+ * Adyen webhook will provide ID of config from URL. Repo must be able to access it
  */
-export type StripeConfigByChannelIdAccessPattern = BaseAccessPattern & {
+export type AdyenConfigByChannelIdAccessPattern = BaseAccessPattern & {
   channelId: string;
 };
 
 /**
  * Saleor webhook will have available channel as access pattern. Repo must store channel<->config relation for this case
  */
-export type StripeConfigByConfigIdAccessPattern = BaseAccessPattern & {
+export type AdyenConfigByConfigIdAccessPattern = BaseAccessPattern & {
   configId: string;
 };
 
-export type GetStripeConfigAccessPattern =
-  | StripeConfigByChannelIdAccessPattern
-  | StripeConfigByConfigIdAccessPattern;
+export type GetAdyenConfigAccessPattern =
+  | AdyenConfigByChannelIdAccessPattern
+  | AdyenConfigByConfigIdAccessPattern;
 
 export const AppConfigRepoError = {
   FailureSavingConfig: BaseError.subclass("FailureSavingConfigError", {
@@ -48,15 +48,15 @@ export const AppConfigRepoError = {
 };
 
 export interface AppConfigRepo {
-  saveStripeConfig: (args: {
-    config: StripeConfig;
+  saveAdyenConfig: (args: {
+    config: AdyenConfig;
     saleorApiUrl: SaleorApiUrl;
     appId: string;
   }) => Promise<Result<null | void, InstanceType<typeof AppConfigRepoError.FailureSavingConfig>>>;
-  getStripeConfig: (
-    access: GetStripeConfigAccessPattern,
+  getAdyenConfig: (
+    access: GetAdyenConfigAccessPattern,
   ) => Promise<
-    Result<StripeConfig | null, InstanceType<typeof AppConfigRepoError.FailureFetchingConfig>>
+    Result<AdyenConfig | null, InstanceType<typeof AppConfigRepoError.FailureFetchingConfig>>
   >;
   getRootConfig: (
     access: BaseAccessPattern,

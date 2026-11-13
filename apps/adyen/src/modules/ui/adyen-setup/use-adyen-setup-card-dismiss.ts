@@ -1,7 +1,7 @@
 import { useAppBridge } from "@saleor/app-sdk/app-bridge";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const STORAGE_PREFIX = "saleor.stripe.setupChecklist.dismissed";
+const STORAGE_PREFIX = "saleor.adyen.setupChecklist.dismissed";
 
 const storageKey = (saleorApiUrl: string | undefined) =>
   `${STORAGE_PREFIX}:${saleorApiUrl ?? "unknown"}`;
@@ -18,7 +18,7 @@ const readDismissed = (key: string) => {
   }
 };
 
-export const useStripeSetupCardDismiss = () => {
+export const useAdyenSetupCardDismiss = () => {
   const { appBridgeState } = useAppBridge();
   const key = useMemo(
     () => storageKey(appBridgeState?.saleorApiUrl),

@@ -1,5 +1,5 @@
 import { err, ok } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
@@ -9,17 +9,17 @@ import {
   mockedSaleorChannelId,
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
-import { mockStripeProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripePaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
+import { mockAdyenProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { getMockedTransactionChargeRequestedEvent } from "@/__tests__/mocks/saleor-events/transaction-charge-requested-event";
 import {
   AppIsNotConfiguredResponse,
   BrokenAppResponse,
 } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
-import { type IStripePaymentIntentsApiFactory } from "@/modules/adyen/types";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
+import { type IAdyenPaymentIntentsApiFactory } from "@/modules/adyen/types";
 import { ChargeFailureResult } from "@/modules/transaction-result/failure-result";
 import { ChargeSuccessResult } from "@/modules/transaction-result/success-result";
 
@@ -47,32 +47,32 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("TransactionChargeRequestedUseCase", () => {
-  const stripePaymentIntentsApiFactory = {
-    create: () => mockedStripePaymentIntentsApi,
-  } satisfies IStripePaymentIntentsApiFactory;
+  const adyenPaymentIntentsApiFactory = {
+    create: () => mockedAdyenPaymentIntentsApi,
+  } satisfies IAdyenPaymentIntentsApiFactory;
 
-  it("Calls Stripe PaymentIntent API to capture payment intent and returns ChargeSuccess when payment intent is captured successfully", async () => {
+  it("Calls Adyen PaymentIntent API to capture payment intent and returns ChargeSuccess when payment intent is captured successfully", async () => {
     const spy = vi
-      .spyOn(mockedStripePaymentIntentsApi, "capturePaymentIntent")
+      .spyOn(mockedAdyenPaymentIntentsApi, "capturePaymentIntent")
       .mockImplementationOnce(async () =>
         ok({
           amount: 100,
           currency: "usd",
-          id: mockedStripePaymentIntentId.toString(), // stripe doesn't expect to get branded type here
+          id: mockedAdyenPaymentIntentId.toString(), // adyen doesn't expect to get branded type here
           status: "succeeded",
-        } as Stripe.PaymentIntent),
+        } as Adyen.PaymentIntent),
       );
 
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     const result = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionChargeRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(result._unsafeUnwrap()).toBeInstanceOf(
@@ -82,7 +82,7 @@ describe("TransactionChargeRequestedUseCase", () => {
     expect(result._unsafeUnwrap().transactionResult).toBeInstanceOf(ChargeSuccessResult);
 
     expect(spy).toHaveBeenCalledWith({
-      id: mockedStripePaymentIntentId,
+      id: mockedAdyenPaymentIntentId,
       idempotencyKey: mockedSaleorActionIdempotencyKey,
       metadata: {
         saleor_checkout_id: "mock-channel-1",
@@ -90,21 +90,21 @@ describe("TransactionChargeRequestedUseCase", () => {
     });
   });
 
-  it("Calls Stripe PaymentIntent API to capture payment intent and returns ChargeFailureResult when payment intent capture fails", async () => {
+  it("Calls Adyen PaymentIntent API to capture payment intent and returns ChargeFailureResult when payment intent capture fails", async () => {
     const spy = vi
-      .spyOn(mockedStripePaymentIntentsApi, "capturePaymentIntent")
-      .mockImplementationOnce(async () => err(new StripeAPIError("Error from Stripe API")));
+      .spyOn(mockedAdyenPaymentIntentsApi, "capturePaymentIntent")
+      .mockImplementationOnce(async () => err(new AdyenAPIError("Error from Adyen API")));
 
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     const result = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionChargeRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(result._unsafeUnwrap()).toBeInstanceOf(
@@ -113,7 +113,7 @@ describe("TransactionChargeRequestedUseCase", () => {
     expect(result._unsafeUnwrap().transactionResult).toBeInstanceOf(ChargeFailureResult);
 
     expect(spy).toHaveBeenCalledWith({
-      id: mockedStripePaymentIntentId,
+      id: mockedAdyenPaymentIntentId,
       idempotencyKey: mockedSaleorActionIdempotencyKey,
       metadata: {
         saleor_checkout_id: "mock-channel-1",
@@ -124,19 +124,19 @@ describe("TransactionChargeRequestedUseCase", () => {
   it("Adds Saleor order and original checkout to payment intent metadata on capture when checkout was completed", async () => {
     const event = getMockedTransactionChargeRequestedEvent();
     const spy = vi
-      .spyOn(mockedStripePaymentIntentsApi, "capturePaymentIntent")
+      .spyOn(mockedAdyenPaymentIntentsApi, "capturePaymentIntent")
       .mockImplementationOnce(async () =>
         ok({
           amount: 100,
           currency: "usd",
-          id: mockedStripePaymentIntentId.toString(),
+          id: mockedAdyenPaymentIntentId.toString(),
           status: "succeeded",
-        } as Stripe.PaymentIntent),
+        } as Adyen.PaymentIntent),
       );
 
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     await uc.execute({
@@ -146,7 +146,7 @@ describe("TransactionChargeRequestedUseCase", () => {
         ...event,
         transaction: {
           id: mockedSaleorTransactionId,
-          pspReference: mockedStripePaymentIntentId,
+          pspReference: mockedAdyenPaymentIntentId,
           checkout: null,
           order: {
             id: "order-id",
@@ -156,11 +156,11 @@ describe("TransactionChargeRequestedUseCase", () => {
           },
         },
       },
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(spy).toHaveBeenCalledWith({
-      id: mockedStripePaymentIntentId,
+      id: mockedAdyenPaymentIntentId,
       idempotencyKey: mockedSaleorActionIdempotencyKey,
       metadata: {
         saleor_order_id: "order-id",
@@ -172,19 +172,19 @@ describe("TransactionChargeRequestedUseCase", () => {
 
   it("Returns 'MissingConfigErrorResponse' if config not found for specified channel", async () => {
     const spy = vi
-      .spyOn(mockedAppConfigRepo, "getStripeConfig")
+      .spyOn(mockedAppConfigRepo, "getAdyenConfig")
       .mockImplementationOnce(async () => ok(null));
 
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     const responsePayload = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionChargeRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     const err = responsePayload._unsafeUnwrapErr();
@@ -194,24 +194,24 @@ describe("TransactionChargeRequestedUseCase", () => {
     expect(err).toBeInstanceOf(AppIsNotConfiguredResponse);
   });
 
-  it("Returns 'BrokenAppResponse' when currency coming from Stripe is not supported", async () => {
-    vi.spyOn(mockedStripePaymentIntentsApi, "capturePaymentIntent").mockImplementation(async () =>
+  it("Returns 'BrokenAppResponse' when currency coming from Adyen is not supported", async () => {
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "capturePaymentIntent").mockImplementation(async () =>
       ok({
         amount: 100,
         currency: "abc",
         status: "succeeded",
-      } as Stripe.PaymentIntent),
+      } as Adyen.PaymentIntent),
     );
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     const response = await uc.execute({
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionChargeRequestedEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(response._unsafeUnwrapErr()).toBeInstanceOf(BrokenAppResponse);
@@ -222,7 +222,7 @@ describe("TransactionChargeRequestedUseCase", () => {
 
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     await expect(
@@ -230,7 +230,7 @@ describe("TransactionChargeRequestedUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `[MissingTransactionError: Transaction not found in event]`,
@@ -243,14 +243,14 @@ describe("TransactionChargeRequestedUseCase", () => {
       transaction: {
         checkout: null,
         order: null,
-        pspReference: mockedStripePaymentIntentId,
+        pspReference: mockedAdyenPaymentIntentId,
         id: mockedSaleorTransactionId,
       },
     };
 
     const uc = new TransactionChargeRequestedUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
     });
 
     await expect(
@@ -258,7 +258,7 @@ describe("TransactionChargeRequestedUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(
       `[MissingChannelIdError: Channel ID not found in event Checkout or Order]`,

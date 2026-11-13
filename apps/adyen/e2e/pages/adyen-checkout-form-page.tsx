@@ -1,7 +1,7 @@
 import { type Locator, type Page } from "@playwright/test";
 import { env } from "e2e/env";
 
-export class StripeCheckoutFormPage {
+export class AdyenCheckoutFormPage {
   private readonly page: Page;
   readonly cardNumberInput: Locator;
   readonly cardExpiryInput: Locator;
@@ -28,8 +28,8 @@ export class StripeCheckoutFormPage {
 
   private constructPath(checkoutId: string) {
     const encodedGraphqlUrl = encodeURIComponent(env.E2E_SALEOR_API_URL);
-    const gateway = "stripe";
-    const appId = "saleor.app.payment.stripe";
+    const gateway = "adyen";
+    const appId = "saleor.app.payment.adyen";
 
     return `/env/${encodedGraphqlUrl}/checkout/${checkoutId}/payment-gateway/${gateway}/${appId}`;
   }
@@ -48,7 +48,7 @@ export class StripeCheckoutFormPage {
     await this.cardCvcInput.click();
     await this.cardCvcInput.fill("123");
 
-    // Default channels are set to Poland so we need to ensure the country is set to Poland as well to avoid issues with Stripe changing countries based on IP.
+    // Default channels are set to Poland so we need to ensure the country is set to Poland as well to avoid issues with Adyen changing countries based on IP.
     await this.countryInput.selectOption("PL");
   }
 

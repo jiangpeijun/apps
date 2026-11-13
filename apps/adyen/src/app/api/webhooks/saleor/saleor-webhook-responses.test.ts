@@ -11,7 +11,7 @@ import { BaseError } from "@/lib/errors";
 describe("BrokenAppResponse", () => {
   it("getResponse() returns valid Response with status 500 and message with error reason", async () => {
     const getConfigResponse = new BrokenAppResponse(
-      { stripeEnv: "LIVE" },
+      { adyenEnv: "LIVE" },
       new Error("Inner error"),
     );
     const fetchResponse = getConfigResponse.getResponse();
@@ -24,7 +24,7 @@ describe("BrokenAppResponse", () => {
 describe("AppIsNotConfiguredResponse", () => {
   it("getResponse() returns valid Response with status 400 and message with error reason", async () => {
     const missingConfigResponse = new AppIsNotConfiguredResponse(
-      { stripeEnv: "LIVE" },
+      { adyenEnv: "LIVE" },
       new Error("Inner error"),
     );
     const fetchResponse = missingConfigResponse.getResponse();
@@ -37,7 +37,7 @@ describe("AppIsNotConfiguredResponse", () => {
 describe("UnhandledErrorResponse", () => {
   it("getResponse() returns valid Response with status 500 and message with error reason", async () => {
     const unhandledResponse = new UnhandledErrorResponse(
-      { stripeEnv: "LIVE" },
+      { adyenEnv: "LIVE" },
       new Error("Inner error"),
     );
     const fetchResponse = unhandledResponse.getResponse();
@@ -50,7 +50,7 @@ describe("UnhandledErrorResponse", () => {
 describe("MalformedRequestResponse", () => {
   it("getResponse() returns valid Response with status 500 and message with error reason", async () => {
     const saleorApiUrlResponse = new MalformedRequestResponse(
-      { stripeEnv: "LIVE" },
+      { adyenEnv: "LIVE" },
       new Error("Inner error"),
     );
     const fetchResponse = saleorApiUrlResponse.getResponse();
@@ -60,7 +60,7 @@ describe("MalformedRequestResponse", () => {
   });
 });
 
-describe("Passing error details to the response when Stripe env is TEST", () => {
+describe("Passing error details to the response when Adyen env is TEST", () => {
   it.each([
     BrokenAppResponse,
     MalformedRequestResponse,
@@ -81,7 +81,7 @@ describe("Passing error details to the response when Stripe env is TEST", () => 
       }),
     });
 
-    const response = new ErrorResponse({ stripeEnv: "TEST" }, error);
+    const response = new ErrorResponse({ adyenEnv: "TEST" }, error);
     const body = await response.getResponse().text();
 
     // check if root message exists

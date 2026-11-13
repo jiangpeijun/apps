@@ -19,7 +19,7 @@ export class SaleorMoney {
     this.currency = args.currency;
   }
 
-  static createFromStripe(args: {
+  static createFromAdyen(args: {
     amount: number;
     currency: string;
   }): Result<SaleorMoney, InstanceType<typeof SaleorMoney.ValidationError>> {

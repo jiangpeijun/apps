@@ -1,9 +1,9 @@
 import { type ConfigChannelFragment } from "@/generated/graphql";
 import {
-  StripeFrontendConfig,
-  type StripeFrontendConfigSerializedFields,
+  AdyenFrontendConfig,
+  type AdyenFrontendConfigSerializedFields,
 } from "@/modules/app-config/domain/adyen-config";
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
 
 import { type ChannelMapping } from "./build-channel-assignment-updates";
 
@@ -11,13 +11,13 @@ export type ChannelMove = {
   channelId: string;
   channelName: string;
   fromConfigName: string;
-  fromEnv: StripeEnv;
+  fromEnv: AdyenEnv;
   /** True when the channel swaps sandbox keys for live ones, or the other way around. */
   changesEnv: boolean;
 };
 
-const envOf = (config: StripeFrontendConfigSerializedFields): StripeEnv =>
-  StripeFrontendConfig.createFromSerializedFields(config).getStripeEnvValue();
+const envOf = (config: AdyenFrontendConfigSerializedFields): AdyenEnv =>
+  AdyenFrontendConfig.createFromSerializedFields(config).getAdyenEnvValue();
 
 /**
  * Channels that would be taken away from another configuration by the current selection.
@@ -34,7 +34,7 @@ export const buildChannelMovePlan = ({
 }: {
   channels: ConfigChannelFragment[];
   mapping: ChannelMapping;
-  targetConfig: StripeFrontendConfigSerializedFields;
+  targetConfig: AdyenFrontendConfigSerializedFields;
   selectedChannelIds: Set<string>;
 }): ChannelMove[] => {
   const targetEnv = envOf(targetConfig);

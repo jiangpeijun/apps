@@ -1,7 +1,7 @@
-import { type AllowedStripeObjectMetadata } from "./types";
+import { type AllowedAdyenObjectMetadata } from "./types";
 
-type SaleorOrderStripeMetadata = Pick<
-  AllowedStripeObjectMetadata,
+type SaleorOrderAdyenMetadata = Pick<
+  AllowedAdyenObjectMetadata,
   "saleor_order_id" | "saleor_order_number" | "saleor_checkout_id"
 >;
 
@@ -11,10 +11,10 @@ type SaleorOrderStripeMetadata = Pick<
  * When checkout is completed, Saleor moves its transactions to the created order and unlinks the checkout,
  * so the checkout ID is resolved from `order.checkoutId` in that case.
  */
-export const getSaleorOrderStripeMetadata = (args: {
+export const getSaleorOrderAdyenMetadata = (args: {
   order?: { id: string; number?: string | null; checkoutId?: string | null } | null;
   checkout?: { id: string } | null;
-}): SaleorOrderStripeMetadata => {
+}): SaleorOrderAdyenMetadata => {
   const checkoutId = args.checkout?.id ?? args.order?.checkoutId;
 
   return {
@@ -24,5 +24,5 @@ export const getSaleorOrderStripeMetadata = (args: {
   };
 };
 
-export const getSaleorOrderStripeDescription = (order: { number?: string | null }) =>
+export const getSaleorOrderAdyenDescription = (order: { number?: string | null }) =>
   order.number ? `Saleor Order #${order.number}` : undefined;

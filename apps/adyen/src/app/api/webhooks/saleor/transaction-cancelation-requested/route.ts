@@ -14,9 +14,9 @@ import { loggerContext, withLoggerContext } from "@/lib/logger-context";
 import { setObservabilitySaleorApiUrl } from "@/lib/observability-saleor-api-url";
 import { setObservabilitySourceObjectId } from "@/lib/observability-source-object-id";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
-import { createStripeProblemReporter } from "@/modules/app-problems";
+import { createAdyenProblemReporter } from "@/modules/app-problems";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { StripePaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
+import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
 
 import { withRecipientVerification } from "../with-recipient-verification";
 import { TransactionCancelationRequestedUseCase } from "./use-case";
@@ -24,7 +24,7 @@ import { transactionCancelationRequestedWebhookDefinition } from "./webhook-defi
 
 const useCase = new TransactionCancelationRequestedUseCase({
   appConfigRepo: appConfigRepoImpl,
-  stripePaymentIntentsApiFactory: new StripePaymentIntentsApiFactory(),
+  adyenPaymentIntentsApiFactory: new AdyenPaymentIntentsApiFactory(),
 });
 
 const logger = createLogger("TRANSACTION_CANCELATION_REQUESTED route");
@@ -58,7 +58,7 @@ const handler = transactionCancelationRequestedWebhookDefinition.createHandler(
 
       setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
 
-      const problemReporter = createStripeProblemReporter(ctx.authData);
+      const problemReporter = createAdyenProblemReporter(ctx.authData);
 
       const result = await useCase.execute({
         appId: ctx.authData.appId,
@@ -71,7 +71,7 @@ const handler = transactionCancelationRequestedWebhookDefinition.createHandler(
         (result) => {
           logger.info("Successfully processed webhook request", {
             httpsStatusCode: result.statusCode,
-            stripeEnv: result.appContext.stripeEnv,
+            adyenEnv: result.appContext.adyenEnv,
             transactionResult: result.transactionResult.result,
           });
 

@@ -1,14 +1,14 @@
 import { err, ok } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
 import { mockedSaleorAppId } from "@/__tests__/mocks/constants";
 import { mockAuthData } from "@/__tests__/mocks/mock-auth-data";
-import { mockStripeProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
+import { mockAdyenProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
 import { getMockedRecordedTransaction } from "@/__tests__/mocks/mocked-recorded-transaction";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripePaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
 import { MockedTransactionRecorder } from "@/__tests__/mocks/mocked-transaction-recorder";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { getMockedTransactionProcessSessionEvent } from "@/__tests__/mocks/saleor-events/transaction-process-session-event";
@@ -18,8 +18,8 @@ import {
   MalformedRequestResponse,
 } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
 import { BaseError } from "@/lib/errors";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
-import { type IStripePaymentIntentsApiFactory } from "@/modules/adyen/types";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
+import { type IAdyenPaymentIntentsApiFactory } from "@/modules/adyen/types";
 
 import { TransactionProcessSessionUseCase } from "./use-case";
 import { TransactionProcessSessionUseCaseResponses } from "./use-case-response";
@@ -45,9 +45,9 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("TransactionProcessSessionUseCase", () => {
-  const stripePaymentIntentsApiFactory = {
-    create: () => mockedStripePaymentIntentsApi,
-  } satisfies IStripePaymentIntentsApiFactory;
+  const adyenPaymentIntentsApiFactory = {
+    create: () => mockedAdyenPaymentIntentsApi,
+  } satisfies IAdyenPaymentIntentsApiFactory;
 
   it.each([
     {
@@ -103,29 +103,29 @@ describe("TransactionProcessSessionUseCase", () => {
       paymentIntentStatus: "requires_capture",
     },
   ])(
-    "Calls Stripe PaymentIntentsAPI to get payment intent and returns 'OK' response for actionType: $actionType and Stripe Payment Intent with status: $paymentIntentStatus",
+    "Calls Adyen PaymentIntentsAPI to get payment intent and returns 'OK' response for actionType: $actionType and Adyen Payment Intent with status: $paymentIntentStatus",
     async ({ actionType, paymentIntentStatus }) => {
       const saleorEvent = getMockedTransactionProcessSessionEvent({ actionType });
       const mockedTransationRecorder = new MockedTransactionRecorder();
 
       mockedTransationRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-      vi.spyOn(mockedTransationRecorder, "getTransactionByStripePaymentIntentId");
+      vi.spyOn(mockedTransationRecorder, "getTransactionByAdyenPaymentIntentId");
 
       const spy = vi
-        .spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent")
+        .spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent")
         .mockImplementationOnce(async () =>
           ok({
             amount: 100,
             currency: "usd",
             client_secret: "secret-value",
-            id: mockedStripePaymentIntentId.toString(), // stripe doesn't expect to get branded type here
+            id: mockedAdyenPaymentIntentId.toString(), // adyen doesn't expect to get branded type here
             status: paymentIntentStatus,
-          } as Stripe.PaymentIntent),
+          } as Adyen.PaymentIntent),
         );
       const uc = new TransactionProcessSessionUseCase({
         appConfigRepo: mockedAppConfigRepo,
-        stripePaymentIntentsApiFactory,
+        adyenPaymentIntentsApiFactory,
         transactionRecorder: mockedTransationRecorder,
       });
 
@@ -133,7 +133,7 @@ describe("TransactionProcessSessionUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       });
 
       expect(result._unsafeUnwrap()).toBeInstanceOf(
@@ -141,24 +141,24 @@ describe("TransactionProcessSessionUseCase", () => {
       );
 
       expect(spy).toHaveBeenCalledWith({
-        id: mockedStripePaymentIntentId,
+        id: mockedAdyenPaymentIntentId,
       });
 
-      expect(mockedTransationRecorder.getTransactionByStripePaymentIntentId).toHaveBeenCalledWith(
+      expect(mockedTransationRecorder.getTransactionByAdyenPaymentIntentId).toHaveBeenCalledWith(
         { saleorApiUrl: mockedSaleorApiUrl, appId: mockedSaleorAppId },
-        mockedStripePaymentIntentId,
+        mockedAdyenPaymentIntentId,
       );
     },
   );
 
   it("Returns 'MissingConfigErrorResponse' if config not found for specified channel", async () => {
     const spy = vi
-      .spyOn(mockedAppConfigRepo, "getStripeConfig")
+      .spyOn(mockedAppConfigRepo, "getAdyenConfig")
       .mockImplementationOnce(async () => ok(null));
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: new MockedTransactionRecorder(),
     });
 
@@ -166,7 +166,7 @@ describe("TransactionProcessSessionUseCase", () => {
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionProcessSessionEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     const err = responsePayload._unsafeUnwrapErr();
@@ -184,19 +184,19 @@ describe("TransactionProcessSessionUseCase", () => {
       actionType: "AUTHORIZATION" as const,
     },
   ])(
-    "Returns 'Error' response if StripePaymentIntentsAPI throws error and actionType is $actionType",
+    "Returns 'Error' response if AdyenPaymentIntentsAPI throws error and actionType is $actionType",
     async ({ actionType }) => {
       const mockedTransationRecorder = new MockedTransactionRecorder();
 
       mockedTransationRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-      vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
-        err(new StripeAPIError("Error from Stripe API")),
+      vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+        err(new AdyenAPIError("Error from Adyen API")),
       );
 
       const uc = new TransactionProcessSessionUseCase({
         appConfigRepo: mockedAppConfigRepo,
-        stripePaymentIntentsApiFactory,
+        adyenPaymentIntentsApiFactory,
         transactionRecorder: mockedTransationRecorder,
       });
 
@@ -206,7 +206,7 @@ describe("TransactionProcessSessionUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       });
 
       expect(responsePayload._unsafeUnwrap()).toBeInstanceOf(
@@ -215,23 +215,23 @@ describe("TransactionProcessSessionUseCase", () => {
     },
   );
 
-  it("Returns 'BrokenAppResponse' when currency coming from Stripe is not supported", async () => {
+  it("Returns 'BrokenAppResponse' when currency coming from Adyen is not supported", async () => {
     const saleorEvent = getMockedTransactionProcessSessionEvent();
     const mockedTransationRecorder = new MockedTransactionRecorder();
 
     mockedTransationRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-    vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
       ok({
         amount: 100,
         currency: "abc",
         status: "succeeded",
-      } as Stripe.PaymentIntent),
+      } as Adyen.PaymentIntent),
     );
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: mockedTransationRecorder,
     });
 
@@ -239,31 +239,31 @@ describe("TransactionProcessSessionUseCase", () => {
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: saleorEvent,
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(BrokenAppResponse);
   });
 
-  it("Throws error when Stripe Payment Intent status is not supported", async () => {
+  it("Throws error when Adyen Payment Intent status is not supported", async () => {
     const saleorEvent = getMockedTransactionProcessSessionEvent();
     const mockedTransationRecorder = new MockedTransactionRecorder();
 
     mockedTransationRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-    vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
       ok({
         amount: 100,
         currency: "usd",
         client_secret: "secret-value",
-        id: mockedStripePaymentIntentId.toString(), // stripe doesn't expect to get branded type here
+        id: mockedAdyenPaymentIntentId.toString(), // adyen doesn't expect to get branded type here
         status: "broken_status",
-      } as unknown as Stripe.PaymentIntent),
+      } as unknown as Adyen.PaymentIntent),
     );
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: mockedTransationRecorder,
     });
 
@@ -272,7 +272,7 @@ describe("TransactionProcessSessionUseCase", () => {
         saleorApiUrl: mockedSaleorApiUrl,
         appId: mockedSaleorAppId,
         event: saleorEvent,
-        problemReporter: mockStripeProblemReporter,
+        problemReporter: mockAdyenProblemReporter,
       }),
     ).rejects.toThrowErrorMatchingInlineSnapshot(`
       [ZodError: [
@@ -299,13 +299,13 @@ describe("TransactionProcessSessionUseCase", () => {
     const saleorEvent = getMockedTransactionProcessSessionEvent();
     const mockedTransationRecorder = new MockedTransactionRecorder();
 
-    vi.spyOn(mockedTransationRecorder, "getTransactionByStripePaymentIntentId").mockImplementation(
+    vi.spyOn(mockedTransationRecorder, "getTransactionByAdyenPaymentIntentId").mockImplementation(
       async () => err(new BaseError("Error while getting transaction record")),
     );
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: mockedTransationRecorder,
     });
 
@@ -313,7 +313,7 @@ describe("TransactionProcessSessionUseCase", () => {
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: saleorEvent,
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
     expect(result._unsafeUnwrapErr()).toBeInstanceOf(MalformedRequestResponse);

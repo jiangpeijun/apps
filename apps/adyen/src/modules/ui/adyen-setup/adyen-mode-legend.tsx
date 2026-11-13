@@ -3,30 +3,30 @@ import { AsideInfoCard } from "@saleor/apps-ui-next";
 import { Box, Text } from "@saleor/macaw-ui";
 
 import { KeyPrefix } from "../key-prefix";
-import styles from "./stripe-mode-legend.module.css";
+import styles from "./adyen-mode-legend.module.css";
 
-const STRIPE_API_KEYS_URL = "https://dashboard.stripe.com/apikeys";
-const STRIPE_KEYS_DOCS_URL = "https://docs.stripe.com/keys";
-const STRIPE_SANDBOXES_DOCS_URL = "https://docs.stripe.com/sandboxes/dashboard/manage";
+const ADYEN_API_KEYS_URL = "https://dashboard.adyen.com/apikeys";
+const ADYEN_KEYS_DOCS_URL = "https://docs.adyen.com/keys";
+const ADYEN_SANDBOXES_DOCS_URL = "https://docs.adyen.com/sandboxes/dashboard/manage";
 const SALEOR_SCOPES_DOCS_URL =
-  "https://docs.saleor.io/developer/app-store/apps/stripe/configuration";
+  "https://docs.saleor.io/developer/app-store/apps/adyen/configuration";
 
 /**
- * Left-rail legend for infrequent Stripe setup: which mode to use, how keys look,
- * and (behind a fold) where to create a restricted key in Stripe Dashboard.
+ * Left-rail legend for infrequent Adyen setup: which mode to use, how keys look,
+ * and (behind a fold) where to create a restricted key in Adyen Dashboard.
  */
-export const StripeModeLegend = () => (
+export const AdyenModeLegend = () => (
   <AsideInfoCard
     title="Sandbox vs live"
-    data-test-id="stripe-mode-legend"
+    data-test-id="adyen-mode-legend"
     fold={{
-      title: "Get keys in Stripe Dashboard",
+      title: "Get keys in Adyen Dashboard",
       children: (
         <Box className={styles.foldContent}>
           <Box as="ol" className={styles.steps}>
             <Box as="li" className={styles.step}>
               <Text size={1} color="default2">
-                In Stripe, open the account picker (top left) →{" "}
+                In Adyen, open the account picker (top left) →{" "}
                 <Text as="span" size={1} fontWeight="medium" color="default1">
                   Switch to sandbox
                 </Text>{" "}
@@ -54,7 +54,7 @@ export const StripeModeLegend = () => (
                   Restricted key
                 </Text>{" "}
                 (not the secret key) with Write access for the scopes below. Paste it here — the app
-                creates the Stripe webhook when you save.
+                creates the Adyen webhook when you save.
               </Text>
             </Box>
           </Box>
@@ -88,14 +88,14 @@ export const StripeModeLegend = () => (
           </Box>
 
           <Box className={styles.links}>
-            <TextLink href={STRIPE_API_KEYS_URL} newTab size={1}>
-              Open Stripe API keys
+            <TextLink href={ADYEN_API_KEYS_URL} newTab size={1}>
+              Open Adyen API keys
             </TextLink>
-            <TextLink href={STRIPE_SANDBOXES_DOCS_URL} newTab size={1}>
+            <TextLink href={ADYEN_SANDBOXES_DOCS_URL} newTab size={1}>
               Manage sandboxes
             </TextLink>
-            <TextLink href={STRIPE_KEYS_DOCS_URL} newTab size={1}>
-              Stripe key documentation
+            <TextLink href={ADYEN_KEYS_DOCS_URL} newTab size={1}>
+              Adyen key documentation
             </TextLink>
             <TextLink href={SALEOR_SCOPES_DOCS_URL} newTab size={1}>
               Saleor required scopes

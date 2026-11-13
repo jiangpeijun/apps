@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { mockedStripePublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
+import { mockedAdyenPublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
 
 import { PaymentGatewayInitializeSessionUseCaseResponses } from "./use-case-response";
 
 describe("PaymentGatewayInitializeSessionUseCaseResponses", () => {
   describe("Success", () => {
-    it("getResponse() returns valid Response with status 200 and formatted 'data' object containing Stripe PK", async () => {
+    it("getResponse() returns valid Response with status 200 and formatted 'data' object containing Adyen PK", async () => {
       const successResponse = new PaymentGatewayInitializeSessionUseCaseResponses.Success({
-        pk: mockedStripePublishableKey,
+        pk: mockedAdyenPublishableKey,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = successResponse.getResponse();
@@ -19,7 +19,7 @@ describe("PaymentGatewayInitializeSessionUseCaseResponses", () => {
       expect(await fetchReponse.json()).toMatchInlineSnapshot(`
         {
           "data": {
-            "stripePublishableKey": "pk_live_1",
+            "adyenPublishableKey": "pk_live_1",
           },
         }
       `);

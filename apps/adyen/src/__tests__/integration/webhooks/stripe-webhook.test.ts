@@ -9,30 +9,30 @@ import {
   mockedSaleorSchemaVersionSupportingPaymentMethodDetails,
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
-import * as stripeWebhookHandlers from "@/app/api/webhooks/adyen/route";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import * as adyenWebhookHandlers from "@/app/api/webhooks/adyen/route";
 import { WebhookParams } from "@/app/api/webhooks/adyen/webhook-params";
 import { RandomId } from "@/lib/random-id";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { DynamoDbChannelConfigMapping } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import { DynamodbAppConfigRepo } from "@/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo";
-import { DynamoDbStripeConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
+import { DynamoDbAdyenConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { createResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { createSaleorTransactionFlow } from "@/modules/saleor/saleor-transaction-flow";
-import { StripeClient } from "@/modules/adyen/adyen-client";
-import { StripeMoney } from "@/modules/adyen/adyen-money";
+import { AdyenClient } from "@/modules/adyen/adyen-client";
+import { AdyenMoney } from "@/modules/adyen/adyen-money";
 import {
-  createStripePaymentIntentId,
-  type StripePaymentIntentId,
+  createAdyenPaymentIntentId,
+  type AdyenPaymentIntentId,
 } from "@/modules/adyen/adyen-payment-intent-id";
-import { StripePaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
-import { createStripePublishableKey } from "@/modules/adyen/adyen-publishable-key";
-import { createStripeRefundId } from "@/modules/adyen/adyen-refund-id";
-import { StripeRefundsApiFactory } from "@/modules/adyen/adyen-refunds-api-factory";
-import { createStripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { StripeWebhookUrlBuilder } from "@/modules/adyen/adyen-webhook-url-builder";
+import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
+import { createAdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
+import { createAdyenRefundId } from "@/modules/adyen/adyen-refund-id";
+import { AdyenRefundsApiFactory } from "@/modules/adyen/adyen-refunds-api-factory";
+import { createAdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { AdyenWebhookUrlBuilder } from "@/modules/adyen/adyen-webhook-url-builder";
 import { RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 import { DynamoDBTransactionRecorderRepo } from "@/modules/transactions-recording/repositories/dynamodb/dynamodb-transaction-recorder-repo";
 import { DynamoDbRecordedTransaction } from "@/modules/transactions-recording/repositories/dynamodb/recorded-transaction-db-model";
@@ -49,7 +49,7 @@ const configId = new RandomId().generate();
 const configRepo = new DynamodbAppConfigRepo({
   entities: {
     channelConfigMapping: DynamoDbChannelConfigMapping.entity,
-    stripeConfig: DynamoDbStripeConfig.entity,
+    adyenConfig: DynamoDbAdyenConfig.entity,
   },
   encryptor: new Encryptor(env.SECRET_KEY),
 });
@@ -62,36 +62,36 @@ const apl = DynamoAPL.create({
   table: dynamoMainTable,
 });
 
-const restrictedKey = createStripeRestrictedKey(env.INTEGRATION_STRIPE_RK)._unsafeUnwrap();
+const restrictedKey = createAdyenRestrictedKey(env.INTEGRATION_ADYEN_RK)._unsafeUnwrap();
 
-const paymentIntentApi = new StripePaymentIntentsApiFactory().create({
+const paymentIntentApi = new AdyenPaymentIntentsApiFactory().create({
   key: restrictedKey,
 });
 
-const refundApi = new StripeRefundsApiFactory().create({
+const refundApi = new AdyenRefundsApiFactory().create({
   key: restrictedKey,
 });
 
-const stripeMoney = StripeMoney.createFromSaleorAmount({
+const adyenMoney = AdyenMoney.createFromSaleorAmount({
   amount: 123.33,
   currency: "USD",
 })._unsafeUnwrap();
 
-let stripePaymentIntentId: StripePaymentIntentId;
+let adyenPaymentIntentId: AdyenPaymentIntentId;
 
 const saleorRequestVarsSpy = vi.fn();
 
-const urlBuilder = new StripeWebhookUrlBuilder();
+const urlBuilder = new AdyenWebhookUrlBuilder();
 
-describe("Stripe Webhook: integration", () => {
+describe("Adyen Webhook: integration", () => {
   beforeAll(() =>
     mswServer.listen({
       onUnhandledRequest: (request, print) => {
         if (request.url.includes(env.AWS_ENDPOINT_URL)) {
           return; // Do not print warnings for DynamoDB local
         }
-        if (request.url.includes("stripe.com")) {
-          return; // Do not print warnings for Stripe API - we use real Stripe API in these tests
+        if (request.url.includes("adyen.com")) {
+          return; // Do not print warnings for Adyen API - we use real Adyen API in these tests
         }
         print.warning();
       },
@@ -108,15 +108,15 @@ describe("Stripe Webhook: integration", () => {
       jwks: "{}",
     });
 
-    await configRepo.saveStripeConfig({
+    await configRepo.saveAdyenConfig({
       saleorApiUrl: realSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: createStripePublishableKey(env.INTEGRATION_STRIPE_PK)._unsafeUnwrap(),
+      config: AdyenConfig.create({
+        publishableKey: createAdyenPublishableKey(env.INTEGRATION_ADYEN_PK)._unsafeUnwrap(),
         name: "Config name",
         webhookId: "we_123",
         restrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        webhookSecret: mockAdyenWebhookSecret,
         id: configId,
       })._unsafeUnwrap(),
     });
@@ -133,10 +133,10 @@ describe("Stripe Webhook: integration", () => {
     );
 
     const paymentIntentResult = await paymentIntentApi.createPaymentIntent({
-      stripeMoney,
+      adyenMoney,
       idempotencyKey: new RandomId().generate(),
       intentParams: {
-        return_url: "https://saleor-stripe-integration-test.com",
+        return_url: "https://saleor-adyen-integration-test.com",
         automatic_payment_methods: {
           enabled: true,
         },
@@ -145,7 +145,7 @@ describe("Stripe Webhook: integration", () => {
       },
     });
 
-    stripePaymentIntentId = createStripePaymentIntentId(paymentIntentResult._unsafeUnwrap().id);
+    adyenPaymentIntentId = createAdyenPaymentIntentId(paymentIntentResult._unsafeUnwrap().id);
 
     await transactionRecorderRepo.recordTransaction(
       {
@@ -154,7 +154,7 @@ describe("Stripe Webhook: integration", () => {
       },
       new RecordedTransaction({
         saleorTransactionId: mockedSaleorTransactionId,
-        stripePaymentIntentId,
+        adyenPaymentIntentId,
         saleorTransactionFlow: createSaleorTransactionFlow("CHARGE"),
         resolvedTransactionFlow: createResolvedTransactionFlow("CHARGE"),
         selectedPaymentMethod: "card",
@@ -171,19 +171,19 @@ describe("Stripe Webhook: integration", () => {
   });
 
   it("should successfully process a payment intent event", async () => {
-    const payload = paymentIntentSucceededEventFixture(stripePaymentIntentId);
+    const payload = paymentIntentSucceededEventFixture(adyenPaymentIntentId);
 
     const payloadString = JSON.stringify(payload, null, 2);
 
-    const stripeClient = StripeClient.createFromRestrictedKey(restrictedKey);
+    const adyenClient = AdyenClient.createFromRestrictedKey(restrictedKey);
 
-    const header = stripeClient.nativeClient.webhooks.generateTestHeaderString({
+    const header = adyenClient.nativeClient.webhooks.generateTestHeaderString({
       payload: payloadString,
-      secret: mockStripeWebhookSecret,
+      secret: mockAdyenWebhookSecret,
     });
 
     const webhookUrl = urlBuilder.buildUrl({
-      appUrl: "https://stripe-v2.saleor.app/api/webhooks/stripe",
+      appUrl: "https://adyen-v2.saleor.app/api/webhooks/adyen",
       webhookParams: WebhookParams.createFromParams({
         configurationId: configId,
         saleorApiUrl: realSaleorApiUrl,
@@ -192,14 +192,14 @@ describe("Stripe Webhook: integration", () => {
     });
 
     await testApiHandler({
-      appHandler: stripeWebhookHandlers,
+      appHandler: adyenWebhookHandlers,
       url: webhookUrl._unsafeUnwrap().toString(),
       async test({ fetch }) {
         const response = await fetch({
           method: "POST",
           body: payloadString,
           headers: new Headers({
-            "stripe-signature": header,
+            "adyen-signature": header,
           }),
         });
 
@@ -212,9 +212,9 @@ describe("Stripe Webhook: integration", () => {
         expect(requestSpyData.variables).toStrictEqual({
           amount: 1.013,
           availableActions: ["REFUND"],
-          externalUrl: expect.stringContaining(stripePaymentIntentId),
+          externalUrl: expect.stringContaining(adyenPaymentIntentId),
           message: "Payment intent has been successful",
-          pspReference: stripePaymentIntentId,
+          pspReference: adyenPaymentIntentId,
           time: expect.any(String),
           transactionId: mockedSaleorTransactionId,
           type: "CHARGE_SUCCESS",
@@ -233,27 +233,27 @@ describe("Stripe Webhook: integration", () => {
   });
 
   it("should successfully process a charge refund updated event", async () => {
-    const stripeRefund = await refundApi.createRefund({
-      paymentIntentId: stripePaymentIntentId,
-      stripeMoney,
+    const adyenRefund = await refundApi.createRefund({
+      paymentIntentId: adyenPaymentIntentId,
+      adyenMoney,
       idempotencyKey: new RandomId().generate(),
     });
 
-    const stripeRefundId = createStripeRefundId(stripeRefund._unsafeUnwrap().id);
+    const adyenRefundId = createAdyenRefundId(adyenRefund._unsafeUnwrap().id);
 
-    const payload = chargeRefundUpdatedEventFixture(stripeRefundId, stripePaymentIntentId);
+    const payload = chargeRefundUpdatedEventFixture(adyenRefundId, adyenPaymentIntentId);
 
     const payloadString = JSON.stringify(payload, null, 2);
 
-    const stripeClient = StripeClient.createFromRestrictedKey(restrictedKey);
+    const adyenClient = AdyenClient.createFromRestrictedKey(restrictedKey);
 
-    const header = stripeClient.nativeClient.webhooks.generateTestHeaderString({
+    const header = adyenClient.nativeClient.webhooks.generateTestHeaderString({
       payload: payloadString,
-      secret: mockStripeWebhookSecret,
+      secret: mockAdyenWebhookSecret,
     });
 
     const webhookUrl = urlBuilder.buildUrl({
-      appUrl: "https://stripe-v2.saleor.app/api/webhooks/stripe",
+      appUrl: "https://adyen-v2.saleor.app/api/webhooks/adyen",
       webhookParams: WebhookParams.createFromParams({
         configurationId: configId,
         saleorApiUrl: realSaleorApiUrl,
@@ -262,14 +262,14 @@ describe("Stripe Webhook: integration", () => {
     });
 
     await testApiHandler({
-      appHandler: stripeWebhookHandlers,
+      appHandler: adyenWebhookHandlers,
       url: webhookUrl._unsafeUnwrap().toString(),
       async test({ fetch }) {
         const response = await fetch({
           method: "POST",
           body: payloadString,
           headers: new Headers({
-            "stripe-signature": header,
+            "adyen-signature": header,
           }),
         });
 
@@ -282,9 +282,9 @@ describe("Stripe Webhook: integration", () => {
         expect(requestSpyData.variables).toStrictEqual({
           amount: 10,
           availableActions: ["REFUND"],
-          externalUrl: expect.stringContaining(stripeRefundId),
+          externalUrl: expect.stringContaining(adyenRefundId),
           message: "Refund was successful",
-          pspReference: stripeRefundId,
+          pspReference: adyenRefundId,
           time: expect.any(String),
           transactionId: mockedSaleorTransactionId,
           type: "REFUND_SUCCESS",

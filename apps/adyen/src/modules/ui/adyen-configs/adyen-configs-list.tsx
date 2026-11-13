@@ -5,7 +5,7 @@ import { Box, Modal, Text } from "@saleor/macaw-ui";
 import { useMemo, useState } from "react";
 
 import { type ConfigChannelFragment } from "@/generated/graphql";
-import { type StripeFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenFrontendConfigSerializedFields } from "@/modules/app-config/domain/adyen-config";
 import { trpcClient } from "@/modules/trpc/trpc-client";
 
 import { AssignChannelSelect } from "./assign-channel-select";
@@ -13,23 +13,23 @@ import {
   type ChannelAssignmentUpdate,
   type ChannelMapping,
 } from "./build-channel-assignment-updates";
-import { StripeConfigCard } from "./stripe-config-card";
-import styles from "./stripe-config-cards.module.css";
+import { AdyenConfigCard } from "./adyen-config-card";
+import styles from "./adyen-config-cards.module.css";
 
 type Props = {
-  configs: StripeFrontendConfigSerializedFields[];
+  configs: AdyenFrontendConfigSerializedFields[];
   channels: ConfigChannelFragment[];
   mapping: ChannelMapping;
 };
 
-export const StripeConfigsList = ({ configs, channels, mapping }: Props) => {
+export const AdyenConfigsList = ({ configs, channels, mapping }: Props) => {
   const { notifyError, notifySuccess } = useDashboardNotification();
-  const configsList = trpcClient.appConfig.getStripeConfigsList.useQuery();
+  const configsList = trpcClient.appConfig.getAdyenConfigsList.useQuery();
   const mappingsQuery = trpcClient.appConfig.channelsConfigsMapping.useQuery();
   const [configIdToDelete, setConfigIdToDelete] = useState<string | null>(null);
 
-  const { mutate: removeStripeConfig, isLoading: isDeleting } =
-    trpcClient.appConfig.removeStripeConfig.useMutation({
+  const { mutate: removeAdyenConfig, isLoading: isDeleting } =
+    trpcClient.appConfig.removeAdyenConfig.useMutation({
       onSuccess() {
         notifySuccess("Configuration deleted");
       },
@@ -136,15 +136,15 @@ export const StripeConfigsList = ({ configs, channels, mapping }: Props) => {
                 );
               }
 
-              removeStripeConfig({ configId: configIdToDelete });
+              removeAdyenConfig({ configId: configIdToDelete });
               closeDeleteModal();
             }}
           />
         </Modal>
 
-        <Box className={styles.grid} data-test-id="stripe-config-cards-grid">
+        <Box className={styles.grid} data-test-id="adyen-config-cards-grid">
           {configs.map((config) => (
-            <StripeConfigCard
+            <AdyenConfigCard
               key={config.id}
               config={config}
               channels={channels}

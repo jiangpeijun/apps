@@ -41,7 +41,7 @@ const getTestCaller = () => {
   };
 };
 
-describe("GetStripeConfigTrpcHandler", () => {
+describe("GetAdyenConfigTrpcHandler", () => {
   beforeEach(() => {
     vi.resetAllMocks();
   });

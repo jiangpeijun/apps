@@ -1,22 +1,22 @@
 import { err } from "neverthrow";
-import Stripe from "stripe";
+import Adyen from "adyen";
 import { describe, expect, it, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
 import { mockedConfigurationId, mockedSaleorAppId } from "@/__tests__/mocks/constants";
 import { mockAuthData } from "@/__tests__/mocks/mock-auth-data";
-import { mockStripeProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
+import { mockAdyenProblemReporter } from "@/__tests__/mocks/mock-adyen-problem-reporter";
 import { getMockedRecordedTransaction } from "@/__tests__/mocks/mocked-recorded-transaction";
-import { mockedStripePaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
+import { mockedAdyenPaymentIntentsApi } from "@/__tests__/mocks/mocked-adyen-payment-intents-api";
 import { MockedTransactionRecorder } from "@/__tests__/mocks/mocked-transaction-recorder";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { getMockedTransactionProcessSessionEvent } from "@/__tests__/mocks/saleor-events/transaction-process-session-event";
 import {
-  StripeAPIError,
-  StripeAuthenticationError,
-  StripePermissionError,
+  AdyenAPIError,
+  AdyenAuthenticationError,
+  AdyenPermissionError,
 } from "@/modules/adyen/adyen-api-error";
-import { type IStripePaymentIntentsApiFactory } from "@/modules/adyen/types";
+import { type IAdyenPaymentIntentsApiFactory } from "@/modules/adyen/types";
 
 import { TransactionProcessSessionUseCase } from "./use-case";
 
@@ -41,29 +41,29 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("TransactionProcessSessionUseCase - problem reporting", () => {
-  const stripePaymentIntentsApiFactory = {
-    create: () => mockedStripePaymentIntentsApi,
-  } satisfies IStripePaymentIntentsApiFactory;
+  const adyenPaymentIntentsApiFactory = {
+    create: () => mockedAdyenPaymentIntentsApi,
+  } satisfies IAdyenPaymentIntentsApiFactory;
 
-  it("Reports authentication problem when Stripe returns StripeAuthenticationError", async () => {
+  it("Reports authentication problem when Adyen returns AdyenAuthenticationError", async () => {
     const mockedTransactionRecorder = new MockedTransactionRecorder();
 
     mockedTransactionRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-    vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
       err(
-        new Stripe.errors.StripeAuthenticationError({
+        new Adyen.errors.AdyenAuthenticationError({
           type: "authentication_error",
           message: "Invalid API key",
         }),
       ),
     );
 
-    const reportSpy = vi.spyOn(mockStripeProblemReporter, "reportApiProblem");
+    const reportSpy = vi.spyOn(mockAdyenProblemReporter, "reportApiProblem");
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: mockedTransactionRecorder,
     });
 
@@ -71,34 +71,34 @@ describe("TransactionProcessSessionUseCase - problem reporting", () => {
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionProcessSessionEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
-    expect(reportSpy).toHaveBeenCalledWith(expect.any(StripeAuthenticationError), {
+    expect(reportSpy).toHaveBeenCalledWith(expect.any(AdyenAuthenticationError), {
       id: mockedConfigurationId,
       name: "config-name",
     });
   });
 
-  it("Reports permission problem when Stripe returns StripePermissionError", async () => {
+  it("Reports permission problem when Adyen returns AdyenPermissionError", async () => {
     const mockedTransactionRecorder = new MockedTransactionRecorder();
 
     mockedTransactionRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-    vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
       err(
-        new Stripe.errors.StripePermissionError({
+        new Adyen.errors.AdyenPermissionError({
           type: "api_error",
           message: "Insufficient permissions",
         }),
       ),
     );
 
-    const reportSpy = vi.spyOn(mockStripeProblemReporter, "reportApiProblem");
+    const reportSpy = vi.spyOn(mockAdyenProblemReporter, "reportApiProblem");
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: mockedTransactionRecorder,
     });
 
@@ -106,34 +106,34 @@ describe("TransactionProcessSessionUseCase - problem reporting", () => {
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionProcessSessionEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
-    expect(reportSpy).toHaveBeenCalledWith(expect.any(StripePermissionError), {
+    expect(reportSpy).toHaveBeenCalledWith(expect.any(AdyenPermissionError), {
       id: mockedConfigurationId,
       name: "config-name",
     });
   });
 
-  it("Calls reportApiProblem with non-reportable error when Stripe returns other error", async () => {
+  it("Calls reportApiProblem with non-reportable error when Adyen returns other error", async () => {
     const mockedTransactionRecorder = new MockedTransactionRecorder();
 
     mockedTransactionRecorder.recordTransaction(mockAuthData, getMockedRecordedTransaction());
 
-    vi.spyOn(mockedStripePaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
+    vi.spyOn(mockedAdyenPaymentIntentsApi, "getPaymentIntent").mockImplementationOnce(async () =>
       err(
-        new Stripe.errors.StripeAPIError({
+        new Adyen.errors.AdyenAPIError({
           type: "api_error",
           message: "Something went wrong",
         }),
       ),
     );
 
-    const reportSpy = vi.spyOn(mockStripeProblemReporter, "reportApiProblem");
+    const reportSpy = vi.spyOn(mockAdyenProblemReporter, "reportApiProblem");
 
     const uc = new TransactionProcessSessionUseCase({
       appConfigRepo: mockedAppConfigRepo,
-      stripePaymentIntentsApiFactory,
+      adyenPaymentIntentsApiFactory,
       transactionRecorder: mockedTransactionRecorder,
     });
 
@@ -141,10 +141,10 @@ describe("TransactionProcessSessionUseCase - problem reporting", () => {
       saleorApiUrl: mockedSaleorApiUrl,
       appId: mockedSaleorAppId,
       event: getMockedTransactionProcessSessionEvent(),
-      problemReporter: mockStripeProblemReporter,
+      problemReporter: mockAdyenProblemReporter,
     });
 
-    expect(reportSpy).toHaveBeenCalledWith(expect.any(StripeAPIError), {
+    expect(reportSpy).toHaveBeenCalledWith(expect.any(AdyenAPIError), {
       id: mockedConfigurationId,
       name: "config-name",
     });

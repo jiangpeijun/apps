@@ -13,11 +13,11 @@
 }
 
 .sandbox {
-  background-color: var(--stripe-color-sandbox);
-  color: var(--stripe-color-on-brand);
+  background-color: var(--adyen-color-sandbox);
+  color: var(--adyen-color-on-brand);
 }
 
 .live {
-  background-color: var(--stripe-color-live);
-  color: var(--stripe-color-on-brand);
+  background-color: var(--adyen-color-live);
+  color: var(--adyen-color-on-brand);
 }

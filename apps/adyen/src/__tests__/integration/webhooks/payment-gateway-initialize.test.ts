@@ -5,16 +5,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { paymentGatewayInitializeFixture } from "@/__tests__/integration/webhooks/fixtures/payment-gateway-initialize-fixture";
 import { mockedSaleorAppId, mockedSaleorChannelId } from "@/__tests__/mocks/constants";
-import { mockedStripePublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
-import { mockedStripeRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockedAdyenPublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
+import { mockedAdyenRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 import * as paymentGatewayInitializeSessionHandlers from "@/app/api/webhooks/saleor/payment-gateway-initialize-session/route";
 import * as verifyWebhookSignatureModule from "@/app/api/webhooks/saleor/verify-signature";
 import { RandomId } from "@/lib/random-id";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { DynamoDbChannelConfigMapping } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import { DynamodbAppConfigRepo } from "@/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo";
-import { DynamoDbStripeConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
+import { DynamoDbAdyenConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
@@ -27,7 +27,7 @@ const configId = new RandomId().generate();
 const repo = new DynamodbAppConfigRepo({
   entities: {
     channelConfigMapping: DynamoDbChannelConfigMapping.entity,
-    stripeConfig: DynamoDbStripeConfig.entity,
+    adyenConfig: DynamoDbAdyenConfig.entity,
   },
   encryptor: new Encryptor(env.SECRET_KEY),
 });
@@ -49,15 +49,15 @@ describe("PaymentGatewayInitialize webhook: integration", async () => {
       jwks: "{}",
     });
 
-    await repo.saveStripeConfig({
+    await repo.saveAdyenConfig({
       saleorApiUrl: realSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: mockedStripePublishableKey,
+      config: AdyenConfig.create({
+        publishableKey: mockedAdyenPublishableKey,
         name: "Config name",
         webhookId: "we_123",
-        restrictedKey: mockedStripeRestrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        restrictedKey: mockedAdyenRestrictedKey,
+        webhookSecret: mockAdyenWebhookSecret,
         id: configId,
       })._unsafeUnwrap(),
     });
@@ -90,7 +90,7 @@ describe("PaymentGatewayInitialize webhook: integration", async () => {
 
         const body = await response.json();
 
-        expect(body).toStrictEqual({ data: { stripePublishableKey: "pk_live_1" } });
+        expect(body).toStrictEqual({ data: { adyenPublishableKey: "pk_live_1" } });
 
         expect(response.status).toStrictEqual(200);
       },

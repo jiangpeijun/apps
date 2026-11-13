@@ -13,7 +13,7 @@ import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { loggerContext } from "@/lib/logger-context";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { type StripeProblemReporter } from "@/modules/app-problems";
+import { type AdyenProblemReporter } from "@/modules/app-problems";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { SaleorMoney } from "@/modules/saleor/saleor-money";
 import { createSaleorTransactionId } from "@/modules/saleor/saleor-transaction-id";
@@ -22,12 +22,12 @@ import {
   getIdempotencyKeyFromRequestedEventPayload,
   getTransactionFromRequestedEventPayload,
 } from "@/modules/saleor/transaction-requested-event-helpers";
-import { getSaleorOrderStripeMetadata } from "@/modules/adyen/saleor-order-adyen-metadata";
-import { mapStripeErrorToApiError } from "@/modules/adyen/adyen-api-error";
-import { StripeMoney } from "@/modules/adyen/adyen-money";
-import { createStripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import { createStripeRefundId } from "@/modules/adyen/adyen-refund-id";
-import { type IStripeRefundsApiFactory } from "@/modules/adyen/types";
+import { getSaleorOrderAdyenMetadata } from "@/modules/adyen/saleor-order-adyen-metadata";
+import { mapAdyenErrorToApiError } from "@/modules/adyen/adyen-api-error";
+import { AdyenMoney } from "@/modules/adyen/adyen-money";
+import { createAdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { createAdyenRefundId } from "@/modules/adyen/adyen-refund-id";
+import { type IAdyenRefundsApiFactory } from "@/modules/adyen/types";
 import { RefundFailureResult } from "@/modules/transaction-result/refund-result";
 
 import {
@@ -43,21 +43,21 @@ type UseCaseExecuteResult = Result<
 export class TransactionRefundRequestedUseCase {
   private logger = createLogger("TransactionRefundRequestedUseCase");
   private appConfigRepo: AppConfigRepo;
-  private stripeRefundsApiFactory: IStripeRefundsApiFactory;
+  private adyenRefundsApiFactory: IAdyenRefundsApiFactory;
 
   constructor(deps: {
     appConfigRepo: AppConfigRepo;
-    stripeRefundsApiFactory: IStripeRefundsApiFactory;
+    adyenRefundsApiFactory: IAdyenRefundsApiFactory;
   }) {
     this.appConfigRepo = deps.appConfigRepo;
-    this.stripeRefundsApiFactory = deps.stripeRefundsApiFactory;
+    this.adyenRefundsApiFactory = deps.adyenRefundsApiFactory;
   }
 
   async execute(args: {
     appId: string;
     saleorApiUrl: SaleorApiUrl;
     event: TransactionRefundRequestedEventFragment;
-    problemReporter: StripeProblemReporter;
+    problemReporter: AdyenProblemReporter;
   }): Promise<UseCaseExecuteResult> {
     const { appId, saleorApiUrl, event } = args;
 
@@ -66,26 +66,26 @@ export class TransactionRefundRequestedUseCase {
 
     loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, transaction.pspReference);
 
-    const stripeConfigForThisChannel = await this.appConfigRepo.getStripeConfig({
+    const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
       channelId,
       appId,
       saleorApiUrl,
     });
 
-    if (stripeConfigForThisChannel.isErr()) {
+    if (adyenConfigForThisChannel.isErr()) {
       this.logger.error("Failed to get configuration", {
-        error: stripeConfigForThisChannel.error,
+        error: adyenConfigForThisChannel.error,
       });
 
       return err(
         new BrokenAppResponse(
           appContextContainer.getContextValue(),
-          stripeConfigForThisChannel.error,
+          adyenConfigForThisChannel.error,
         ),
       );
     }
 
-    if (!stripeConfigForThisChannel.value) {
+    if (!adyenConfigForThisChannel.value) {
       this.logger.warn("Config for channel not found", {
         channelId,
       });
@@ -99,43 +99,43 @@ export class TransactionRefundRequestedUseCase {
     }
 
     appContextContainer.set({
-      stripeEnv: stripeConfigForThisChannel.value.getStripeEnvValue(),
+      adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
     });
 
-    const restrictedKey = stripeConfigForThisChannel.value.restrictedKey;
+    const restrictedKey = adyenConfigForThisChannel.value.restrictedKey;
 
-    const stripeRefundsApi = this.stripeRefundsApiFactory.create({
+    const adyenRefundsApi = this.adyenRefundsApiFactory.create({
       key: restrictedKey,
     });
 
-    this.logger.debug("Refunding Stripe payment intent with id", {
+    this.logger.debug("Refunding Adyen payment intent with id", {
       id: transaction.pspReference,
       action: event.action,
     });
 
-    const stripePaymentIntentId = createStripePaymentIntentId(transaction.pspReference);
+    const adyenPaymentIntentId = createAdyenPaymentIntentId(transaction.pspReference);
 
-    const stripeMoneyResult = StripeMoney.createFromSaleorAmount({
+    const adyenMoneyResult = AdyenMoney.createFromSaleorAmount({
       amount: event.action.amount,
       currency: event.action.currency,
     });
 
-    if (stripeMoneyResult.isErr()) {
-      this.logger.error("Failed to create Stripe money", {
-        error: stripeMoneyResult.error,
+    if (adyenMoneyResult.isErr()) {
+      this.logger.error("Failed to create Adyen money", {
+        error: adyenMoneyResult.error,
       });
 
       return err(
         new MalformedRequestResponse(
           appContextContainer.getContextValue(),
-          stripeMoneyResult.error,
+          adyenMoneyResult.error,
         ),
       );
     }
 
-    const createRefundResult = await stripeRefundsApi.createRefund({
-      paymentIntentId: stripePaymentIntentId,
-      stripeMoney: stripeMoneyResult.value,
+    const createRefundResult = await adyenRefundsApi.createRefund({
+      paymentIntentId: adyenPaymentIntentId,
+      adyenMoney: adyenMoneyResult.value,
       idempotencyKey: getIdempotencyKeyFromRequestedEventPayload(event),
       metadata: {
         saleor_source_id: transaction.checkout?.id
@@ -145,16 +145,16 @@ export class TransactionRefundRequestedUseCase {
         saleor_transaction_id: createSaleorTransactionId(transaction.id),
         saleor_api_url: saleorApiUrl,
         saleor_app_id: appId,
-        ...getSaleorOrderStripeMetadata(transaction),
+        ...getSaleorOrderAdyenMetadata(transaction),
       },
     });
 
     if (createRefundResult.isErr()) {
-      const error = mapStripeErrorToApiError(createRefundResult.error);
+      const error = mapAdyenErrorToApiError(createRefundResult.error);
 
       const config = {
-        id: stripeConfigForThisChannel.value.id,
-        name: stripeConfigForThisChannel.value.name,
+        id: adyenConfigForThisChannel.value.id,
+        name: adyenConfigForThisChannel.value.name,
       };
 
       after(() => args.problemReporter.reportApiProblem(error, config));
@@ -166,7 +166,7 @@ export class TransactionRefundRequestedUseCase {
       return ok(
         new TransactionRefundRequestedUseCaseResponses.Failure({
           transactionResult: new RefundFailureResult(),
-          stripePaymentIntentId,
+          adyenPaymentIntentId,
           error,
           appContext: appContextContainer.getContextValue(),
         }),
@@ -179,7 +179,7 @@ export class TransactionRefundRequestedUseCase {
       refund,
     });
 
-    const saleorMoneyResult = SaleorMoney.createFromStripe({
+    const saleorMoneyResult = SaleorMoney.createFromAdyen({
       amount: refund.amount,
       currency: refund.currency,
     });
@@ -196,7 +196,7 @@ export class TransactionRefundRequestedUseCase {
 
     return ok(
       new TransactionRefundRequestedUseCaseResponses.Success({
-        stripeRefundId: createStripeRefundId(refund.id),
+        adyenRefundId: createAdyenRefundId(refund.id),
         appContext: appContextContainer.getContextValue(),
       }),
     );

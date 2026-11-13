@@ -9,26 +9,26 @@ import {
   mockedSaleorSchemaVersionSupportingPaymentMethodDetails,
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 import * as cancelationRequestedHandlers from "@/app/api/webhooks/saleor/transaction-cancelation-requested/route";
 import * as verifyWebhookSignatureModule from "@/app/api/webhooks/saleor/verify-signature";
 import { RandomId } from "@/lib/random-id";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { DynamoDbChannelConfigMapping } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import { DynamodbAppConfigRepo } from "@/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo";
-import { DynamoDbStripeConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
+import { DynamoDbAdyenConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { createResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { createSaleorTransactionFlow } from "@/modules/saleor/saleor-transaction-flow";
-import { StripeMoney } from "@/modules/adyen/adyen-money";
+import { AdyenMoney } from "@/modules/adyen/adyen-money";
 import {
-  createStripePaymentIntentId,
-  type StripePaymentIntentId,
+  createAdyenPaymentIntentId,
+  type AdyenPaymentIntentId,
 } from "@/modules/adyen/adyen-payment-intent-id";
-import { StripePaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
-import { createStripePublishableKey } from "@/modules/adyen/adyen-publishable-key";
-import { createStripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
+import { createAdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
+import { createAdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
 import { RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 import { DynamoDBTransactionRecorderRepo } from "@/modules/transactions-recording/repositories/dynamodb/dynamodb-transaction-recorder-repo";
 import { DynamoDbRecordedTransaction } from "@/modules/transactions-recording/repositories/dynamodb/recorded-transaction-db-model";
@@ -43,7 +43,7 @@ const configId = new RandomId().generate();
 const configRepo = new DynamodbAppConfigRepo({
   entities: {
     channelConfigMapping: DynamoDbChannelConfigMapping.entity,
-    stripeConfig: DynamoDbStripeConfig.entity,
+    adyenConfig: DynamoDbAdyenConfig.entity,
   },
   encryptor: new Encryptor(env.SECRET_KEY),
 });
@@ -56,13 +56,13 @@ const apl = DynamoAPL.create({
   table: dynamoMainTable,
 });
 
-const restrictedKey = createStripeRestrictedKey(env.INTEGRATION_STRIPE_RK)._unsafeUnwrap();
+const restrictedKey = createAdyenRestrictedKey(env.INTEGRATION_ADYEN_RK)._unsafeUnwrap();
 
-const paymentIntentApi = new StripePaymentIntentsApiFactory().create({
+const paymentIntentApi = new AdyenPaymentIntentsApiFactory().create({
   key: restrictedKey,
 });
 
-let stripePaymentIntentId: StripePaymentIntentId;
+let adyenPaymentIntentId: AdyenPaymentIntentId;
 
 describe("TransactionCancellationRequested webhook: integration", async () => {
   beforeEach(async () => {
@@ -77,15 +77,15 @@ describe("TransactionCancellationRequested webhook: integration", async () => {
       jwks: "{}",
     });
 
-    await configRepo.saveStripeConfig({
+    await configRepo.saveAdyenConfig({
       saleorApiUrl: realSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: createStripePublishableKey(env.INTEGRATION_STRIPE_PK)._unsafeUnwrap(),
+      config: AdyenConfig.create({
+        publishableKey: createAdyenPublishableKey(env.INTEGRATION_ADYEN_PK)._unsafeUnwrap(),
         name: "Config name",
         webhookId: "we_123",
         restrictedKey,
-        webhookSecret: mockStripeWebhookSecret,
+        webhookSecret: mockAdyenWebhookSecret,
         id: configId,
       })._unsafeUnwrap(),
     });
@@ -102,7 +102,7 @@ describe("TransactionCancellationRequested webhook: integration", async () => {
     );
 
     const paymentIntentResult = await paymentIntentApi.createPaymentIntent({
-      stripeMoney: StripeMoney.createFromSaleorAmount({
+      adyenMoney: AdyenMoney.createFromSaleorAmount({
         amount: 123.33,
         currency: "USD",
       })._unsafeUnwrap(),
@@ -119,7 +119,7 @@ describe("TransactionCancellationRequested webhook: integration", async () => {
       },
     });
 
-    stripePaymentIntentId = createStripePaymentIntentId(paymentIntentResult._unsafeUnwrap().id);
+    adyenPaymentIntentId = createAdyenPaymentIntentId(paymentIntentResult._unsafeUnwrap().id);
 
     await transactionRecorderRepo.recordTransaction(
       {
@@ -128,7 +128,7 @@ describe("TransactionCancellationRequested webhook: integration", async () => {
       },
       new RecordedTransaction({
         saleorTransactionId: mockedSaleorTransactionId,
-        stripePaymentIntentId,
+        adyenPaymentIntentId,
         saleorTransactionFlow: createSaleorTransactionFlow("AUTHORIZATION"),
         resolvedTransactionFlow: createResolvedTransactionFlow("AUTHORIZATION"),
         selectedPaymentMethod: "card",
@@ -143,7 +143,7 @@ describe("TransactionCancellationRequested webhook: integration", async () => {
       async test({ fetch }) {
         const response = await fetch({
           method: "POST",
-          body: JSON.stringify(transactionCancelationRequestedFixture(stripePaymentIntentId)),
+          body: JSON.stringify(transactionCancelationRequestedFixture(adyenPaymentIntentId)),
           headers: new Headers({
             "saleor-api-url": realSaleorApiUrl,
             "saleor-event": "transaction_cancelation_requested",
@@ -159,7 +159,7 @@ describe("TransactionCancellationRequested webhook: integration", async () => {
           actions: [],
           pspReference: expect.stringContaining("pi_"),
           message: "Payment intent was cancelled",
-          externalUrl: expect.stringContaining("https://dashboard.stripe.com/test/payments/pi_"),
+          externalUrl: expect.stringContaining("https://dashboard.adyen.com/test/payments/pi_"),
           time: expect.any(String),
         });
 

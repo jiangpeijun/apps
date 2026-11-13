@@ -1,84 +1,84 @@
 import { describe, expect, it } from "vitest";
 
 import { mockedConfigurationId } from "@/__tests__/mocks/constants";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 import {
-  mockedStripePublishableKey,
-  mockedStripePublishableKeyTest,
+  mockedAdyenPublishableKey,
+  mockedAdyenPublishableKeyTest,
 } from "@/__tests__/mocks/mocked-adyen-publishable-key";
 import {
-  mockedStripeRestrictedKey,
-  mockedStripeRestrictedKeyTest,
+  mockedAdyenRestrictedKey,
+  mockedAdyenRestrictedKeyTest,
 } from "@/__tests__/mocks/mocked-adyen-restricted-key";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 
-import { StripeConfig, StripeFrontendConfig } from "./adyen-config";
+import { AdyenConfig, AdyenFrontendConfig } from "./adyen-config";
 
-describe("StripeConfig", () => {
+describe("AdyenConfig", () => {
   it("should create a valid config", () => {
-    const result = StripeConfig.create({
+    const result = AdyenConfig.create({
       name: "Test Config",
       id: "test-config-1",
-      publishableKey: mockedStripePublishableKey,
-      restrictedKey: mockedStripeRestrictedKey,
-      webhookSecret: mockStripeWebhookSecret,
-      webhookId: mockStripeWebhookSecret,
+      publishableKey: mockedAdyenPublishableKey,
+      restrictedKey: mockedAdyenRestrictedKey,
+      webhookSecret: mockAdyenWebhookSecret,
+      webhookId: mockAdyenWebhookSecret,
     });
 
     expect(result.isOk()).toBe(true);
     expect(result._unsafeUnwrap().name).toBe("Test Config");
     expect(result._unsafeUnwrap().id).toBe("test-config-1");
-    expect(result._unsafeUnwrap().publishableKey).toBe(mockedStripePublishableKey);
-    expect(result._unsafeUnwrap().restrictedKey).toBe(mockedStripeRestrictedKey);
+    expect(result._unsafeUnwrap().publishableKey).toBe(mockedAdyenPublishableKey);
+    expect(result._unsafeUnwrap().restrictedKey).toBe(mockedAdyenRestrictedKey);
   });
 
   it("should return error for empty name", () => {
-    const result = StripeConfig.create({
+    const result = AdyenConfig.create({
       name: "",
       id: "test-config-1",
-      publishableKey: mockedStripePublishableKey,
-      restrictedKey: mockedStripeRestrictedKey,
-      webhookSecret: mockStripeWebhookSecret,
-      webhookId: mockStripeWebhookSecret,
+      publishableKey: mockedAdyenPublishableKey,
+      restrictedKey: mockedAdyenRestrictedKey,
+      webhookSecret: mockAdyenWebhookSecret,
+      webhookId: mockAdyenWebhookSecret,
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toBeInstanceOf(StripeConfig.ValidationError);
+    expect(result._unsafeUnwrapErr()).toBeInstanceOf(AdyenConfig.ValidationError);
     expect(result._unsafeUnwrapErr().message).toBe("Config name cannot be empty");
   });
 
   it("should return error for empty id", () => {
-    const result = StripeConfig.create({
+    const result = AdyenConfig.create({
       name: "Test Config",
       id: "",
-      publishableKey: mockedStripePublishableKey,
-      restrictedKey: mockedStripeRestrictedKey,
-      webhookSecret: mockStripeWebhookSecret,
-      webhookId: mockStripeWebhookSecret,
+      publishableKey: mockedAdyenPublishableKey,
+      restrictedKey: mockedAdyenRestrictedKey,
+      webhookSecret: mockAdyenWebhookSecret,
+      webhookId: mockAdyenWebhookSecret,
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result._unsafeUnwrapErr()).toBeInstanceOf(StripeConfig.ValidationError);
+    expect(result._unsafeUnwrapErr()).toBeInstanceOf(AdyenConfig.ValidationError);
     expect(result._unsafeUnwrapErr().message).toBe("Config id cannot be empty");
   });
 
   it("Should return error when PK and RK have mixed live/test prefixes", () => {
-    const instance1 = StripeConfig.create({
+    const instance1 = AdyenConfig.create({
       name: "Test Config",
       id: "test-config-1",
-      publishableKey: mockedStripePublishableKeyTest,
-      restrictedKey: mockedStripeRestrictedKey,
-      webhookSecret: mockStripeWebhookSecret,
-      webhookId: mockStripeWebhookSecret,
+      publishableKey: mockedAdyenPublishableKeyTest,
+      restrictedKey: mockedAdyenRestrictedKey,
+      webhookSecret: mockAdyenWebhookSecret,
+      webhookId: mockAdyenWebhookSecret,
     })._unsafeUnwrapErr();
 
-    const instance2 = StripeConfig.create({
+    const instance2 = AdyenConfig.create({
       name: "Test Config",
       id: "test-config-1",
-      publishableKey: mockedStripePublishableKey,
-      restrictedKey: mockedStripeRestrictedKeyTest,
-      webhookSecret: mockStripeWebhookSecret,
-      webhookId: mockStripeWebhookSecret,
+      publishableKey: mockedAdyenPublishableKey,
+      restrictedKey: mockedAdyenRestrictedKeyTest,
+      webhookSecret: mockAdyenWebhookSecret,
+      webhookId: mockAdyenWebhookSecret,
     })._unsafeUnwrapErr();
 
     expect(instance1).toMatchInlineSnapshot(
@@ -91,20 +91,20 @@ describe("StripeConfig", () => {
   });
 });
 
-describe("StripeFrontendConfig", () => {
-  it("Creates from Stripe Config and sets expected data", () => {
-    const frontendConfig = StripeFrontendConfig.createFromStripeConfig(mockedStripeConfig);
+describe("AdyenFrontendConfig", () => {
+  it("Creates from Adyen Config and sets expected data", () => {
+    const frontendConfig = AdyenFrontendConfig.createFromAdyenConfig(mockedAdyenConfig);
 
-    expect(frontendConfig.id).toStrictEqual(mockedStripeConfig.id);
-    expect(frontendConfig.name).toStrictEqual(mockedStripeConfig.name);
-    expect(frontendConfig.publishableKey).toStrictEqual(mockedStripeConfig.publishableKey);
+    expect(frontendConfig.id).toStrictEqual(mockedAdyenConfig.id);
+    expect(frontendConfig.name).toStrictEqual(mockedAdyenConfig.name);
+    expect(frontendConfig.publishableKey).toStrictEqual(mockedAdyenConfig.publishableKey);
 
     // Ensure RK is masked
     expect(frontendConfig.restrictedKey).toMatchInlineSnapshot(`"...GGGG"`);
   });
 
   it("Serializes and deserializes from itself", () => {
-    const frontendConfig = StripeFrontendConfig.createFromStripeConfig(mockedStripeConfig);
+    const frontendConfig = AdyenFrontendConfig.createFromAdyenConfig(mockedAdyenConfig);
 
     const serialized = JSON.stringify(frontendConfig);
 
@@ -116,32 +116,32 @@ describe("StripeFrontendConfig", () => {
     );
 
     //@ts-expect-error - JSON is arbitrary
-    const parsedBack = StripeFrontendConfig.createFromSerializedFields(JSON.parse(serialized));
+    const parsedBack = AdyenFrontendConfig.createFromSerializedFields(JSON.parse(serialized));
 
-    expect(parsedBack.id).toStrictEqual(mockedStripeConfig.id);
-    expect(parsedBack.name).toStrictEqual(mockedStripeConfig.name);
-    expect(parsedBack.publishableKey).toStrictEqual(mockedStripeConfig.publishableKey);
+    expect(parsedBack.id).toStrictEqual(mockedAdyenConfig.id);
+    expect(parsedBack.name).toStrictEqual(mockedAdyenConfig.name);
+    expect(parsedBack.publishableKey).toStrictEqual(mockedAdyenConfig.publishableKey);
 
     // Ensure RK is masked
     expect(parsedBack.restrictedKey).toMatchInlineSnapshot(`"...GGGG"`);
   });
 
   it("Returns TEST and LIVE information about the config", () => {
-    const testConfig = StripeFrontendConfig.createFromSerializedFields({
+    const testConfig = AdyenFrontendConfig.createFromSerializedFields({
       name: "Test",
       id: mockedConfigurationId,
-      publishableKey: mockedStripePublishableKeyTest,
-      restrictedKey: mockedStripeRestrictedKeyTest,
+      publishableKey: mockedAdyenPublishableKeyTest,
+      restrictedKey: mockedAdyenRestrictedKeyTest,
     });
 
-    const liveConfig = StripeFrontendConfig.createFromSerializedFields({
+    const liveConfig = AdyenFrontendConfig.createFromSerializedFields({
       name: "Test",
       id: mockedConfigurationId,
-      publishableKey: mockedStripePublishableKey,
-      restrictedKey: mockedStripeRestrictedKey,
+      publishableKey: mockedAdyenPublishableKey,
+      restrictedKey: mockedAdyenRestrictedKey,
     });
 
-    expect(testConfig.getStripeEnvValue()).toBe("TEST");
-    expect(liveConfig.getStripeEnvValue()).toBe("LIVE");
+    expect(testConfig.getAdyenEnvValue()).toBe("TEST");
+    expect(liveConfig.getAdyenEnvValue()).toBe("LIVE");
   });
 });

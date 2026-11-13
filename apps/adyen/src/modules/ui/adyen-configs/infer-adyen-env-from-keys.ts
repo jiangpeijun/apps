@@ -1,6 +1,6 @@
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
 
-export const stripeEnvFromKeyPrefix = (raw: string | undefined): StripeEnv | null => {
+export const adyenEnvFromKeyPrefix = (raw: string | undefined): AdyenEnv | null => {
   const key = raw?.trim() ?? "";
 
   if (key.startsWith("pk_test_") || key.startsWith("rk_test_")) {
@@ -22,17 +22,17 @@ export const stripeEnvFromKeyPrefix = (raw: string | undefined): StripeEnv | nul
  * environment as `keptRestrictedKeyEnv` so changing only the publishable key to the
  * other mode hides the pill instead of claiming a switch that save will reject.
  */
-export const inferStripeEnvFromKeys = ({
+export const inferAdyenEnvFromKeys = ({
   publishableKey,
   restrictedKey,
   keptRestrictedKeyEnv = null,
 }: {
   publishableKey: string | undefined;
   restrictedKey: string | undefined;
-  keptRestrictedKeyEnv?: StripeEnv | null;
-}): StripeEnv | null => {
-  const publishableEnv = stripeEnvFromKeyPrefix(publishableKey);
-  const restrictedEnv = stripeEnvFromKeyPrefix(restrictedKey) ?? keptRestrictedKeyEnv;
+  keptRestrictedKeyEnv?: AdyenEnv | null;
+}): AdyenEnv | null => {
+  const publishableEnv = adyenEnvFromKeyPrefix(publishableKey);
+  const restrictedEnv = adyenEnvFromKeyPrefix(restrictedKey) ?? keptRestrictedKeyEnv;
 
   if (publishableEnv && restrictedEnv && publishableEnv !== restrictedEnv) {
     return null;

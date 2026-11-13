@@ -1,33 +1,33 @@
 import { type Result } from "neverthrow";
 
-import { createStripePaymentIntentStatus } from "../adyen/adyen-payment-intent-status";
+import { createAdyenPaymentIntentStatus } from "../adyen/adyen-payment-intent-status";
 import { SaleorMoney } from "./saleor-money";
 
-export const resolveSaleorMoneyFromStripePaymentIntent = (paymentIntent: {
+export const resolveSaleorMoneyFromAdyenPaymentIntent = (paymentIntent: {
   amount: number;
   amount_received: number;
   amount_capturable: number;
   currency: string;
   status: string;
 }): Result<SaleorMoney, InstanceType<typeof SaleorMoney.ValidationError>> => {
-  const stripePaymentIntentStatus = createStripePaymentIntentStatus(paymentIntent.status);
+  const adyenPaymentIntentStatus = createAdyenPaymentIntentStatus(paymentIntent.status);
 
-  switch (stripePaymentIntentStatus) {
+  switch (adyenPaymentIntentStatus) {
     case "canceled":
     case "requires_payment_method":
     case "requires_action":
     case "processing":
-      return SaleorMoney.createFromStripe({
+      return SaleorMoney.createFromAdyen({
         amount: paymentIntent.amount,
         currency: paymentIntent.currency,
       });
     case "requires_capture":
-      return SaleorMoney.createFromStripe({
+      return SaleorMoney.createFromAdyen({
         amount: paymentIntent.amount_capturable,
         currency: paymentIntent.currency,
       });
     default:
-      return SaleorMoney.createFromStripe({
+      return SaleorMoney.createFromAdyen({
         amount: paymentIntent.amount_received,
         currency: paymentIntent.currency,
       });

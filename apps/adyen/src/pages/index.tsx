@@ -29,9 +29,9 @@ const IndexPage: NextPage = () => {
 
   return (
     <div>
-      <h1>Saleor App Payment Stripe</h1>
+      <h1>Saleor App Payment Adyen</h1>
       <p>
-        This is Saleor App that allows to accept online payments from customers using Stripe as
+        This is Saleor App that allows to accept online payments from customers using Adyen as
         their payment processor.
       </p>
       <p>Install the app in your Saleor instance and open it in Dashboard.</p>

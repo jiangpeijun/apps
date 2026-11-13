@@ -2,7 +2,7 @@ import { type Result } from "neverthrow";
 
 import { BaseError } from "@/lib/errors";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import { type RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 
 export const TransactionRecorderError = {
@@ -59,8 +59,8 @@ export interface TransactionRecorderRepo {
     transaction: RecordedTransaction,
   ): Promise<Result<null, TransactionRecorderError>>;
 
-  getTransactionByStripePaymentIntentId(
+  getTransactionByAdyenPaymentIntentId(
     accessPattern: TransactionRecorderRepoAccess,
-    id: StripePaymentIntentId,
+    id: AdyenPaymentIntentId,
   ): Promise<Result<RecordedTransaction, TransactionRecorderError>>;
 }

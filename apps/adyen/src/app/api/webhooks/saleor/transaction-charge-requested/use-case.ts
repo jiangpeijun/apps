@@ -13,18 +13,18 @@ import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { loggerContext } from "@/lib/logger-context";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { type StripeProblemReporter } from "@/modules/app-problems";
-import { resolveSaleorMoneyFromStripePaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
+import { type AdyenProblemReporter } from "@/modules/app-problems";
+import { resolveSaleorMoneyFromAdyenPaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import {
   getChannelIdFromRequestedEventPayload,
   getIdempotencyKeyFromRequestedEventPayload,
   getTransactionFromRequestedEventPayload,
 } from "@/modules/saleor/transaction-requested-event-helpers";
-import { getSaleorOrderStripeMetadata } from "@/modules/adyen/saleor-order-adyen-metadata";
-import { mapStripeErrorToApiError } from "@/modules/adyen/adyen-api-error";
-import { createStripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import { type IStripePaymentIntentsApiFactory } from "@/modules/adyen/types";
+import { getSaleorOrderAdyenMetadata } from "@/modules/adyen/saleor-order-adyen-metadata";
+import { mapAdyenErrorToApiError } from "@/modules/adyen/adyen-api-error";
+import { createAdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type IAdyenPaymentIntentsApiFactory } from "@/modules/adyen/types";
 import { ChargeFailureResult } from "@/modules/transaction-result/failure-result";
 import { ChargeSuccessResult } from "@/modules/transaction-result/success-result";
 
@@ -41,21 +41,21 @@ type UseCaseExecuteResult = Result<
 export class TransactionChargeRequestedUseCase {
   private logger = createLogger("TransactionChargeRequestedUseCase");
   private appConfigRepo: AppConfigRepo;
-  private stripePaymentIntentsApiFactory: IStripePaymentIntentsApiFactory;
+  private adyenPaymentIntentsApiFactory: IAdyenPaymentIntentsApiFactory;
 
   constructor(deps: {
     appConfigRepo: AppConfigRepo;
-    stripePaymentIntentsApiFactory: IStripePaymentIntentsApiFactory;
+    adyenPaymentIntentsApiFactory: IAdyenPaymentIntentsApiFactory;
   }) {
     this.appConfigRepo = deps.appConfigRepo;
-    this.stripePaymentIntentsApiFactory = deps.stripePaymentIntentsApiFactory;
+    this.adyenPaymentIntentsApiFactory = deps.adyenPaymentIntentsApiFactory;
   }
 
   async execute(args: {
     appId: string;
     saleorApiUrl: SaleorApiUrl;
     event: TransactionChargeRequestedEventFragment;
-    problemReporter: StripeProblemReporter;
+    problemReporter: AdyenProblemReporter;
   }): Promise<UseCaseExecuteResult> {
     const { appId, saleorApiUrl, event } = args;
 
@@ -64,26 +64,26 @@ export class TransactionChargeRequestedUseCase {
 
     loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, transaction.pspReference);
 
-    const stripeConfigForThisChannel = await this.appConfigRepo.getStripeConfig({
+    const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
       channelId,
       appId,
       saleorApiUrl,
     });
 
-    if (stripeConfigForThisChannel.isErr()) {
+    if (adyenConfigForThisChannel.isErr()) {
       this.logger.error("Failed to get configuration", {
-        error: stripeConfigForThisChannel.error,
+        error: adyenConfigForThisChannel.error,
       });
 
       return err(
         new BrokenAppResponse(
           appContextContainer.getContextValue(),
-          stripeConfigForThisChannel.error,
+          adyenConfigForThisChannel.error,
         ),
       );
     }
 
-    if (!stripeConfigForThisChannel.value) {
+    if (!adyenConfigForThisChannel.value) {
       this.logger.warn("Config for channel not found", {
         channelId,
       });
@@ -97,33 +97,33 @@ export class TransactionChargeRequestedUseCase {
     }
 
     appContextContainer.set({
-      stripeEnv: stripeConfigForThisChannel.value.getStripeEnvValue(),
+      adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
     });
 
-    const restrictedKey = stripeConfigForThisChannel.value.restrictedKey;
+    const restrictedKey = adyenConfigForThisChannel.value.restrictedKey;
 
-    const stripePaymentIntentsApi = this.stripePaymentIntentsApiFactory.create({
+    const adyenPaymentIntentsApi = this.adyenPaymentIntentsApiFactory.create({
       key: restrictedKey,
     });
 
-    this.logger.debug("Capturing Stripe payment intent with id", {
+    this.logger.debug("Capturing Adyen payment intent with id", {
       id: transaction.pspReference,
     });
 
-    const paymentIntentIdResult = createStripePaymentIntentId(transaction.pspReference);
+    const paymentIntentIdResult = createAdyenPaymentIntentId(transaction.pspReference);
 
-    const capturePaymentIntentResult = await stripePaymentIntentsApi.capturePaymentIntent({
+    const capturePaymentIntentResult = await adyenPaymentIntentsApi.capturePaymentIntent({
       id: paymentIntentIdResult,
       idempotencyKey: getIdempotencyKeyFromRequestedEventPayload(event),
-      metadata: getSaleorOrderStripeMetadata(transaction),
+      metadata: getSaleorOrderAdyenMetadata(transaction),
     });
 
     if (capturePaymentIntentResult.isErr()) {
-      const error = mapStripeErrorToApiError(capturePaymentIntentResult.error);
+      const error = mapAdyenErrorToApiError(capturePaymentIntentResult.error);
 
       const config = {
-        id: stripeConfigForThisChannel.value.id,
-        name: stripeConfigForThisChannel.value.name,
+        id: adyenConfigForThisChannel.value.id,
+        name: adyenConfigForThisChannel.value.name,
       };
 
       after(() => args.problemReporter.reportApiProblem(error, config));
@@ -135,14 +135,14 @@ export class TransactionChargeRequestedUseCase {
       return ok(
         new TransactionChargeRequestedUseCaseResponses.Failure({
           transactionResult: new ChargeFailureResult(),
-          stripePaymentIntentId: paymentIntentIdResult,
+          adyenPaymentIntentId: paymentIntentIdResult,
           error,
           appContext: appContextContainer.getContextValue(),
         }),
       );
     }
 
-    const saleorMoneyResult = resolveSaleorMoneyFromStripePaymentIntent(
+    const saleorMoneyResult = resolveSaleorMoneyFromAdyenPaymentIntent(
       capturePaymentIntentResult.value,
     );
 
@@ -161,7 +161,7 @@ export class TransactionChargeRequestedUseCase {
     return ok(
       new TransactionChargeRequestedUseCaseResponses.Success({
         transactionResult: new ChargeSuccessResult(),
-        stripePaymentIntentId: paymentIntentIdResult,
+        adyenPaymentIntentId: paymentIntentIdResult,
         saleorMoney,
         appContext: appContextContainer.getContextValue(),
       }),

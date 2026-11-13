@@ -1,4 +1,4 @@
-.stripe-app-config.json
+.adyen-app-config.json
 .transactions-record.json
 
 # Playwright

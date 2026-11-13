@@ -1,35 +1,35 @@
-import Stripe from "stripe";
+import Adyen from "adyen";
 
 import { env } from "@/lib/env";
-import { type StripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { type AdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
 import pkg from "@/package.json";
 
-import { STRIPE_API_VERSION } from "./adyen-api-version";
+import { ADYEN_API_VERSION } from "./adyen-api-version";
 
 /**
  * Holds native client,
- * provides a single initialization place for Stripe SDK
+ * provides a single initialization place for Adyen SDK
  */
-export class StripeClient {
-  readonly nativeClient: Stripe;
+export class AdyenClient {
+  readonly nativeClient: Adyen;
 
-  constructor(nativeClient: Stripe) {
+  constructor(nativeClient: Adyen) {
     this.nativeClient = nativeClient;
   }
 
-  static createFromRestrictedKey(key: StripeRestrictedKey) {
-    const nativeClient = new Stripe(key, {
+  static createFromRestrictedKey(key: AdyenRestrictedKey) {
+    const nativeClient = new Adyen(key, {
       typescript: true,
-      httpClient: Stripe.createFetchHttpClient(fetch), // this allow us to mock the fetch
-      apiVersion: STRIPE_API_VERSION,
+      httpClient: Adyen.createFetchHttpClient(fetch), // this allow us to mock the fetch
+      apiVersion: ADYEN_API_VERSION,
       appInfo: {
-        name: "Saleor App Stripe",
+        name: "Saleor App Adyen",
         version: pkg.version,
         url: env.APPSTORE_URL,
-        partner_id: env.STRIPE_PARTNER_ID,
+        partner_id: env.ADYEN_PARTNER_ID,
       },
     });
 
-    return new StripeClient(nativeClient);
+    return new AdyenClient(nativeClient);
   }
 }

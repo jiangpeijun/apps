@@ -13,25 +13,25 @@ import { loggerContext, withLoggerContext } from "@/lib/logger-context";
 import { setObservabilitySaleorApiUrl } from "@/lib/observability-saleor-api-url";
 import { saleorApp } from "@/lib/saleor-app";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
-import { createStripeProblemReporter } from "@/modules/app-problems";
+import { createAdyenProblemReporter } from "@/modules/app-problems";
 import { TransactionEventReporter } from "@/modules/saleor/transaction-event-reporter";
-import { StripePaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
-import { StripeWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
-import { StripeWebhookSignatureValidator } from "@/modules/adyen/stripe-webhook-signature-validator";
+import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
+import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
+import { AdyenWebhookSignatureValidator } from "@/modules/adyen/adyen-webhook-signature-validator";
 import { transactionRecorder } from "@/modules/transactions-recording/repositories/transaction-recorder-impl";
 
-import { getAndParseStripeSignatureHeader } from "./stripe-signature-header";
+import { getAndParseAdyenSignatureHeader } from "./adyen-signature-header";
 import {
-  StripeWebhookMalformedRequestResponse,
-  StripeWebhookSeverErrorResponse,
-} from "./stripe-webhook-responses";
-import { StripeWebhookUseCase } from "./use-case";
+  AdyenWebhookMalformedRequestResponse,
+  AdyenWebhookSeverErrorResponse,
+} from "./adyen-webhook-responses";
+import { AdyenWebhookUseCase } from "./use-case";
 import { WebhookParams } from "./webhook-params";
 
-const useCase = new StripeWebhookUseCase({
+const useCase = new AdyenWebhookUseCase({
   appConfigRepo: appConfigRepoImpl,
-  webhookEventVerifyFactory: (stripeClient) =>
-    StripeWebhookSignatureValidator.createFromClient(stripeClient),
+  webhookEventVerifyFactory: (adyenClient) =>
+    AdyenWebhookSignatureValidator.createFromClient(adyenClient),
   apl: saleorApp.apl,
   transactionRecorder: transactionRecorder,
   transactionEventReporterFactory(authData) {
@@ -39,33 +39,33 @@ const useCase = new StripeWebhookUseCase({
       graphqlClient: createInstrumentedGraphqlClient(authData),
     });
   },
-  problemReporterFactory: (authData) => createStripeProblemReporter(authData),
-  webhookManager: new StripeWebhookManager(),
-  stripePaymentIntentsApiFactory: new StripePaymentIntentsApiFactory(),
+  problemReporterFactory: (authData) => createAdyenProblemReporter(authData),
+  webhookManager: new AdyenWebhookManager(),
+  adyenPaymentIntentsApiFactory: new AdyenPaymentIntentsApiFactory(),
 });
 
-const logger = createLogger("StripeWebhookHandler");
+const logger = createLogger("AdyenWebhookHandler");
 
-const StripeWebhookHandler = async (request: NextRequest): Promise<Response> => {
+const AdyenWebhookHandler = async (request: NextRequest): Promise<Response> => {
   /**
    * Has access to first error value
    * Use https://github.com/supermacro/neverthrow#resultcombinewithallerrors-static-class-method to
    * get access to all errors
    */
   const requiredUrlAttributes = Result.combine([
-    getAndParseStripeSignatureHeader(request.headers),
+    getAndParseAdyenSignatureHeader(request.headers),
     WebhookParams.createFromWebhookUrl(request.url),
   ]);
 
   if (requiredUrlAttributes.isErr()) {
-    logger.info("Received webhook from Stripe with invalid parameters", {
+    logger.info("Received webhook from Adyen with invalid parameters", {
       error: requiredUrlAttributes.error,
     });
 
-    return new StripeWebhookMalformedRequestResponse().getResponse();
+    return new AdyenWebhookMalformedRequestResponse().getResponse();
   }
 
-  const [stripeSignatureHeader, webhookParams] = requiredUrlAttributes.value;
+  const [adyenSignatureHeader, webhookParams] = requiredUrlAttributes.value;
 
   /**
    * todo:
@@ -78,12 +78,12 @@ const StripeWebhookHandler = async (request: NextRequest): Promise<Response> => 
     .getActiveSpan()
     ?.setAttribute(ObservabilityAttributes.SALEOR_API_URL, webhookParams.saleorApiUrl);
 
-  logger.info("Received webhook from Stripe");
+  logger.info("Received webhook from Adyen");
 
   try {
     const result = await useCase.execute({
       rawBody: await request.text(),
-      signatureHeader: stripeSignatureHeader,
+      signatureHeader: adyenSignatureHeader,
       webhookParams,
     });
 
@@ -93,14 +93,14 @@ const StripeWebhookHandler = async (request: NextRequest): Promise<Response> => 
      */
     return result.match(
       (success) => {
-        logger.info("Success processing Stripe webhook", {
+        logger.info("Success processing Adyen webhook", {
           httpsStatusCode: success.statusCode,
         });
 
         return success.getResponse();
       },
       (error) => {
-        logger.warn("Failed to process Stripe webhook", {
+        logger.warn("Failed to process Adyen webhook", {
           error: error,
           httpsStatusCode: error.statusCode,
         });
@@ -111,17 +111,17 @@ const StripeWebhookHandler = async (request: NextRequest): Promise<Response> => 
   } catch (e) {
     logger.error("Unhandled error", { error: e });
 
-    const panicError = new BaseError("Unhandled Error processing Stripe webhook UseCase", {
+    const panicError = new BaseError("Unhandled Error processing Adyen webhook UseCase", {
       cause: e,
     });
 
     captureException(panicError);
 
-    return new StripeWebhookSeverErrorResponse().getResponse();
+    return new AdyenWebhookSeverErrorResponse().getResponse();
   }
 };
 
 export const POST = compose(
   withLoggerContext,
   appContextContainer.wrapRequest,
-)(StripeWebhookHandler);
+)(AdyenWebhookHandler);

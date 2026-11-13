@@ -4,7 +4,7 @@ import {
   mockedSaleorSchemaVersionSupportingPaymentMethodDetails,
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
 import {
   createResolvedTransactionFlow,
   type ResolvedTransactionFlow,
@@ -15,12 +15,12 @@ import {
 } from "@/modules/saleor/saleor-transaction-flow";
 import { type SaleorTransationId } from "@/modules/saleor/saleor-transaction-id";
 import { type PaymentMethod } from "@/modules/adyen/payment-methods/types";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import { RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 
 type Params = {
   saleorTransactionId?: SaleorTransationId;
-  stripePaymentIntentId?: StripePaymentIntentId;
+  adyenPaymentIntentId?: AdyenPaymentIntentId;
   selectedPaymentMethod?: PaymentMethod["type"];
   resolvedTransactionFlow?: ResolvedTransactionFlow;
   saleorTransactionFlow?: SaleorTransationFlow;
@@ -30,7 +30,7 @@ type Params = {
 export const getMockedRecordedTransaction = (params?: Params): RecordedTransaction => {
   const finalParams = {
     saleorTransactionId: mockedSaleorTransactionId,
-    stripePaymentIntentId: mockedStripePaymentIntentId,
+    adyenPaymentIntentId: mockedAdyenPaymentIntentId,
     saleorTransactionFlow: createSaleorTransactionFlow("CHARGE"),
     resolvedTransactionFlow: createResolvedTransactionFlow("CHARGE"),
     selectedPaymentMethod: "card",
@@ -40,7 +40,7 @@ export const getMockedRecordedTransaction = (params?: Params): RecordedTransacti
 
   return new RecordedTransaction({
     saleorTransactionId: finalParams.saleorTransactionId,
-    stripePaymentIntentId: finalParams.stripePaymentIntentId,
+    adyenPaymentIntentId: finalParams.adyenPaymentIntentId,
     saleorTransactionFlow: finalParams.saleorTransactionFlow,
     resolvedTransactionFlow: finalParams.resolvedTransactionFlow,
     selectedPaymentMethod: finalParams.selectedPaymentMethod,

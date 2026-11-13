@@ -1,27 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { mockedStripePublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
-import { mockedStripeRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
-import { newStripeConfigInputSchema } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
+import { mockedAdyenPublishableKey } from "@/__tests__/mocks/mocked-adyen-publishable-key";
+import { mockedAdyenRestrictedKey } from "@/__tests__/mocks/mocked-adyen-restricted-key";
+import { newAdyenConfigInputSchema } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
 
-describe("newStripeConfigInputSchema", () => {
+describe("newAdyenConfigInputSchema", () => {
   it("Properly parses valid input", () => {
     expect(
-      newStripeConfigInputSchema.parse({
+      newAdyenConfigInputSchema.parse({
         name: "test",
-        restrictedKey: mockedStripeRestrictedKey,
-        publishableKey: mockedStripePublishableKey,
+        restrictedKey: mockedAdyenRestrictedKey,
+        publishableKey: mockedAdyenPublishableKey,
       }),
     ).toStrictEqual({
       name: "test",
-      restrictedKey: mockedStripeRestrictedKey,
-      publishableKey: mockedStripePublishableKey,
+      restrictedKey: mockedAdyenRestrictedKey,
+      publishableKey: mockedAdyenPublishableKey,
     });
   });
 
   it("Returns list of errors for invalid input", () => {
     expect(() =>
-      newStripeConfigInputSchema.parse({
+      newAdyenConfigInputSchema.parse({
         name: "",
         restrictedKey: "test",
         publishableKey: "",
@@ -61,7 +61,7 @@ describe("newStripeConfigInputSchema", () => {
 
   it("Returns custom error if TEST and LIVE keys are mixed", () => {
     expect(() =>
-      newStripeConfigInputSchema.parse({
+      newAdyenConfigInputSchema.parse({
         name: "test",
         restrictedKey: "rk_live_asd",
         publishableKey: "pk_test_asd",

@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
 
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import { type RecordedTransaction } from "@/modules/transactions-recording/domain/recorded-transaction";
 import {
   TransactionRecorderError,
@@ -15,14 +15,14 @@ export class MockedTransactionRecorder implements TransactionRecorderRepo {
     _accessPattern: TransactionRecorderRepoAccess,
     transaction: RecordedTransaction,
   ): Promise<Result<null, TransactionRecorderError>> {
-    this.transactions[transaction.stripePaymentIntentId] = transaction;
+    this.transactions[transaction.adyenPaymentIntentId] = transaction;
 
     return ok(null);
   }
 
-  async getTransactionByStripePaymentIntentId(
+  async getTransactionByAdyenPaymentIntentId(
     _accessPattern: TransactionRecorderRepoAccess,
-    id: StripePaymentIntentId,
+    id: AdyenPaymentIntentId,
   ): Promise<Result<RecordedTransaction, TransactionRecorderError>> {
     const transaction = this.transactions[id];
 

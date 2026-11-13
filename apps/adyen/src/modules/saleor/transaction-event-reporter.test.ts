@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
 import { mockedGraphqlClient } from "@/__tests__/mocks/graphql-client";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
 import { SaleorMoney } from "@/modules/saleor/saleor-money";
 import { TransactionEventReporter } from "@/modules/saleor/transaction-event-reporter";
-import { generatePaymentIntentStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
 
 describe("TransactionEventReporter", () => {
   const instance = new TransactionEventReporter({
@@ -31,14 +31,14 @@ describe("TransactionEventReporter", () => {
       time: new Date().toISOString(),
       message: "Test message",
       type: "AUTHORIZATION_ADJUSTMENT",
-      amount: SaleorMoney.createFromStripe({
+      amount: SaleorMoney.createFromAdyen({
         amount: 10_12,
         currency: "USD",
       })._unsafeUnwrap(),
-      pspReference: mockedStripePaymentIntentId,
+      pspReference: mockedAdyenPaymentIntentId,
       transactionId: mockedSaleorTransactionId,
       actions: [],
-      externalUrl: generatePaymentIntentStripeDashboardUrl(mockedStripePaymentIntentId, "LIVE"),
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(mockedAdyenPaymentIntentId, "LIVE"),
       saleorPaymentMethodDetailsInput: null,
     });
 
@@ -67,14 +67,14 @@ describe("TransactionEventReporter", () => {
       time: new Date().toISOString(),
       message: "Test message",
       type: "AUTHORIZATION_ADJUSTMENT",
-      amount: SaleorMoney.createFromStripe({
+      amount: SaleorMoney.createFromAdyen({
         amount: 10_12,
         currency: "USD",
       })._unsafeUnwrap(),
-      pspReference: mockedStripePaymentIntentId,
+      pspReference: mockedAdyenPaymentIntentId,
       transactionId: mockedSaleorTransactionId,
       actions: [],
-      externalUrl: generatePaymentIntentStripeDashboardUrl(mockedStripePaymentIntentId, "LIVE"),
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(mockedAdyenPaymentIntentId, "LIVE"),
       saleorPaymentMethodDetailsInput: null,
     });
 
@@ -100,14 +100,14 @@ describe("TransactionEventReporter", () => {
       time: new Date().toISOString(),
       message: "Test message",
       type: "AUTHORIZATION_ADJUSTMENT",
-      amount: SaleorMoney.createFromStripe({
+      amount: SaleorMoney.createFromAdyen({
         amount: 10_12,
         currency: "USD",
       })._unsafeUnwrap(),
-      pspReference: mockedStripePaymentIntentId,
+      pspReference: mockedAdyenPaymentIntentId,
       transactionId: mockedSaleorTransactionId,
       actions: [],
-      externalUrl: generatePaymentIntentStripeDashboardUrl(mockedStripePaymentIntentId, "LIVE"),
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(mockedAdyenPaymentIntentId, "LIVE"),
       saleorPaymentMethodDetailsInput: null,
     });
 

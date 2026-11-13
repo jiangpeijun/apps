@@ -1,6 +1,6 @@
 import { type Actions } from "@/generated/app-webhooks-types/transaction-initialize-session";
 import { BaseError } from "@/lib/errors";
-import { type StripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { type AdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 
 export class ChargeActionRequiredResult {
   readonly result = "CHARGE_ACTION_REQUIRED" as const;
@@ -8,8 +8,8 @@ export class ChargeActionRequiredResult {
 
   readonly message: string;
 
-  private getMessageFromStripeStatus(stripeStatus: StripePaymentIntentStatus) {
-    switch (stripeStatus) {
+  private getMessageFromAdyenStatus(adyenStatus: AdyenPaymentIntentStatus) {
+    switch (adyenStatus) {
       case "requires_action":
         return "Payment intent requires action";
       case "requires_confirmation":
@@ -20,13 +20,13 @@ export class ChargeActionRequiredResult {
         return "Payment intent was canceled";
       default:
         throw new BaseError(
-          `Payment intent status ${stripeStatus} is not supported for CHARGE_ACTION_REQUIRED transaction flow`,
+          `Payment intent status ${adyenStatus} is not supported for CHARGE_ACTION_REQUIRED transaction flow`,
         );
     }
   }
 
-  constructor(stripeStatus: StripePaymentIntentStatus) {
-    this.message = this.getMessageFromStripeStatus(stripeStatus);
+  constructor(adyenStatus: AdyenPaymentIntentStatus) {
+    this.message = this.getMessageFromAdyenStatus(adyenStatus);
   }
 }
 
@@ -36,8 +36,8 @@ export class AuthorizationActionRequiredResult {
 
   readonly message: string;
 
-  private getMessageFromStripeStatus(stripeStatus: StripePaymentIntentStatus) {
-    switch (stripeStatus) {
+  private getMessageFromAdyenStatus(adyenStatus: AdyenPaymentIntentStatus) {
+    switch (adyenStatus) {
       case "requires_action":
         return "Payment intent requires action";
       case "requires_confirmation":
@@ -48,12 +48,12 @@ export class AuthorizationActionRequiredResult {
         return "Payment intent was canceled";
       default:
         throw new BaseError(
-          `Payment intent status ${stripeStatus} is not supported for AUTHORIZATION_ACTION_REQUIRED transaction flow`,
+          `Payment intent status ${adyenStatus} is not supported for AUTHORIZATION_ACTION_REQUIRED transaction flow`,
         );
     }
   }
 
-  constructor(stripeStatus: StripePaymentIntentStatus) {
-    this.message = this.getMessageFromStripeStatus(stripeStatus);
+  constructor(adyenStatus: AdyenPaymentIntentStatus) {
+    this.message = this.getMessageFromAdyenStatus(adyenStatus);
   }
 }

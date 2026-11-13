@@ -5,7 +5,7 @@ import { BaseError } from "@/lib/errors";
 import { createSaleorApiUrl, type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
 /**
- * Stores attributes that Stripe webhook returns to us
+ * Stores attributes that Adyen webhook returns to us
  */
 export class WebhookParams {
   static saleorApiUrlSearchParam = "saleorApiUrl";
@@ -99,7 +99,7 @@ export class WebhookParams {
       );
     } catch (error) {
       return err(
-        new WebhookParams.ParsingError("Cant parse Stripe incoming webhook URL", {
+        new WebhookParams.ParsingError("Cant parse Adyen incoming webhook URL", {
           cause: error,
           // TODO: Print url but ensure no secrets
         }),

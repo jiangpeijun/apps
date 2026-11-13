@@ -12,17 +12,17 @@ import {
 import { type AppContext } from "@/lib/app-context";
 import { BaseError } from "@/lib/errors";
 import { type SaleorMoney } from "@/modules/saleor/saleor-money";
-import { generatePaymentIntentStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
 import {
-  type StripeApiError,
-  StripeApiErrorPublicCode,
-  StripeCardErrorPublicCode,
+  type AdyenApiError,
+  AdyenApiErrorPublicCode,
+  AdyenCardErrorPublicCode,
 } from "@/modules/adyen/adyen-api-error";
 import {
-  type StripeClientSecret,
-  StripeClientSecretSchema,
+  type AdyenClientSecret,
+  AdyenClientSecretSchema,
 } from "@/modules/adyen/adyen-client-secret";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import {
   type AuthorizationActionRequiredResult,
   type ChargeActionRequiredResult,
@@ -40,49 +40,49 @@ import {
 
 class Success extends SuccessWebhookResponse {
   readonly transactionResult: ChargeActionRequiredResult | AuthorizationActionRequiredResult;
-  readonly stripeClientSecret: StripeClientSecret;
+  readonly adyenClientSecret: AdyenClientSecret;
   readonly saleorMoney: SaleorMoney;
-  readonly stripePaymentIntentId: StripePaymentIntentId;
+  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
 
   private static ResponseDataSchema = createSuccessWebhookResponseDataSchema(
     z.object({
-      stripeClientSecret: StripeClientSecretSchema,
+      adyenClientSecret: AdyenClientSecretSchema,
     }),
   );
 
   constructor(args: {
     transactionResult: ChargeActionRequiredResult | AuthorizationActionRequiredResult;
-    stripeClientSecret: StripeClientSecret;
+    adyenClientSecret: AdyenClientSecret;
     saleorMoney: SaleorMoney;
-    stripePaymentIntentId: StripePaymentIntentId;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appContext: AppContext;
   }) {
     super(args.appContext);
     this.transactionResult = args.transactionResult;
-    this.stripeClientSecret = args.stripeClientSecret;
+    this.adyenClientSecret = args.adyenClientSecret;
     this.saleorMoney = args.saleorMoney;
-    this.stripePaymentIntentId = args.stripePaymentIntentId;
+    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
   }
 
   getResponse() {
-    if (!this.appContext.stripeEnv) {
-      throw new BaseError("Stripe environment is not set. Ensure AppContext is set earlier");
+    if (!this.appContext.adyenEnv) {
+      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
     }
 
     const typeSafeResponse: TransactionSessionActionRequired = {
       data: Success.ResponseDataSchema.parse({
         paymentIntent: {
-          stripeClientSecret: this.stripeClientSecret,
+          adyenClientSecret: this.adyenClientSecret,
         },
       }),
       actions: this.transactionResult.actions,
       result: this.transactionResult.result,
       amount: this.saleorMoney.amount,
-      pspReference: this.stripePaymentIntentId,
+      pspReference: this.adyenPaymentIntentId,
       message: this.transactionResult.message,
-      externalUrl: generatePaymentIntentStripeDashboardUrl(
-        this.stripePaymentIntentId,
-        this.appContext.stripeEnv,
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(
+        this.adyenPaymentIntentId,
+        this.appContext.adyenEnv,
       ),
     };
 
@@ -92,7 +92,7 @@ class Success extends SuccessWebhookResponse {
 
 class Failure extends SuccessWebhookResponse {
   readonly transactionResult: ChargeFailureResult | AuthorizationFailureResult;
-  readonly error: StripeApiError | TransactionInitializeSessionEventDataError;
+  readonly error: AdyenApiError | TransactionInitializeSessionEventDataError;
 
   private static ResponseDataSchema = createFailureWebhookResponseDataSchema(
     z.array(
@@ -100,8 +100,8 @@ class Failure extends SuccessWebhookResponse {
         code: z.union([
           z.literal(ParseErrorPublicCode),
           z.literal(UnsupportedPaymentMethodErrorPublicCode),
-          z.literal(StripeCardErrorPublicCode),
-          z.literal(StripeApiErrorPublicCode),
+          z.literal(AdyenCardErrorPublicCode),
+          z.literal(AdyenApiErrorPublicCode),
         ]),
         message: z.string(),
       }),
@@ -110,7 +110,7 @@ class Failure extends SuccessWebhookResponse {
 
   constructor(args: {
     transactionResult: ChargeFailureResult | AuthorizationFailureResult;
-    error: StripeApiError | TransactionInitializeSessionEventDataError;
+    error: AdyenApiError | TransactionInitializeSessionEventDataError;
     appContext: AppContext;
   }) {
     super(args.appContext);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { getMockedSaleorMoney } from "@/__tests__/mocks/constants";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
 import {
   CancelFailureResult,
   CancelSuccessResult,
@@ -16,10 +16,10 @@ describe("TransactionCancellationRequestedUseCaseResponses", () => {
       const response = new TransactionCancelationRequestedUseCaseResponses.Success({
         saleorMoney: getMockedSaleorMoney(),
         transactionResult: new CancelSuccessResult(),
-        stripePaymentIntentId: mockedStripePaymentIntentId,
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
         timestamp: new Date(2023, 0, 1),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -30,7 +30,7 @@ describe("TransactionCancellationRequestedUseCaseResponses", () => {
         {
           "actions": [],
           "amount": 10,
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
           "message": "Payment intent was cancelled",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CANCEL_SUCCESS",
@@ -44,10 +44,10 @@ describe("TransactionCancellationRequestedUseCaseResponses", () => {
     it("getResponse() returns valid Response with status 200", async () => {
       const response = new TransactionCancelationRequestedUseCaseResponses.Failure({
         transactionResult: new CancelFailureResult(),
-        stripePaymentIntentId: mockedStripePaymentIntentId,
-        error: new StripeAPIError("Error from stripe"),
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
+        error: new AdyenAPIError("Error from adyen"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -59,8 +59,8 @@ describe("TransactionCancellationRequestedUseCaseResponses", () => {
           "actions": [
             "CANCEL",
           ],
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
-          "message": "There is a problem with the request to Stripe API",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
+          "message": "There is a problem with the request to Adyen API",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "CANCEL_FAILURE",
         }

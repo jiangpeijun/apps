@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
-import { mockedStripeRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
-import { StripeAPIError } from "@/modules/adyen/adyen-api-error";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenRefundId } from "@/__tests__/mocks/mocked-adyen-refund-id";
+import { AdyenAPIError } from "@/modules/adyen/adyen-api-error";
 import { RefundFailureResult } from "@/modules/transaction-result/refund-result";
 
 import { TransactionRefundRequestedUseCaseResponses } from "./use-case-response";
@@ -11,9 +11,9 @@ describe("TransactionRefundRequestedUseCaseResponses", () => {
   describe("Success", () => {
     it("getResponse() returns valid Response with status 200", async () => {
       const response = new TransactionRefundRequestedUseCaseResponses.Success({
-        stripeRefundId: mockedStripeRefundId,
+        adyenRefundId: mockedAdyenRefundId,
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -31,10 +31,10 @@ describe("TransactionRefundRequestedUseCaseResponses", () => {
     it("getResponse() returns valid Response with status 200", async () => {
       const response = new TransactionRefundRequestedUseCaseResponses.Failure({
         transactionResult: new RefundFailureResult(),
-        stripePaymentIntentId: mockedStripePaymentIntentId,
-        error: new StripeAPIError("Error from stripe"),
+        adyenPaymentIntentId: mockedAdyenPaymentIntentId,
+        error: new AdyenAPIError("Error from adyen"),
         appContext: {
-          stripeEnv: "LIVE",
+          adyenEnv: "LIVE",
         },
       });
       const fetchReponse = response.getResponse();
@@ -45,8 +45,8 @@ describe("TransactionRefundRequestedUseCaseResponses", () => {
           "actions": [
             "REFUND",
           ],
-          "externalUrl": "https://dashboard.stripe.com/payments/pi_TEST_TEST_TEST",
-          "message": "There is a problem with the request to Stripe API",
+          "externalUrl": "https://dashboard.adyen.com/payments/pi_TEST_TEST_TEST",
+          "message": "There is a problem with the request to Adyen API",
           "pspReference": "pi_TEST_TEST_TEST",
           "result": "REFUND_FAILURE",
         }

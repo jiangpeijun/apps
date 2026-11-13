@@ -4,7 +4,7 @@ import { item } from "dynamodb-toolbox/schema/item";
 import { DynamoMainTable, dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 
-class StripeConfigAccessPattern {
+class AdyenConfigAccessPattern {
   static getPK({ saleorApiUrl, appId }: { saleorApiUrl: SaleorApiUrl; appId: string }) {
     return DynamoMainTable.getPrimaryKeyScopedToInstallation({ saleorApiUrl, appId });
   }
@@ -18,22 +18,22 @@ class StripeConfigAccessPattern {
   }
 }
 
-const DynamoDbStripeConfigSchema = item({
+const DynamoDbAdyenConfigSchema = item({
   PK: string().key(),
   SK: string().key(),
   configName: string(),
   configId: string(),
-  stripePk: string(),
-  stripeRk: string(),
-  stripeWhSecret: string(),
-  stripeWhId: string(),
+  adyenPk: string(),
+  adyenRk: string(),
+  adyenWhSecret: string(),
+  adyenWhId: string(),
 });
 
-const createStripeConfigEntity = (table: DynamoMainTable) => {
+const createAdyenConfigEntity = (table: DynamoMainTable) => {
   return new Entity({
     table,
-    name: "StripeConfig",
-    schema: DynamoDbStripeConfigSchema,
+    name: "AdyenConfig",
+    schema: DynamoDbAdyenConfigSchema,
     timestamps: {
       created: {
         name: "createdAt",
@@ -47,17 +47,17 @@ const createStripeConfigEntity = (table: DynamoMainTable) => {
   });
 };
 
-const dynamoDbStripeConfigEntity = createStripeConfigEntity(dynamoMainTable);
+const dynamoDbAdyenConfigEntity = createAdyenConfigEntity(dynamoMainTable);
 
-export type DynamoDbStripeConfigEntity = typeof dynamoDbStripeConfigEntity;
+export type DynamoDbAdyenConfigEntity = typeof dynamoDbAdyenConfigEntity;
 
-export const DynamoDbStripeConfig = {
+export const DynamoDbAdyenConfig = {
   accessPattern: {
-    getPK: StripeConfigAccessPattern.getPK,
-    getSKforSpecificItem: StripeConfigAccessPattern.getSKforSpecificItem,
-    getSKforAllItems: StripeConfigAccessPattern.getSKforAllItems,
+    getPK: AdyenConfigAccessPattern.getPK,
+    getSKforSpecificItem: AdyenConfigAccessPattern.getSKforSpecificItem,
+    getSKforAllItems: AdyenConfigAccessPattern.getSKforAllItems,
   },
-  entitySchema: DynamoDbStripeConfigSchema,
-  createEntity: createStripeConfigEntity,
-  entity: dynamoDbStripeConfigEntity,
+  entitySchema: DynamoDbAdyenConfigSchema,
+  createEntity: createAdyenConfigEntity,
+  entity: dynamoDbAdyenConfigEntity,
 };

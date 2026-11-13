@@ -1,6 +1,6 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
-export const mockedStripeCardPaymentMethod: Stripe.PaymentMethod = {
+export const mockedAdyenCardPaymentMethod: Adyen.PaymentMethod = {
   id: "pm_1234567890",
   object: "payment_method",
   billing_details: {
@@ -49,7 +49,7 @@ export const mockedStripeCardPaymentMethod: Stripe.PaymentMethod = {
   metadata: {},
 };
 
-export const mockedStripeOtherPaymentMethod: Stripe.PaymentMethod = {
+export const mockedAdyenOtherPaymentMethod: Adyen.PaymentMethod = {
   id: "pm_other_1234567890",
   object: "payment_method",
   billing_details: {

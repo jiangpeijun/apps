@@ -1,38 +1,38 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  createStripePublishableKey,
-  StripePublishableKeyValidationError,
+  createAdyenPublishableKey,
+  AdyenPublishableKeyValidationError,
 } from "./adyen-publishable-key";
 
-describe("StripePublishableKey", () => {
+describe("AdyenPublishableKey", () => {
   describe("createFromUserInput", () => {
     it("should create instance for valid test key", () => {
-      const result = createStripePublishableKey("pk_test_valid123");
+      const result = createAdyenPublishableKey("pk_test_valid123");
 
       expect(result.isOk()).toBe(true);
       expect(result._unsafeUnwrap()).toBe("pk_test_valid123");
     });
 
     it("should create instance for valid live key", () => {
-      const result = createStripePublishableKey("pk_live_valid456");
+      const result = createAdyenPublishableKey("pk_live_valid456");
 
       expect(result.isOk()).toBe(true);
       expect(result._unsafeUnwrap()).toBe("pk_live_valid456");
     });
 
     it("should accepted potentially invalid key, even if format is not expected", () => {
-      const result = createStripePublishableKey("invalid_key");
+      const result = createAdyenPublishableKey("invalid_key");
 
       expect(result.isOk()).toBe(true);
       expect(result._unsafeUnwrap()).toBe("invalid_key");
     });
 
     it("should return error if key is empty", () => {
-      const result = createStripePublishableKey("");
+      const result = createAdyenPublishableKey("");
 
       expect(result.isErr()).toBe(true);
-      expect(result._unsafeUnwrapErr()).toBeInstanceOf(StripePublishableKeyValidationError);
+      expect(result._unsafeUnwrapErr()).toBeInstanceOf(AdyenPublishableKeyValidationError);
       expect(result._unsafeUnwrapErr().message).toMatchInlineSnapshot(`
         "ZodError: [
           {

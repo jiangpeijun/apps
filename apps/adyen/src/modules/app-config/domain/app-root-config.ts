@@ -1,19 +1,19 @@
-import { type StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 
 export class AppRootConfig {
   readonly chanelConfigMapping: Record<string, string>;
-  readonly stripeConfigsById: Record<string, StripeConfig>;
+  readonly adyenConfigsById: Record<string, AdyenConfig>;
 
   constructor(
     chanelConfigMapping: Record<string, string>,
-    stripeConfigsById: Record<string, StripeConfig>,
+    adyenConfigsById: Record<string, AdyenConfig>,
   ) {
     this.chanelConfigMapping = chanelConfigMapping;
-    this.stripeConfigsById = stripeConfigsById;
+    this.adyenConfigsById = adyenConfigsById;
   }
 
   getAllConfigsAsList() {
-    return Object.values(this.stripeConfigsById);
+    return Object.values(this.adyenConfigsById);
   }
 
   getChannelsBoundToGivenConfig(configId: string) {

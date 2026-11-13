@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { mockedSaleorAppId, mockedSaleorTransactionId } from "@/__tests__/mocks/constants";
 import { mockAuthData } from "@/__tests__/mocks/mock-auth-data";
-import { mockedStripePaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
+import { mockedAdyenPaymentIntentId } from "@/__tests__/mocks/mocked-adyen-payment-intent-id";
 import { mockedSaleorApiUrl } from "@/__tests__/mocks/saleor-api-url";
 import { DynamoDbRecordedTransaction } from "@/modules/transactions-recording/repositories/dynamodb/recorded-transaction-db-model";
 
@@ -14,12 +14,12 @@ describe("DynamoDbRecordedTransaction", () => {
         "https://foo.bar.saleor.cloud/graphql/#saleor-app-id",
       );
     });
-    it("getSKforSpecificItem returns correct key including Stripe PI ID", () => {
+    it("getSKforSpecificItem returns correct key including Adyen PI ID", () => {
       expect(
         DynamoDbRecordedTransaction.accessPattern.getSKforSpecificItem({
-          paymentIntentId: mockedStripePaymentIntentId,
+          paymentIntentId: mockedAdyenPaymentIntentId,
         }),
-      ).toStrictEqual(`TRANSACTION#${mockedStripePaymentIntentId}`);
+      ).toStrictEqual(`TRANSACTION#${mockedAdyenPaymentIntentId}`);
     });
   });
 
@@ -43,7 +43,7 @@ describe("DynamoDbRecordedTransaction", () => {
         parser.parse({
           PK: `${mockedSaleorApiUrl}#${mockedSaleorAppId}`,
           SK: `TRANSACTION#${mockedSaleorTransactionId}`,
-          paymentIntentId: mockedStripePaymentIntentId,
+          paymentIntentId: mockedAdyenPaymentIntentId,
           saleorTransactionId: mockedSaleorTransactionId,
           saleorTransactionFlow: "AUTHORIZATION",
           resolvedTransactionFlow: "CHARGE",

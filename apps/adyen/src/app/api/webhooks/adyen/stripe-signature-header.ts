@@ -2,22 +2,22 @@ import { err, ok, type Result } from "neverthrow";
 
 import { BaseError } from "@/lib/errors";
 
-export const stripeSignatureHeader = "stripe-signature";
+export const adyenSignatureHeader = "adyen-signature";
 
-export const MissingStripeHeaderError = BaseError.subclass("MissingStripeHeaderError", {
+export const MissingAdyenHeaderError = BaseError.subclass("MissingAdyenHeaderError", {
   props: {
-    _internalName: "MissingStripeHeaderError",
+    _internalName: "MissingAdyenHeaderError",
   },
 });
 
-export function getAndParseStripeSignatureHeader(
+export function getAndParseAdyenSignatureHeader(
   headers: Headers,
-): Result<string, InstanceType<typeof MissingStripeHeaderError>> {
-  const signatureHeader = headers.get(stripeSignatureHeader);
+): Result<string, InstanceType<typeof MissingAdyenHeaderError>> {
+  const signatureHeader = headers.get(adyenSignatureHeader);
 
   if (signatureHeader && signatureHeader.length > 0) {
     return ok(signatureHeader);
   } else {
-    return err(new MissingStripeHeaderError("Stripe-Signature header is invalid"));
+    return err(new MissingAdyenHeaderError("Adyen-Signature header is invalid"));
   }
 }

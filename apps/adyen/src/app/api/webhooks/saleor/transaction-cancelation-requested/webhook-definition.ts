@@ -12,7 +12,7 @@ export const transactionCancelationRequestedWebhookDefinition =
   new SaleorSyncWebhook<TransactionCancelationRequestedEventFragment>({
     apl: saleorApp.apl,
     event: "TRANSACTION_CANCELATION_REQUESTED",
-    name: "Stripe Transaction Cancelation Requested",
+    name: "Adyen Transaction Cancelation Requested",
     isActive: true,
     query: TransactionCancelationRequestedDocument,
     webhookPath: "api/webhooks/saleor/transaction-cancelation-requested",

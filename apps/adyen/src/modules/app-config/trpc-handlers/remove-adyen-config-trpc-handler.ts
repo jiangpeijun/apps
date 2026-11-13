@@ -7,18 +7,18 @@ import { z } from "zod";
 import { BaseError } from "@/lib/errors";
 import { createInstrumentedGraphqlClient } from "@/lib/graphql-client";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { StripeProblemReporter } from "@/modules/app-problems/adyen-problem-reporter";
+import { AdyenProblemReporter } from "@/modules/app-problems/adyen-problem-reporter";
 import { createSaleorApiUrl, type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { StripeWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
+import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
 // todo test
-export class RemoveStripeConfigTrpcHandler {
+export class RemoveAdyenConfigTrpcHandler {
   baseProcedure = protectedClientProcedure;
 
-  private readonly webhookManager = new StripeWebhookManager();
+  private readonly webhookManager = new AdyenWebhookManager();
 
-  constructor(deps: { webhookManager: StripeWebhookManager }) {
+  constructor(deps: { webhookManager: AdyenWebhookManager }) {
     this.webhookManager = deps.webhookManager;
   }
 
@@ -39,7 +39,7 @@ export class RemoveStripeConfigTrpcHandler {
     if (rootConfig.isErr()) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Failed to remove Stripe configuration. Please try again.",
+        message: "Failed to remove Adyen configuration. Please try again.",
       });
     }
 
@@ -88,7 +88,7 @@ export class RemoveStripeConfigTrpcHandler {
           saleorApiUrl: saleorApiUrl.value,
         });
 
-        const configToRemove = rootConfig.stripeConfigsById[input.configId];
+        const configToRemove = rootConfig.adyenConfigsById[input.configId];
         const channelsToUnbind = rootConfig.getChannelsBoundToGivenConfig(input.configId);
 
         if (!configToRemove) {
@@ -105,7 +105,7 @@ export class RemoveStripeConfigTrpcHandler {
 
         if (webhookRemovingResult.isErr()) {
           /**
-           * Ignore - it's possible webhook was removed in Stripe, or in previous call. We can't transactional remove both webhook and our config,
+           * Ignore - it's possible webhook was removed in Adyen, or in previous call. We can't transactional remove both webhook and our config,
            * so we must accept that inconsistency and document it
            */
         }
@@ -153,11 +153,11 @@ export class RemoveStripeConfigTrpcHandler {
 
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to remove Stripe configuration. Please try again.",
+            message: "Failed to remove Adyen configuration. Please try again.",
           });
         }
 
-        const reporter = new StripeProblemReporter(
+        const reporter = new AdyenProblemReporter(
           createInstrumentedGraphqlClient({
             saleorApiUrl: ctx.saleorApiUrl,
             token: ctx.appToken,

@@ -4,23 +4,23 @@ import { z } from "zod";
 
 import { BaseError } from "@/lib/errors";
 
-export const StripeRestrictedKeyValidationError = BaseError.subclass(
-  "StripeRestrictedKeyValidationError",
+export const AdyenRestrictedKeyValidationError = BaseError.subclass(
+  "AdyenRestrictedKeyValidationError",
   {
     props: {
-      _internalName: "StripeRestrictedKeyValidationError" as const,
+      _internalName: "AdyenRestrictedKeyValidationError" as const,
     },
   },
 );
 
-export const StripeRestrictedKeySchema = z
+export const AdyenRestrictedKeySchema = z
   .string()
   .min(1)
   .refine((value) => {
     const expected = value.startsWith("rk_test_") || value.startsWith("rk_live_");
 
     if (!expected) {
-      captureMessage("Received unexpected Stripe PK format", (scope) => {
+      captureMessage("Received unexpected Adyen PK format", (scope) => {
         scope.setLevel("warning");
         scope.setExtra("first8letters", value.slice(0, 8));
 
@@ -30,11 +30,11 @@ export const StripeRestrictedKeySchema = z
 
     return true;
   })
-  .brand("StripeRestrictedKey");
+  .brand("AdyenRestrictedKey");
 
-export const createStripeRestrictedKey = (raw: string | null) =>
-  fromThrowable(StripeRestrictedKeySchema.parse, (error) =>
-    StripeRestrictedKeyValidationError.normalize(error),
+export const createAdyenRestrictedKey = (raw: string | null) =>
+  fromThrowable(AdyenRestrictedKeySchema.parse, (error) =>
+    AdyenRestrictedKeyValidationError.normalize(error),
   )(raw);
 
-export type StripeRestrictedKey = z.infer<typeof StripeRestrictedKeySchema>;
+export type AdyenRestrictedKey = z.infer<typeof AdyenRestrictedKeySchema>;

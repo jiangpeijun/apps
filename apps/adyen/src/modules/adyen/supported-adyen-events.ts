@@ -1,6 +1,6 @@
-import type { Stripe } from "stripe";
+import type { Adyen } from "adyen";
 
-export const supportedStripeEvents: Array<Stripe.WebhookEndpointCreateParams.EnabledEvent> = [
+export const supportedAdyenEvents: Array<Adyen.WebhookEndpointCreateParams.EnabledEvent> = [
   "payment_intent.amount_capturable_updated",
   "payment_intent.payment_failed",
   "payment_intent.processing",

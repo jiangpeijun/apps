@@ -21,7 +21,7 @@ export class PaymentGatewayInitializeSessionUseCase {
 
   static UseCaseError = BaseError.subclass("PaymentGatewayInitializeSessionUseCaseError", {
     props: {
-      _internalName: "InitializeStripeSessionUseCaseError" as const,
+      _internalName: "InitializeAdyenSessionUseCaseError" as const,
     },
   });
 
@@ -41,14 +41,14 @@ export class PaymentGatewayInitializeSessionUseCase {
   > {
     const { channelId, appId, saleorApiUrl } = params;
 
-    const stripeConfigForThisChannel = await this.appConfigRepo.getStripeConfig({
+    const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
       channelId,
       appId,
       saleorApiUrl,
     });
 
-    if (stripeConfigForThisChannel.isOk()) {
-      const pk = stripeConfigForThisChannel.value?.publishableKey;
+    if (adyenConfigForThisChannel.isOk()) {
+      const pk = adyenConfigForThisChannel.value?.publishableKey;
 
       if (!pk) {
         this.logger.warn("Config for channel not found", {
@@ -64,7 +64,7 @@ export class PaymentGatewayInitializeSessionUseCase {
       }
 
       appContextContainer.set({
-        stripeEnv: stripeConfigForThisChannel.value.getStripeEnvValue(),
+        adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
       });
 
       return ok(
@@ -75,15 +75,15 @@ export class PaymentGatewayInitializeSessionUseCase {
       );
     }
 
-    if (stripeConfigForThisChannel.isErr()) {
+    if (adyenConfigForThisChannel.isErr()) {
       this.logger.error("Failed to get configuration", {
-        error: stripeConfigForThisChannel.error,
+        error: adyenConfigForThisChannel.error,
       });
 
       return err(
         new BrokenAppResponse(
           appContextContainer.getContextValue(),
-          stripeConfigForThisChannel.error,
+          adyenConfigForThisChannel.error,
         ),
       );
     }

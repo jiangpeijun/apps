@@ -1,6 +1,6 @@
 /**
- * TODO: Verify if this is actually non-retryable. Stripe retries every non-2xx response (4xx included),
- * so these responses are probably retried for up to 3 days. See https://docs.stripe.com/webhooks#automatic-retries
+ * TODO: Verify if this is actually non-retryable. Adyen retries every non-2xx response (4xx included),
+ * so these responses are probably retried for up to 3 days. See https://docs.adyen.com/webhooks#automatic-retries
  */
 abstract class NonRetryableErrorWebhookResponse {
   statusCode = 400;
@@ -10,7 +10,7 @@ abstract class RetryableErrorWebhookResponse {
   statusCode = 500;
 }
 
-export class StripeWebhookSuccessResponse {
+export class AdyenWebhookSuccessResponse {
   readonly statusCode = 200;
   readonly message = "Ok";
 
@@ -21,7 +21,7 @@ export class StripeWebhookSuccessResponse {
   }
 }
 
-export class StripeWebhookMalformedRequestResponse extends NonRetryableErrorWebhookResponse {
+export class AdyenWebhookMalformedRequestResponse extends NonRetryableErrorWebhookResponse {
   readonly message = "Malformed request";
 
   getResponse() {
@@ -31,7 +31,7 @@ export class StripeWebhookMalformedRequestResponse extends NonRetryableErrorWebh
   }
 }
 
-export class StripeWebhookAppIsNotConfiguredResponse extends NonRetryableErrorWebhookResponse {
+export class AdyenWebhookAppIsNotConfiguredResponse extends NonRetryableErrorWebhookResponse {
   readonly message = "App is not configured";
 
   getResponse() {
@@ -41,7 +41,7 @@ export class StripeWebhookAppIsNotConfiguredResponse extends NonRetryableErrorWe
   }
 }
 
-export class StripeWebhookSeverErrorResponse extends RetryableErrorWebhookResponse {
+export class AdyenWebhookSeverErrorResponse extends RetryableErrorWebhookResponse {
   readonly message = "Server error";
 
   getResponse() {
@@ -51,7 +51,7 @@ export class StripeWebhookSeverErrorResponse extends RetryableErrorWebhookRespon
   }
 }
 
-export class StripeWebhookTransactionMissingResponse extends NonRetryableErrorWebhookResponse {
+export class AdyenWebhookTransactionMissingResponse extends NonRetryableErrorWebhookResponse {
   readonly message = "Transaction is missing";
 
   getResponse() {
@@ -61,10 +61,10 @@ export class StripeWebhookTransactionMissingResponse extends NonRetryableErrorWe
   }
 }
 
-export type PossibleStripeWebhookSuccessResponses = StripeWebhookSuccessResponse;
+export type PossibleAdyenWebhookSuccessResponses = AdyenWebhookSuccessResponse;
 
-export type PossibleStripeWebhookErrorResponses =
-  | StripeWebhookMalformedRequestResponse
-  | StripeWebhookAppIsNotConfiguredResponse
-  | StripeWebhookSeverErrorResponse
-  | StripeWebhookTransactionMissingResponse;
+export type PossibleAdyenWebhookErrorResponses =
+  | AdyenWebhookMalformedRequestResponse
+  | AdyenWebhookAppIsNotConfiguredResponse
+  | AdyenWebhookSeverErrorResponse
+  | AdyenWebhookTransactionMissingResponse;

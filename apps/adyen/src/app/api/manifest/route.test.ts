@@ -38,7 +38,7 @@ describe("Manifest handler", async () => {
           },
           `
      {
-       "about": "App that allows merchants using the Saleor e-commerce platform to accept online payments from customers using Stripe as their payment processor.",
+       "about": "App that allows merchants using the Saleor e-commerce platform to accept online payments from customers using Adyen as their payment processor.",
        "appUrl": "https://localhost:3000",
        "author": "Saleor Commerce",
        "brand": {
@@ -49,8 +49,8 @@ describe("Manifest handler", async () => {
        "dataPrivacyUrl": "https://saleor.io/legal/privacy/",
        "extensions": [],
        "homepageUrl": "https://github.com/saleor/apps",
-       "id": "saleor.app.payment.stripe",
-       "name": "Stripe",
+       "id": "saleor.app.payment.adyen",
+       "name": "Adyen",
        "permissions": [
          "HANDLE_PAYMENTS",
        ],
@@ -61,7 +61,7 @@ describe("Manifest handler", async () => {
        "webhooks": [
          {
            "isActive": true,
-           "name": "Stripe Payment Gateway Initialize",
+           "name": "Adyen Payment Gateway Initialize",
            "query": "subscription PaymentGatewayInitializeSession { event { ...PaymentGatewayInitializeSessionEvent }}fragment EventMetadata on Event { version recipient { id }}fragment Channel on Channel { id slug}fragment SourceObject on OrderOrCheckout { ... on Checkout { __typename id channel { ...Channel } } ... on Order { __typename id number checkoutId channel { ...Channel } }}fragment PaymentGatewayInitializeSessionEvent on PaymentGatewayInitializeSession { ...EventMetadata sourceObject { ...SourceObject }}",
            "syncEvents": [
              "PAYMENT_GATEWAY_INITIALIZE_SESSION",
@@ -70,7 +70,7 @@ describe("Manifest handler", async () => {
          },
          {
            "isActive": true,
-           "name": "Stripe Transaction Initialize Session",
+           "name": "Adyen Transaction Initialize Session",
            "query": "subscription TransactionInitializeSession { event { ...TransactionInitializeSessionEvent }}fragment EventMetadata on Event { version recipient { id }}fragment Channel on Channel { id slug}fragment SourceObject on OrderOrCheckout { ... on Checkout { __typename id channel { ...Channel } } ... on Order { __typename id number checkoutId channel { ...Channel } }}fragment TransactionInitializeSessionEvent on TransactionInitializeSession { ...EventMetadata action { amount currency actionType } data transaction { id } sourceObject { ...SourceObject } idempotencyKey}",
            "syncEvents": [
              "TRANSACTION_INITIALIZE_SESSION",
@@ -79,7 +79,7 @@ describe("Manifest handler", async () => {
          },
          {
            "isActive": true,
-           "name": "Stripe Transaction Process Session",
+           "name": "Adyen Transaction Process Session",
            "query": "subscription TransactionProcessSession { event { ...TransactionProcessSessionEvent }}fragment EventMetadata on Event { version recipient { id }}fragment Channel on Channel { id slug}fragment SourceObject on OrderOrCheckout { ... on Checkout { __typename id channel { ...Channel } } ... on Order { __typename id number checkoutId channel { ...Channel } }}fragment TransactionProcessSessionEvent on TransactionProcessSession { ...EventMetadata transaction { pspReference } action { amount actionType } sourceObject { ...SourceObject }}",
            "syncEvents": [
              "TRANSACTION_PROCESS_SESSION",
@@ -88,7 +88,7 @@ describe("Manifest handler", async () => {
          },
          {
            "isActive": true,
-           "name": "Stripe Transaction Charge Requested",
+           "name": "Adyen Transaction Charge Requested",
            "query": "subscription TransactionChargeRequested { event { ...TransactionChargeRequestedEvent }}fragment EventMetadata on Event { version recipient { id }}fragment Channel on Channel { id slug}fragment TransactionChargeRequestedEvent on TransactionChargeRequested { ...EventMetadata idempotencyKey action { amount } transaction { id pspReference checkout { id channel { ...Channel } } order { id number checkoutId channel { ...Channel } } }}",
            "syncEvents": [
              "TRANSACTION_CHARGE_REQUESTED",
@@ -97,7 +97,7 @@ describe("Manifest handler", async () => {
          },
          {
            "isActive": true,
-           "name": "Stripe Transaction Cancelation Requested",
+           "name": "Adyen Transaction Cancelation Requested",
            "query": "subscription TransactionCancelationRequested { event { ...TransactionCancelationRequestedEvent }}fragment EventMetadata on Event { version recipient { id }}fragment Channel on Channel { id slug}fragment TransactionCancelationRequestedEvent on TransactionCancelationRequested { ...EventMetadata idempotencyKey transaction { id pspReference checkout { id channel { ...Channel } } order { id channel { ...Channel } } }}",
            "syncEvents": [
              "TRANSACTION_CANCELATION_REQUESTED",
@@ -106,7 +106,7 @@ describe("Manifest handler", async () => {
          },
          {
            "isActive": true,
-           "name": "Stripe Transaction Refund Requested",
+           "name": "Adyen Transaction Refund Requested",
            "query": "subscription TransactionRefundRequested { event { ...TransactionRefundRequestedEvent }}fragment EventMetadata on Event { version recipient { id }}fragment Channel on Channel { id slug}fragment TransactionRefundRequestedEvent on TransactionRefundRequested { ...EventMetadata idempotencyKey action { amount currency } transaction { id pspReference checkout { id channel { ...Channel } } order { id number checkoutId channel { ...Channel } } }}",
            "syncEvents": [
              "TRANSACTION_REFUND_REQUESTED",

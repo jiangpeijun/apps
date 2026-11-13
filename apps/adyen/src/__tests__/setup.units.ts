@@ -2,7 +2,7 @@ import { ok } from "neverthrow";
 import { beforeEach, vi } from "vitest";
 
 import { mockedAppConfigRepo } from "@/__tests__/mocks/app-config-repo";
-import { mockedStripeConfig } from "@/__tests__/mocks/mock-adyen-config";
+import { mockedAdyenConfig } from "@/__tests__/mocks/mock-adyen-config";
 
 vi.mock("next/server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("next/server")>()),
@@ -16,10 +16,10 @@ vi.stubEnv("AWS_REGION", "localhost");
 vi.stubEnv("AWS_ACCESS_KEY_ID", "");
 vi.stubEnv("AWS_SECRET_ACCESS_KEY", "");
 vi.stubEnv("AWS_ENDPOINT_URL", "http://localhost:8000");
-vi.stubEnv("DYNAMODB_MAIN_TABLE_NAME", "stripe-main-table");
+vi.stubEnv("DYNAMODB_MAIN_TABLE_NAME", "adyen-main-table");
 
 beforeEach(() => {
-  mockedAppConfigRepo.getStripeConfig.mockImplementation(async () => ok(mockedStripeConfig));
+  mockedAppConfigRepo.getAdyenConfig.mockImplementation(async () => ok(mockedAdyenConfig));
 });
 
 export {};

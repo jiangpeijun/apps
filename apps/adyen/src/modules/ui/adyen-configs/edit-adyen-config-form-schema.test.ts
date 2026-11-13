@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { editStripeConfigFormSchema } from "./edit-adyen-config-form-schema";
+import { editAdyenConfigFormSchema } from "./edit-adyen-config-form-schema";
 
 const validValues = {
   name: "Live",
@@ -9,20 +9,20 @@ const validValues = {
 };
 
 const parseIssues = (values: typeof validValues) => {
-  const result = editStripeConfigFormSchema.safeParse(values);
+  const result = editAdyenConfigFormSchema.safeParse(values);
 
   return result.success ? [] : result.error.issues;
 };
 
-describe("editStripeConfigFormSchema", () => {
+describe("editAdyenConfigFormSchema", () => {
   it("Accepts an empty restricted key, meaning the saved one is kept", () => {
-    expect(editStripeConfigFormSchema.parse(validValues)).toStrictEqual(validValues);
+    expect(editAdyenConfigFormSchema.parse(validValues)).toStrictEqual(validValues);
   });
 
   it("Accepts a rotated restricted key from the same environment", () => {
     const values = { ...validValues, restrictedKey: "rk_live_456" };
 
-    expect(editStripeConfigFormSchema.parse(values)).toStrictEqual(values);
+    expect(editAdyenConfigFormSchema.parse(values)).toStrictEqual(values);
   });
 
   it("Rejects a restricted key with a wrong prefix", () => {

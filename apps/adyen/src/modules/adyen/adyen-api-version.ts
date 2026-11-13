@@ -1,3 +1,3 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
-export const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2025-04-30.basil";
+export const ADYEN_API_VERSION: Adyen.LatestApiVersion = "2025-04-30.basil";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createStripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { createAdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
 
 import {
   AuthorizationActionRequiredResult,
@@ -9,19 +9,19 @@ import {
 
 describe("ChargeActionRequiredResult", () => {
   it.each([
-    { stripeStatus: "requires_action", expectedMessage: "Payment intent requires action" },
+    { adyenStatus: "requires_action", expectedMessage: "Payment intent requires action" },
     {
-      stripeStatus: "requires_confirmation",
+      adyenStatus: "requires_confirmation",
       expectedMessage: "Payment intent requires confirmation",
     },
     {
-      stripeStatus: "requires_payment_method",
+      adyenStatus: "requires_payment_method",
       expectedMessage: "Payment intent requires payment method",
     },
   ])(
-    "should create instance with message: $expectedMessage for Stripe status:$stripeStatus",
-    ({ stripeStatus, expectedMessage }) => {
-      const result = new ChargeActionRequiredResult(createStripePaymentIntentStatus(stripeStatus));
+    "should create instance with message: $expectedMessage for Adyen status:$adyenStatus",
+    ({ adyenStatus, expectedMessage }) => {
+      const result = new ChargeActionRequiredResult(createAdyenPaymentIntentStatus(adyenStatus));
 
       expect(result.message).toBe(expectedMessage);
     },
@@ -29,7 +29,7 @@ describe("ChargeActionRequiredResult", () => {
 
   it("should throw error for unsupported status", () => {
     expect(() => {
-      new ChargeActionRequiredResult(createStripePaymentIntentStatus("succeeded"));
+      new ChargeActionRequiredResult(createAdyenPaymentIntentStatus("succeeded"));
     }).toThrow(
       "Payment intent status succeeded is not supported for CHARGE_ACTION_REQUIRED transaction flow",
     );
@@ -38,20 +38,20 @@ describe("ChargeActionRequiredResult", () => {
 
 describe("AuthorizationActionRequiredResult", () => {
   it.each([
-    { stripeStatus: "requires_action", expectedMessage: "Payment intent requires action" },
+    { adyenStatus: "requires_action", expectedMessage: "Payment intent requires action" },
     {
-      stripeStatus: "requires_confirmation",
+      adyenStatus: "requires_confirmation",
       expectedMessage: "Payment intent requires confirmation",
     },
     {
-      stripeStatus: "requires_payment_method",
+      adyenStatus: "requires_payment_method",
       expectedMessage: "Payment intent requires payment method",
     },
   ])(
-    "should create instance with message: $expectedMessage for Stripe status:$stripeStatus",
-    ({ stripeStatus, expectedMessage }) => {
+    "should create instance with message: $expectedMessage for Adyen status:$adyenStatus",
+    ({ adyenStatus, expectedMessage }) => {
       const result = new AuthorizationActionRequiredResult(
-        createStripePaymentIntentStatus(stripeStatus),
+        createAdyenPaymentIntentStatus(adyenStatus),
       );
 
       expect(result.message).toBe(expectedMessage);
@@ -60,7 +60,7 @@ describe("AuthorizationActionRequiredResult", () => {
 
   it("should throw error for unsupported status", () => {
     expect(() => {
-      new AuthorizationActionRequiredResult(createStripePaymentIntentStatus("succeeded"));
+      new AuthorizationActionRequiredResult(createAdyenPaymentIntentStatus("succeeded"));
     }).toThrow(
       "Payment intent status succeeded is not supported for AUTHORIZATION_ACTION_REQUIRED transaction flow",
     );

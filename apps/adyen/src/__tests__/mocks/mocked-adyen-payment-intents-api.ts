@@ -1,10 +1,10 @@
 import { vi } from "vitest";
 
-import { type IStripePaymentIntentsApi } from "@/modules/adyen/types";
+import { type IAdyenPaymentIntentsApi } from "@/modules/adyen/types";
 
-export const mockedStripePaymentIntentsApi = {
+export const mockedAdyenPaymentIntentsApi = {
   createPaymentIntent: vi.fn(),
   getPaymentIntent: vi.fn(),
   capturePaymentIntent: vi.fn(),
   cancelPaymentIntent: vi.fn(),
-} satisfies IStripePaymentIntentsApi;
+} satisfies IAdyenPaymentIntentsApi;

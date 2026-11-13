@@ -3,16 +3,16 @@ import { z } from "zod";
 import { SuccessWebhookResponse } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
 import { type PaymentGatewayInitializeSession } from "@/generated/app-webhooks-types/payment-gateway-initialize-session";
 import { type AppContext } from "@/lib/app-context";
-import { type StripePublishableKey } from "@/modules/adyen/adyen-publishable-key";
+import { type AdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
 
 class Success extends SuccessWebhookResponse {
-  readonly pk: StripePublishableKey;
+  readonly pk: AdyenPublishableKey;
 
   private static ResponseDataSchema = z.object({
-    stripePublishableKey: z.string(),
+    adyenPublishableKey: z.string(),
   });
 
-  constructor(args: { pk: StripePublishableKey; appContext: AppContext }) {
+  constructor(args: { pk: AdyenPublishableKey; appContext: AppContext }) {
     super(args.appContext);
     this.pk = args.pk;
   }
@@ -20,7 +20,7 @@ class Success extends SuccessWebhookResponse {
   getResponse() {
     const typeSafeResponse: PaymentGatewayInitializeSession = {
       data: Success.ResponseDataSchema.parse({
-        stripePublishableKey: this.pk,
+        adyenPublishableKey: this.pk,
       }),
     };
 

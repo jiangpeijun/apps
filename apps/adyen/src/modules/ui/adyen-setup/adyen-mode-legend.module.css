@@ -33,11 +33,11 @@
 }
 
 .swatchTest {
-  background-color: var(--stripe-color-sandbox);
+  background-color: var(--adyen-color-sandbox);
 }
 
 .swatchLive {
-  background-color: var(--stripe-color-live);
+  background-color: var(--adyen-color-live);
 }
 
 .modeDescription {

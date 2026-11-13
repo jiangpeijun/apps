@@ -4,14 +4,14 @@ import { WebhookParams } from "@/app/api/webhooks/adyen/webhook-params";
 import { BaseError } from "@/lib/errors";
 
 /**
- * Builds URL which Stripe will reach
+ * Builds URL which Adyen will reach
  *
- * Consider merging with WebhookParams, maybe it can be single class like StripeWebhookUrl
+ * Consider merging with WebhookParams, maybe it can be single class like AdyenWebhookUrl
  */
-export class StripeWebhookUrlBuilder {
+export class AdyenWebhookUrlBuilder {
   buildUrl({ appUrl, webhookParams }: { appUrl: string; webhookParams: WebhookParams }) {
     try {
-      const webhookUrl = new URL(appUrl + "/api/webhooks/stripe");
+      const webhookUrl = new URL(appUrl + "/api/webhooks/adyen");
 
       webhookUrl.searchParams.set(
         WebhookParams.configurationIdIdSearchParam,

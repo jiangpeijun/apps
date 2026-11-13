@@ -51,7 +51,7 @@ describe("WebhookParams", () => {
 
       expect(error).toMatchInlineSnapshot(`
       [ParsingError: Missing saleorApiUrl param
-      Cant parse Stripe incoming webhook URL]
+      Cant parse Adyen incoming webhook URL]
     `);
     });
 
@@ -69,7 +69,7 @@ describe("WebhookParams", () => {
 
       expect(error).toMatchInlineSnapshot(`
         [ParsingError: saleorApiUrl URL param is invalid
-        Cant parse Stripe incoming webhook URL]
+        Cant parse Adyen incoming webhook URL]
       `);
     });
   });
@@ -96,7 +96,7 @@ describe("WebhookParams", () => {
 
       expect(error).toMatchInlineSnapshot(`
         [ParsingError: configurationId URL param is invalid
-        Cant parse Stripe incoming webhook URL]
+        Cant parse Adyen incoming webhook URL]
       `);
     });
 
@@ -114,7 +114,7 @@ describe("WebhookParams", () => {
 
       expect(error).toMatchInlineSnapshot(`
         [ParsingError: configurationId URL param is invalid
-        Cant parse Stripe incoming webhook URL]
+        Cant parse Adyen incoming webhook URL]
       `);
     });
   });
@@ -142,7 +142,7 @@ describe("WebhookParams", () => {
 
       expect(error).toMatchInlineSnapshot(`
         [ParsingError: appId URL param is invalid
-        Cant parse Stripe incoming webhook URL]
+        Cant parse Adyen incoming webhook URL]
       `);
     });
 
@@ -161,7 +161,7 @@ describe("WebhookParams", () => {
 
       expect(error).toMatchInlineSnapshot(`
         [ParsingError: appId URL param is invalid
-        Cant parse Stripe incoming webhook URL]
+        Cant parse Adyen incoming webhook URL]
       `);
     });
   });

@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { z } from "zod";
 
 import {
@@ -10,7 +10,7 @@ import { type SaleorTransationFlow } from "@/modules/saleor/saleor-transaction-f
 import { type PaymentMethod } from "./types";
 
 /**
- * https://stripe.com/docs/payments/sepa-debit
+ * https://adyen.com/docs/payments/sepa-debit
  */
 export class SepaDebitPaymentMethod implements PaymentMethod {
   type = "sepa_debit" as const;
@@ -34,7 +34,7 @@ export class SepaDebitPaymentMethod implements PaymentMethod {
 
   getCreatePaymentIntentMethodOptions(
     _saleorTransactionFlow: SaleorTransationFlow,
-  ): Stripe.PaymentIntentCreateParams.PaymentMethodOptions {
+  ): Adyen.PaymentIntentCreateParams.PaymentMethodOptions {
     return {
       sepa_debit: {},
     };

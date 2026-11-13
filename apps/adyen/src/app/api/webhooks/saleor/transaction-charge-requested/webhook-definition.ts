@@ -12,7 +12,7 @@ export const transactionChargeRequestedWebhookDefinition =
   new SaleorSyncWebhook<TransactionChargeRequestedEventFragment>({
     apl: saleorApp.apl,
     event: "TRANSACTION_CHARGE_REQUESTED",
-    name: "Stripe Transaction Charge Requested",
+    name: "Adyen Transaction Charge Requested",
     isActive: true,
     query: TransactionChargeRequestedDocument,
     webhookPath: "api/webhooks/saleor/transaction-charge-requested",

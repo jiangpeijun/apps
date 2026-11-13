@@ -1,34 +1,34 @@
 import { captureException } from "@sentry/nextjs";
 import { TRPCError } from "@trpc/server";
 
-import { type StripeConfig, StripeFrontendConfig } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenConfig, AdyenFrontendConfig } from "@/modules/app-config/domain/adyen-config";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { StripeWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
+import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
 // todo test
-export class GetStripeConfigsListTrpcHandler {
+export class GetAdyenConfigsListTrpcHandler {
   baseProcedure = protectedClientProcedure;
 
-  webhookManager: StripeWebhookManager;
+  webhookManager: AdyenWebhookManager;
 
   constructor(
-    deps: { webhookManager: StripeWebhookManager } = {
-      webhookManager: new StripeWebhookManager(),
+    deps: { webhookManager: AdyenWebhookManager } = {
+      webhookManager: new AdyenWebhookManager(),
     },
   ) {
     this.webhookManager = deps.webhookManager;
   }
 
   private getFrontendConfigWithWebhookStatus = async (
-    config: StripeConfig,
-  ): Promise<StripeFrontendConfig> => {
+    config: AdyenConfig,
+  ): Promise<AdyenFrontendConfig> => {
     const webhookResult = await this.webhookManager.getWebhook({
       webhookId: config.webhookId,
       restrictedKey: config.restrictedKey,
     });
 
-    const frontendConfig = StripeFrontendConfig.createFromStripeConfig(config);
+    const frontendConfig = AdyenFrontendConfig.createFromAdyenConfig(config);
 
     if (webhookResult.isErr()) {
       frontendConfig.webhookStatus = "missing";

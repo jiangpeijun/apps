@@ -12,31 +12,31 @@ import { env } from "@/lib/env";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import {
   type AppConfigRepo,
   AppConfigRepoError,
   type BaseAccessPattern,
-  type GetStripeConfigAccessPattern,
-  type StripeConfigByChannelIdAccessPattern,
-  type StripeConfigByConfigIdAccessPattern,
+  type GetAdyenConfigAccessPattern,
+  type AdyenConfigByChannelIdAccessPattern,
+  type AdyenConfigByConfigIdAccessPattern,
 } from "@/modules/app-config/repositories/app-config-repo";
 import {
   DynamoDbChannelConfigMapping,
   type DynamoDbChannelConfigMappingEntity,
 } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import {
-  DynamoDbStripeConfig,
-  type DynamoDbStripeConfigEntity,
+  DynamoDbAdyenConfig,
+  type DynamoDbAdyenConfigEntity,
 } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { createStripePublishableKey } from "@/modules/adyen/adyen-publishable-key";
-import { createStripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { createStripeWebhookSecret } from "@/modules/adyen/stripe-webhook-secret";
+import { createAdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
+import { createAdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { createAdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 
 type ConstructorParams = {
   entities: {
-    stripeConfig: DynamoDbStripeConfigEntity;
+    adyenConfig: DynamoDbAdyenConfigEntity;
     channelConfigMapping: DynamoDbChannelConfigMappingEntity;
   };
   encryptor: IEncryptor;
@@ -45,14 +45,14 @@ type ConstructorParams = {
 export class DynamodbAppConfigRepo implements AppConfigRepo {
   private logger = createLogger("DynamodbAppConfigRepo");
 
-  stripeConfigEntity: DynamoDbStripeConfigEntity;
+  adyenConfigEntity: DynamoDbAdyenConfigEntity;
   channelConfigMappingEntity: DynamoDbChannelConfigMappingEntity;
   encryptor: IEncryptor;
 
   constructor(
     config: ConstructorParams = {
       entities: {
-        stripeConfig: DynamoDbStripeConfig.entity,
+        adyenConfig: DynamoDbAdyenConfig.entity,
         channelConfigMapping: DynamoDbChannelConfigMapping.entity,
       },
       encryptor: new RotatingEncryptor({
@@ -63,7 +63,7 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     },
   ) {
     this.channelConfigMappingEntity = config.entities.channelConfigMapping;
-    this.stripeConfigEntity = config.entities.stripeConfig;
+    this.adyenConfigEntity = config.entities.adyenConfig;
     this.encryptor = config.encryptor;
   }
 
@@ -74,14 +74,14 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
   async getRootConfig(
     access: BaseAccessPattern,
   ): Promise<Result<AppRootConfig, InstanceType<typeof BaseError>>> {
-    const allConfigsQuery = this.stripeConfigEntity.table
+    const allConfigsQuery = this.adyenConfigEntity.table
       .build(QueryCommand)
-      .entities(this.stripeConfigEntity)
+      .entities(this.adyenConfigEntity)
       .query({
         range: {
-          beginsWith: DynamoDbStripeConfig.accessPattern.getSKforAllItems(),
+          beginsWith: DynamoDbAdyenConfig.accessPattern.getSKforAllItems(),
         },
-        partition: DynamoDbStripeConfig.accessPattern.getPK({
+        partition: DynamoDbAdyenConfig.accessPattern.getPK({
           appId: access.appId,
           saleorApiUrl: access.saleorApiUrl,
         }),
@@ -112,7 +112,7 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
        */
       const parsedConfigs =
         configs.Items?.map((item) => {
-          return DynamoDbStripeConfig.entitySchema.build(Parser).parse(item);
+          return DynamoDbAdyenConfig.entitySchema.build(Parser).parse(item);
         }) ?? [];
 
       const parsedMappings =
@@ -137,7 +137,7 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
 
             return record;
           },
-          {} as Record<string, StripeConfig>,
+          {} as Record<string, AdyenConfig>,
         ),
       );
 
@@ -153,10 +153,10 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     }
   }
 
-  private fetchStripeConfigByItsId(access: StripeConfigByConfigIdAccessPattern) {
-    const query = this.stripeConfigEntity.build(GetItemCommand).key({
-      PK: DynamoDbStripeConfig.accessPattern.getPK(access),
-      SK: DynamoDbStripeConfig.accessPattern.getSKforSpecificItem({
+  private fetchAdyenConfigByItsId(access: AdyenConfigByConfigIdAccessPattern) {
+    const query = this.adyenConfigEntity.build(GetItemCommand).key({
+      PK: DynamoDbAdyenConfig.accessPattern.getPK(access),
+      SK: DynamoDbAdyenConfig.accessPattern.getSKforSpecificItem({
         configId: access.configId,
       }),
     });
@@ -164,7 +164,7 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     return query.send();
   }
 
-  private fetchConfigIdFromChannelId(access: StripeConfigByChannelIdAccessPattern) {
+  private fetchConfigIdFromChannelId(access: AdyenConfigByChannelIdAccessPattern) {
     const query = this.channelConfigMappingEntity.build(GetItemCommand).key({
       PK: DynamoDbChannelConfigMapping.accessPattern.getPK(access),
       SK: DynamoDbChannelConfigMapping.accessPattern.getSKforSpecificChannel({
@@ -176,18 +176,18 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
   }
 
   private mapRawDynamoConfigItemToConfigOrThrow(item: unknown) {
-    const parsed = DynamoDbStripeConfig.entitySchema.build(Parser).parse(item);
+    const parsed = DynamoDbAdyenConfig.entitySchema.build(Parser).parse(item);
 
-    const configResult = StripeConfig.create({
+    const configResult = AdyenConfig.create({
       name: parsed.configName,
-      restrictedKey: createStripeRestrictedKey(
-        this.encryptor.decrypt(parsed.stripeRk),
+      restrictedKey: createAdyenRestrictedKey(
+        this.encryptor.decrypt(parsed.adyenRk),
       )._unsafeUnwrap(), // make it throwable
-      webhookId: parsed.stripeWhId,
+      webhookId: parsed.adyenWhId,
       id: parsed.configId,
-      publishableKey: createStripePublishableKey(parsed.stripePk)._unsafeUnwrap(), // make it throwable
-      webhookSecret: createStripeWebhookSecret(
-        this.encryptor.decrypt(parsed.stripeWhSecret),
+      publishableKey: createAdyenPublishableKey(parsed.adyenPk)._unsafeUnwrap(), // make it throwable
+      webhookSecret: createAdyenWebhookSecret(
+        this.encryptor.decrypt(parsed.adyenWhSecret),
       )._unsafeUnwrap(), // make it throwable
     });
 
@@ -201,9 +201,9 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     return configResult.value;
   }
 
-  async getStripeConfig(
-    access: GetStripeConfigAccessPattern,
-  ): Promise<Result<StripeConfig | null, InstanceType<typeof BaseError>>> {
+  async getAdyenConfig(
+    access: GetAdyenConfigAccessPattern,
+  ): Promise<Result<AdyenConfig | null, InstanceType<typeof BaseError>>> {
     const channelId = "channelId" in access ? access.channelId : undefined;
     /**
      * We eventually need config id, so it's mutable. It's either provided or will be resolved later and written here
@@ -244,7 +244,7 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     }
 
     try {
-      const result = await this.fetchStripeConfigByItsId({
+      const result = await this.fetchAdyenConfigByItsId({
         configId,
         appId: access.appId,
         saleorApiUrl: access.saleorApiUrl,
@@ -271,24 +271,24 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     }
   }
 
-  async saveStripeConfig({
+  async saveAdyenConfig({
     config,
     appId,
     saleorApiUrl,
   }: {
-    config: StripeConfig;
+    config: AdyenConfig;
     saleorApiUrl: SaleorApiUrl;
     appId: string;
   }): Promise<Result<void | null, InstanceType<typeof AppConfigRepoError.FailureSavingConfig>>> {
     try {
-      const command = this.stripeConfigEntity.build(PutItemCommand).item({
+      const command = this.adyenConfigEntity.build(PutItemCommand).item({
         configId: config.id,
-        stripePk: config.publishableKey,
-        stripeRk: this.encryptor.encrypt(config.restrictedKey),
-        stripeWhId: config.webhookId,
-        stripeWhSecret: this.encryptor.encrypt(config.webhookSecret),
-        PK: DynamoDbStripeConfig.accessPattern.getPK({ saleorApiUrl, appId }),
-        SK: DynamoDbStripeConfig.accessPattern.getSKforSpecificItem({ configId: config.id }),
+        adyenPk: config.publishableKey,
+        adyenRk: this.encryptor.encrypt(config.restrictedKey),
+        adyenWhId: config.webhookId,
+        adyenWhSecret: this.encryptor.encrypt(config.webhookSecret),
+        PK: DynamoDbAdyenConfig.accessPattern.getPK({ saleorApiUrl, appId }),
+        SK: DynamoDbAdyenConfig.accessPattern.getSKforSpecificItem({ configId: config.id }),
         configName: config.name,
       });
 
@@ -357,9 +357,9 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     },
   ): Promise<Result<null, InstanceType<typeof AppConfigRepoError.FailureRemovingConfig>>> {
     try {
-      const operation = this.stripeConfigEntity.build(DeleteItemCommand).key({
-        PK: DynamoDbStripeConfig.accessPattern.getPK(access),
-        SK: DynamoDbStripeConfig.accessPattern.getSKforSpecificItem({
+      const operation = this.adyenConfigEntity.build(DeleteItemCommand).key({
+        PK: DynamoDbAdyenConfig.accessPattern.getPK(access),
+        SK: DynamoDbAdyenConfig.accessPattern.getSKforSpecificItem({
           configId: data.configId,
         }),
       });

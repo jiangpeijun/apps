@@ -1,4 +1,4 @@
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 import { z } from "zod";
 
 import {
@@ -25,7 +25,7 @@ export class CardPaymentMethod implements PaymentMethod {
 
   getCreatePaymentIntentMethodOptions(
     saleorTransactionFlow: SaleorTransationFlow,
-  ): Stripe.PaymentIntentCreateParams.PaymentMethodOptions {
+  ): Adyen.PaymentIntentCreateParams.PaymentMethodOptions {
     const transactionFlow = this.getResolvedTransactionFlow(saleorTransactionFlow);
 
     return {

@@ -6,9 +6,9 @@ import {
 import { type AppContext } from "@/lib/app-context";
 import { BaseError } from "@/lib/errors";
 import { type SaleorMoney } from "@/modules/saleor/saleor-money";
-import { generatePaymentIntentStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
-import { type StripeApiError } from "@/modules/adyen/adyen-api-error";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { type AdyenApiError } from "@/modules/adyen/adyen-api-error";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 import {
   type CancelFailureResult,
   type CancelSuccessResult,
@@ -18,36 +18,36 @@ class Success extends SuccessWebhookResponse {
   readonly transactionResult: CancelSuccessResult;
   readonly saleorMoney: SaleorMoney;
   readonly timestamp: Date | null;
-  readonly stripePaymentIntentId: StripePaymentIntentId;
+  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
 
   constructor(args: {
     transactionResult: CancelSuccessResult;
     saleorMoney: SaleorMoney;
     timestamp: Date | null;
-    stripePaymentIntentId: StripePaymentIntentId;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appContext: AppContext;
   }) {
     super(args.appContext);
     this.transactionResult = args.transactionResult;
     this.saleorMoney = args.saleorMoney;
     this.timestamp = args.timestamp;
-    this.stripePaymentIntentId = args.stripePaymentIntentId;
+    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
   }
 
   getResponse(): Response {
-    if (!this.appContext.stripeEnv) {
-      throw new BaseError("Stripe environment is not set. Ensure AppContext is set earlier");
+    if (!this.appContext.adyenEnv) {
+      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
     }
 
     const typeSafeResponse: TransactionCancelationRequestedSyncSuccess = {
       result: this.transactionResult.result,
       amount: this.saleorMoney.amount,
-      pspReference: this.stripePaymentIntentId,
+      pspReference: this.adyenPaymentIntentId,
       message: this.messageFormatter.formatMessage(this.transactionResult.message),
       actions: this.transactionResult.actions,
-      externalUrl: generatePaymentIntentStripeDashboardUrl(
-        this.stripePaymentIntentId,
-        this.appContext.stripeEnv,
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(
+        this.adyenPaymentIntentId,
+        this.appContext.adyenEnv,
       ),
       time: this.timestamp?.toISOString(),
     };
@@ -58,34 +58,34 @@ class Success extends SuccessWebhookResponse {
 
 class Failure extends SuccessWebhookResponse {
   readonly transactionResult: CancelFailureResult;
-  readonly error: StripeApiError;
-  readonly stripePaymentIntentId: StripePaymentIntentId;
+  readonly error: AdyenApiError;
+  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
 
   constructor(args: {
     transactionResult: CancelFailureResult;
-    error: StripeApiError;
-    stripePaymentIntentId: StripePaymentIntentId;
+    error: AdyenApiError;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appContext: AppContext;
   }) {
     super(args.appContext);
     this.transactionResult = args.transactionResult;
     this.error = args.error;
-    this.stripePaymentIntentId = args.stripePaymentIntentId;
+    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
   }
 
   getResponse(): Response {
-    if (!this.appContext.stripeEnv) {
-      throw new BaseError("Stripe environment is not set. Ensure AppContext is set earlier");
+    if (!this.appContext.adyenEnv) {
+      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
     }
 
     const typeSafeResponse: TransactionCancelationRequestedSyncFailure = {
       result: this.transactionResult.result,
-      pspReference: this.stripePaymentIntentId,
+      pspReference: this.adyenPaymentIntentId,
       message: this.messageFormatter.formatMessage(this.error.merchantMessage, this.error),
       actions: this.transactionResult.actions,
-      externalUrl: generatePaymentIntentStripeDashboardUrl(
-        this.stripePaymentIntentId,
-        this.appContext.stripeEnv,
+      externalUrl: generatePaymentIntentAdyenDashboardUrl(
+        this.adyenPaymentIntentId,
+        this.appContext.adyenEnv,
       ),
     };
 

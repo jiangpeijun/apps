@@ -1,18 +1,18 @@
 import { Box, Select } from "@saleor/macaw-ui";
 
 import {
-  StripeFrontendConfig,
-  type StripeFrontendConfigSerializedFields,
+  AdyenFrontendConfig,
+  type AdyenFrontendConfigSerializedFields,
 } from "@/modules/app-config/domain/adyen-config";
 
-import styles from "./stripe-config-cards.module.css";
-import { stripeEnvLabel } from "./adyen-env-label";
+import styles from "./adyen-config-cards.module.css";
+import { adyenEnvLabel } from "./adyen-env-label";
 
 const PLACEHOLDER_VALUE = "";
 
 type Props = {
   channelName: string;
-  configs: StripeFrontendConfigSerializedFields[];
+  configs: AdyenFrontendConfigSerializedFields[];
   disabled?: boolean;
   onAssign: (configId: string) => void;
 };
@@ -40,8 +40,8 @@ export const AssignChannelSelect = ({
         { value: PLACEHOLDER_VALUE, label: "Assign to…" },
         ...configs.map((config) => ({
           value: config.id,
-          label: `${config.name} · ${stripeEnvLabel(
-            StripeFrontendConfig.createFromSerializedFields(config).getStripeEnvValue(),
+          label: `${config.name} · ${adyenEnvLabel(
+            AdyenFrontendConfig.createFromSerializedFields(config).getAdyenEnvValue(),
           )}`,
         })),
       ]}

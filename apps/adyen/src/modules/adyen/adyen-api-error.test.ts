@@ -1,120 +1,120 @@
-import Stripe from "stripe";
+import Adyen from "adyen";
 import { describe, expect, it } from "vitest";
 
 import {
-  mapStripeErrorToApiError,
-  StripeAPIError,
-  StripeAuthenticationError,
-  StripeCardError,
-  StripeConnectionError,
-  StripeIdempotencyError,
-  StripeInvalidRequestError,
-  StripePermissionError,
-  StripeRateLimitError,
-  StripeUnknownAPIError,
+  mapAdyenErrorToApiError,
+  AdyenAPIError,
+  AdyenAuthenticationError,
+  AdyenCardError,
+  AdyenConnectionError,
+  AdyenIdempotencyError,
+  AdyenInvalidRequestError,
+  AdyenPermissionError,
+  AdyenRateLimitError,
+  AdyenUnknownAPIError,
 } from "./adyen-api-error";
 
-describe("mapStripeErrorToApiError", () => {
-  it("maps Stripe.errors.StripeCardError to app StripeCardError", () => {
-    const stripeError = new Stripe.errors.StripeCardError({
+describe("mapAdyenErrorToApiError", () => {
+  it("maps Adyen.errors.AdyenCardError to app AdyenCardError", () => {
+    const adyenError = new Adyen.errors.AdyenCardError({
       message: "Card declined",
       type: "card_error",
       code: "card_declined",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeCardError);
+    expect(result).toBeInstanceOf(AdyenCardError);
   });
 
-  it("maps Stripe.errors.StripeInvalidRequestError to StripeInvalidRequestError", () => {
-    const stripeError = new Stripe.errors.StripeInvalidRequestError({
+  it("maps Adyen.errors.AdyenInvalidRequestError to AdyenInvalidRequestError", () => {
+    const adyenError = new Adyen.errors.AdyenInvalidRequestError({
       message: "Missing required param",
       type: "invalid_request_error",
       param: "amount",
       code: "param_required",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeInvalidRequestError);
+    expect(result).toBeInstanceOf(AdyenInvalidRequestError);
   });
 
-  it("maps Stripe.errors.StripeRateLimitError to StripeRateLimitError", () => {
-    const stripeError = new Stripe.errors.StripeRateLimitError({
+  it("maps Adyen.errors.AdyenRateLimitError to AdyenRateLimitError", () => {
+    const adyenError = new Adyen.errors.AdyenRateLimitError({
       message: "Too many requests",
       type: "rate_limit_error",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeRateLimitError);
+    expect(result).toBeInstanceOf(AdyenRateLimitError);
   });
 
-  it("maps Stripe.errors.StripeConnectionError to StripeConnectionError", () => {
-    const stripeError = new Stripe.errors.StripeConnectionError({
+  it("maps Adyen.errors.AdyenConnectionError to AdyenConnectionError", () => {
+    const adyenError = new Adyen.errors.AdyenConnectionError({
       message: "Connection failed",
       type: "api_error",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeConnectionError);
+    expect(result).toBeInstanceOf(AdyenConnectionError);
     expect(result.message).toMatchInlineSnapshot(`
       "Error: Connection failed
-      There was a network problem between app and Stripe"
+      There was a network problem between app and Adyen"
     `);
   });
 
-  it("maps Stripe.errors.StripeAPIError to StripeAPIError", () => {
-    const stripeError = new Stripe.errors.StripeAPIError({
+  it("maps Adyen.errors.AdyenAPIError to AdyenAPIError", () => {
+    const adyenError = new Adyen.errors.AdyenAPIError({
       message: "API error",
       type: "api_error",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeAPIError);
+    expect(result).toBeInstanceOf(AdyenAPIError);
   });
 
-  it("maps Stripe.errors.StripeAuthenticationError to StripeAuthenticationError", () => {
-    const stripeError = new Stripe.errors.StripeAuthenticationError({
+  it("maps Adyen.errors.AdyenAuthenticationError to AdyenAuthenticationError", () => {
+    const adyenError = new Adyen.errors.AdyenAuthenticationError({
       message: "Auth error",
       type: "authentication_error",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeAuthenticationError);
+    expect(result).toBeInstanceOf(AdyenAuthenticationError);
   });
 
-  it("maps Stripe.errors.StripePermissionError to StripePermissionError", () => {
-    const stripeError = new Stripe.errors.StripePermissionError({
+  it("maps Adyen.errors.AdyenPermissionError to AdyenPermissionError", () => {
+    const adyenError = new Adyen.errors.AdyenPermissionError({
       message: "Permission error",
       type: "invalid_request_error",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripePermissionError);
+    expect(result).toBeInstanceOf(AdyenPermissionError);
   });
 
-  it("maps Stripe.errors.StripeIdempotencyError to StripeIdempotencyError", () => {
-    const stripeError = new Stripe.errors.StripeIdempotencyError({
+  it("maps Adyen.errors.AdyenIdempotencyError to AdyenIdempotencyError", () => {
+    const adyenError = new Adyen.errors.AdyenIdempotencyError({
       message: "Idempotency error",
       type: "idempotency_error",
     });
 
-    const result = mapStripeErrorToApiError(stripeError);
+    const result = mapAdyenErrorToApiError(adyenError);
 
-    expect(result).toBeInstanceOf(StripeIdempotencyError);
+    expect(result).toBeInstanceOf(AdyenIdempotencyError);
   });
 
-  it("maps unknown error to StripeUnknownAPIError", () => {
+  it("maps unknown error to AdyenUnknownAPIError", () => {
     const unknownError = new Error("Unknown error");
 
-    const result = mapStripeErrorToApiError(unknownError);
+    const result = mapAdyenErrorToApiError(unknownError);
 
-    expect(result).toBeInstanceOf(StripeUnknownAPIError);
+    expect(result).toBeInstanceOf(AdyenUnknownAPIError);
   });
 });

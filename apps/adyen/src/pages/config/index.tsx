@@ -9,18 +9,18 @@ import {
   ChannelConfigSectionSkeleton,
 } from "@/modules/ui/adyen-configs/channel-config-section";
 import { ConfigPageShell } from "@/modules/ui/adyen-configs/config-page-shell";
-import { StripeSetupCard } from "@/modules/ui/adyen-setup/adyen-setup-card";
+import { AdyenSetupCard } from "@/modules/ui/adyen-setup/adyen-setup-card";
 import {
-  buildStripeSetupTasks,
-  summarizeStripeSetupTasks,
+  buildAdyenSetupTasks,
+  summarizeAdyenSetupTasks,
 } from "@/modules/ui/adyen-setup/adyen-setup-summary";
-import { useStripeSetupCardDismiss } from "@/modules/ui/adyen-setup/use-adyen-setup-card-dismiss";
+import { useAdyenSetupCardDismiss } from "@/modules/ui/adyen-setup/use-adyen-setup-card-dismiss";
 import { useHasAppAccess } from "@/modules/ui/use-has-app-access";
 
 const ConfigPage: NextPage = () => {
   const { haveAccessToApp, isReady } = useHasAppAccess();
-  const { dismissed, dismiss, restore } = useStripeSetupCardDismiss();
-  const configsQuery = trpcClient.appConfig.getStripeConfigsList.useQuery();
+  const { dismissed, dismiss, restore } = useAdyenSetupCardDismiss();
+  const configsQuery = trpcClient.appConfig.getAdyenConfigsList.useQuery();
   const mappingQuery = trpcClient.appConfig.channelsConfigsMapping.useQuery();
 
   const parkedSummary = useMemo(() => {
@@ -28,8 +28,8 @@ const ConfigPage: NextPage = () => {
       return null;
     }
 
-    return summarizeStripeSetupTasks(
-      buildStripeSetupTasks({
+    return summarizeAdyenSetupTasks(
+      buildAdyenSetupTasks({
         configs: configsQuery.data,
         mapping: mappingQuery.data,
       }),
@@ -55,7 +55,7 @@ const ConfigPage: NextPage = () => {
   return (
     <ConfigPageShell>
       {showSetup ? (
-        <StripeSetupCard
+        <AdyenSetupCard
           configs={configsQuery.data}
           mapping={mappingQuery.data}
           onDismiss={dismiss}
@@ -63,11 +63,11 @@ const ConfigPage: NextPage = () => {
       ) : null}
       {showParked && parkedSummary ? (
         <ParkedSetupChecklist
-          title="Finish Stripe setup"
+          title="Finish Adyen setup"
           progress={parkedSummary.progress}
           nextUp={parkedSummary.nextUp}
           onReveal={restore}
-          data-test-id="stripe-parked-setup-checklist"
+          data-test-id="adyen-parked-setup-checklist"
         />
       ) : null}
       <ChannelConfigSection />

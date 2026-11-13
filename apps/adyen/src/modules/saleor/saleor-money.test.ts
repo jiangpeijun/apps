@@ -3,30 +3,30 @@ import { describe, expect, it } from "vitest";
 import { SaleorMoney } from "./saleor-money";
 
 describe("SaleorMoney", () => {
-  describe("createFromStripe", () => {
+  describe("createFromAdyen", () => {
     it("creates a valid money object for valid input", () => {
-      const result = SaleorMoney.createFromStripe({ amount: 1000, currency: "usd" });
+      const result = SaleorMoney.createFromAdyen({ amount: 1000, currency: "usd" });
 
       expect(result.isOk()).toBe(true);
       expect(result._unsafeUnwrap()).toBeInstanceOf(SaleorMoney);
     });
 
     it("rejects negative amounts", () => {
-      const result = SaleorMoney.createFromStripe({ amount: -100, currency: "usd" });
+      const result = SaleorMoney.createFromAdyen({ amount: -100, currency: "usd" });
 
       expect(result.isErr()).toBe(true);
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(SaleorMoney.ValidationError);
     });
 
     it("rejects invalid currency code length", () => {
-      const result = SaleorMoney.createFromStripe({ amount: 100, currency: "usdd" });
+      const result = SaleorMoney.createFromAdyen({ amount: 100, currency: "usdd" });
 
       expect(result.isErr()).toBe(true);
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(SaleorMoney.ValidationError);
     });
 
     it("rejects unsupported currency codes", () => {
-      const result = SaleorMoney.createFromStripe({ amount: 100, currency: "abc" });
+      const result = SaleorMoney.createFromAdyen({ amount: 100, currency: "abc" });
 
       expect(result.isErr()).toBe(true);
       expect(result._unsafeUnwrapErr()).toBeInstanceOf(SaleorMoney.ValidationError);
@@ -35,7 +35,7 @@ describe("SaleorMoney", () => {
 
   describe("amount", () => {
     it("handles 0-digit currencies", () => {
-      const money = SaleorMoney.createFromStripe({
+      const money = SaleorMoney.createFromAdyen({
         amount: 2137,
         currency: "jpy",
       })._unsafeUnwrap();
@@ -44,7 +44,7 @@ describe("SaleorMoney", () => {
     });
 
     it("handles 2-digit currencies", () => {
-      const money = SaleorMoney.createFromStripe({
+      const money = SaleorMoney.createFromAdyen({
         amount: 1099,
         currency: "usd",
       })._unsafeUnwrap();
@@ -53,7 +53,7 @@ describe("SaleorMoney", () => {
     });
 
     it("handles 3-digit currencies", () => {
-      const money = SaleorMoney.createFromStripe({
+      const money = SaleorMoney.createFromAdyen({
         amount: 10123,
         currency: "iqd",
       })._unsafeUnwrap();
@@ -62,7 +62,7 @@ describe("SaleorMoney", () => {
     });
 
     it("handles 4-digit currencies", () => {
-      const money = SaleorMoney.createFromStripe({
+      const money = SaleorMoney.createFromAdyen({
         amount: 101234,
         currency: "uyw",
       })._unsafeUnwrap();
@@ -73,7 +73,7 @@ describe("SaleorMoney", () => {
 
   describe("currency", () => {
     it("returns currency in uppercase", () => {
-      const result = SaleorMoney.createFromStripe({ amount: 1000, currency: "usd" });
+      const result = SaleorMoney.createFromAdyen({ amount: 1000, currency: "usd" });
 
       expect(result._unsafeUnwrap().currency).toBe("USD");
     });

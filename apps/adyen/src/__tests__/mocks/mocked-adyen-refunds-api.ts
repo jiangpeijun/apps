@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 
-import { type IStripeRefundsApi } from "@/modules/adyen/types";
+import { type IAdyenRefundsApi } from "@/modules/adyen/types";
 
-export const mockedStripeRefundsApi = {
+export const mockedAdyenRefundsApi = {
   createRefund: vi.fn(),
-} satisfies IStripeRefundsApi;
+} satisfies IAdyenRefundsApi;

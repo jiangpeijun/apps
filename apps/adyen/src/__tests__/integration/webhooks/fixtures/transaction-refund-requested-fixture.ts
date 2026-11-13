@@ -4,10 +4,10 @@ import {
   mockedSaleorTransactionId,
 } from "@/__tests__/mocks/constants";
 import { type TransactionRefundRequestedEventFragment } from "@/generated/graphql";
-import { type StripePaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
+import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
 
 export const transactionRefundRequestedFixture = (args: {
-  stripePaymentIntentId: StripePaymentIntentId;
+  adyenPaymentIntentId: AdyenPaymentIntentId;
   idempotencyKey: string;
   amount?: number;
 }): TransactionRefundRequestedEventFragment => {
@@ -22,7 +22,7 @@ export const transactionRefundRequestedFixture = (args: {
     },
     transaction: {
       id: mockedSaleorTransactionId,
-      pspReference: args.stripePaymentIntentId,
+      pspReference: args.adyenPaymentIntentId,
       checkout: {
         channel: {
           slug: "default-channel",

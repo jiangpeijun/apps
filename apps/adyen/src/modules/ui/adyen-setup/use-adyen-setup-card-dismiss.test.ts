@@ -2,15 +2,15 @@ import { type AppBridgeState, useAppBridge } from "@saleor/app-sdk/app-bridge";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useStripeSetupCardDismiss } from "./use-adyen-setup-card-dismiss";
+import { useAdyenSetupCardDismiss } from "./use-adyen-setup-card-dismiss";
 
 vi.mock("@saleor/app-sdk/app-bridge", () => ({
   useAppBridge: vi.fn(),
 }));
 
 const SHOP_URL = "https://example.saleor.cloud/graphql/";
-const UNKNOWN_KEY = "saleor.stripe.setupChecklist.dismissed:unknown";
-const SHOP_KEY = `saleor.stripe.setupChecklist.dismissed:${SHOP_URL}`;
+const UNKNOWN_KEY = "saleor.adyen.setupChecklist.dismissed:unknown";
+const SHOP_KEY = `saleor.adyen.setupChecklist.dismissed:${SHOP_URL}`;
 
 const createLocalStorage = () => {
   const store = new Map<string, string>();
@@ -46,7 +46,7 @@ const bridgeState = (saleorApiUrl: string | undefined) => {
   return { appBridgeState: state, appBridge: undefined };
 };
 
-describe("useStripeSetupCardDismiss", () => {
+describe("useAdyenSetupCardDismiss", () => {
   beforeEach(() => {
     Object.defineProperty(window, "localStorage", {
       value: createLocalStorage(),
@@ -59,7 +59,7 @@ describe("useStripeSetupCardDismiss", () => {
     window.localStorage.setItem(SHOP_KEY, "1");
     vi.mocked(useAppBridge).mockReturnValue(bridgeState(undefined));
 
-    const { result, rerender } = renderHook(() => useStripeSetupCardDismiss());
+    const { result, rerender } = renderHook(() => useAdyenSetupCardDismiss());
 
     expect(result.current.dismissed).toBe(false);
     expect(window.localStorage.getItem(UNKNOWN_KEY)).toBeNull();
@@ -73,7 +73,7 @@ describe("useStripeSetupCardDismiss", () => {
   it("Writes dismissal under the hydrated shop key", () => {
     vi.mocked(useAppBridge).mockReturnValue(bridgeState(SHOP_URL));
 
-    const { result } = renderHook(() => useStripeSetupCardDismiss());
+    const { result } = renderHook(() => useAdyenSetupCardDismiss());
 
     act(() => {
       result.current.dismiss();
@@ -88,7 +88,7 @@ describe("useStripeSetupCardDismiss", () => {
     window.localStorage.setItem(SHOP_KEY, "1");
     vi.mocked(useAppBridge).mockReturnValue(bridgeState(SHOP_URL));
 
-    const { result } = renderHook(() => useStripeSetupCardDismiss());
+    const { result } = renderHook(() => useAdyenSetupCardDismiss());
 
     expect(result.current.dismissed).toBe(true);
 

@@ -1,22 +1,22 @@
 import { err, ok, type Result } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { loggerContext } from "@/lib/logger-context";
-import { resolveSaleorMoneyFromStripePaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
+import { resolveSaleorMoneyFromAdyenPaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { type SaleorMoney } from "@/modules/saleor/saleor-money";
 import { SaleorPaymentMethodDetails } from "@/modules/saleor/saleor-payment-method-details";
-import { generatePaymentIntentStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
+import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
 import {
-  createStripePaymentIntentId,
-  type StripePaymentIntentId,
+  createAdyenPaymentIntentId,
+  type AdyenPaymentIntentId,
 } from "@/modules/adyen/adyen-payment-intent-id";
-import { createStripePaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
-import { createTimestampFromStripeEvent } from "@/modules/adyen/adyen-timestamps";
-import { type IStripePaymentIntentsApi } from "@/modules/adyen/types";
+import { createAdyenPaymentIntentStatus } from "@/modules/adyen/adyen-payment-intent-status";
+import { createTimestampFromAdyenEvent } from "@/modules/adyen/adyen-timestamps";
+import { type IAdyenPaymentIntentsApi } from "@/modules/adyen/types";
 import { CancelSuccessResult } from "@/modules/transaction-result/cancel-result";
 import {
   AuthorizationFailureResult,
@@ -30,43 +30,43 @@ import {
 
 import { TransactionEventReportVariablesResolver } from "../transaction-event-report-variables-resolver";
 
-export type StripePaymentIntentHandlerSupportedEvents =
-  | Stripe.PaymentIntentSucceededEvent
-  | Stripe.PaymentIntentProcessingEvent
-  | Stripe.PaymentIntentRequiresActionEvent
-  | Stripe.PaymentIntentAmountCapturableUpdatedEvent
-  | Stripe.PaymentIntentPaymentFailedEvent
-  | Stripe.PaymentIntentCanceledEvent;
+export type AdyenPaymentIntentHandlerSupportedEvents =
+  | Adyen.PaymentIntentSucceededEvent
+  | Adyen.PaymentIntentProcessingEvent
+  | Adyen.PaymentIntentRequiresActionEvent
+  | Adyen.PaymentIntentAmountCapturableUpdatedEvent
+  | Adyen.PaymentIntentPaymentFailedEvent
+  | Adyen.PaymentIntentCanceledEvent;
 
 type PossibleErrors =
   | InstanceType<
       | typeof SaleorMoney.ValidationError
-      | typeof StripePaymentIntentHandler.NotSupportedEventError
-      | typeof StripePaymentIntentHandler.MalformedEventError
+      | typeof AdyenPaymentIntentHandler.NotSupportedEventError
+      | typeof AdyenPaymentIntentHandler.MalformedEventError
     >
   | TransactionRecorderError;
 
-export class StripePaymentIntentHandler {
+export class AdyenPaymentIntentHandler {
   static NotSupportedEventError = BaseError.subclass("NotSupportedEventError", {
     props: {
-      _internalName: "StripePaymentIntentHandler.NotSupportedEventError" as const,
+      _internalName: "AdyenPaymentIntentHandler.NotSupportedEventError" as const,
     },
   });
 
   static MalformedEventError = BaseError.subclass("MalformedEventError", {
     props: {
-      _internalName: "StripePaymentIntentHandler.MalformedEventError" as const,
+      _internalName: "AdyenPaymentIntentHandler.MalformedEventError" as const,
     },
   });
 
-  logger = createLogger("StripePaymentIntentHandler");
+  logger = createLogger("AdyenPaymentIntentHandler");
 
-  private prepareTransactionEventReportParams(event: StripePaymentIntentHandlerSupportedEvents) {
-    const timestamp = createTimestampFromStripeEvent(event);
+  private prepareTransactionEventReportParams(event: AdyenPaymentIntentHandlerSupportedEvents) {
+    const timestamp = createTimestampFromAdyenEvent(event);
 
-    const paymentIntentStatus = createStripePaymentIntentStatus(event.data.object.status);
+    const paymentIntentStatus = createAdyenPaymentIntentStatus(event.data.object.status);
 
-    const saleorMoneyResult = resolveSaleorMoneyFromStripePaymentIntent(event.data.object);
+    const saleorMoneyResult = resolveSaleorMoneyFromAdyenPaymentIntent(event.data.object);
 
     if (saleorMoneyResult.isErr()) {
       return err(saleorMoneyResult.error);
@@ -80,8 +80,8 @@ export class StripePaymentIntentHandler {
   }
 
   private checkIfEventIsSupported(
-    event: Stripe.Event,
-  ): event is StripePaymentIntentHandlerSupportedEvents {
+    event: Adyen.Event,
+  ): event is AdyenPaymentIntentHandlerSupportedEvents {
     return (
       event.type === "payment_intent.succeeded" ||
       event.type === "payment_intent.processing" ||
@@ -94,22 +94,22 @@ export class StripePaymentIntentHandler {
 
   private async resolveTransactionRecord({
     transactionRecorder,
-    stripePaymentIntentId,
+    adyenPaymentIntentId,
     appId,
     saleorApiUrl,
   }: {
     transactionRecorder: TransactionRecorderRepo;
-    stripePaymentIntentId: StripePaymentIntentId;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appId: string;
     saleorApiUrl: SaleorApiUrl;
   }) {
     const recordedTransactionResult =
-      await transactionRecorder.getTransactionByStripePaymentIntentId(
+      await transactionRecorder.getTransactionByAdyenPaymentIntentId(
         {
           appId,
           saleorApiUrl,
         },
-        stripePaymentIntentId,
+        adyenPaymentIntentId,
       );
 
     if (recordedTransactionResult.isErr()) {
@@ -122,10 +122,10 @@ export class StripePaymentIntentHandler {
   }
 
   private async getPaymentMethodDetails(
-    stripePaymentIntentsApi: IStripePaymentIntentsApi,
-    paymentIntentId: StripePaymentIntentId,
+    adyenPaymentIntentsApi: IAdyenPaymentIntentsApi,
+    paymentIntentId: AdyenPaymentIntentId,
   ): Promise<SaleorPaymentMethodDetails | null> {
-    const getPaymentIntentResult = await stripePaymentIntentsApi.getPaymentIntent({
+    const getPaymentIntentResult = await adyenPaymentIntentsApi.getPaymentIntent({
       id: paymentIntentId,
     });
 
@@ -140,13 +140,13 @@ export class StripePaymentIntentHandler {
       return null;
     }
 
-    const paymentMethodDetailsResult = SaleorPaymentMethodDetails.createFromStripe(
+    const paymentMethodDetailsResult = SaleorPaymentMethodDetails.createFromAdyen(
       getPaymentIntentResult.value.payment_method,
     );
 
     if (paymentMethodDetailsResult.isErr()) {
       this.logger.warn(
-        "Failed to create payment method details from Stripe payment method - falling back to null",
+        "Failed to create payment method details from Adyen payment method - falling back to null",
         { error: paymentMethodDetailsResult.error },
       );
 
@@ -158,28 +158,28 @@ export class StripePaymentIntentHandler {
 
   async processPaymentIntentEvent({
     event,
-    stripeEnv,
+    adyenEnv,
     transactionRecorder,
     appId,
     saleorApiUrl,
-    stripePaymentIntentsApi,
+    adyenPaymentIntentsApi,
   }: {
-    event: Stripe.Event;
-    stripeEnv: StripeEnv;
+    event: Adyen.Event;
+    adyenEnv: AdyenEnv;
     transactionRecorder: TransactionRecorderRepo;
     appId: string;
     saleorApiUrl: SaleorApiUrl;
-    stripePaymentIntentsApi: IStripePaymentIntentsApi;
+    adyenPaymentIntentsApi: IAdyenPaymentIntentsApi;
   }): Promise<Result<TransactionEventReportVariablesResolver, PossibleErrors>> {
     if (!this.checkIfEventIsSupported(event)) {
-      return err(new StripePaymentIntentHandler.NotSupportedEventError("Unsupported event type"));
+      return err(new AdyenPaymentIntentHandler.NotSupportedEventError("Unsupported event type"));
     }
 
-    const stripePaymentIntentId = createStripePaymentIntentId(event.data.object.id);
+    const adyenPaymentIntentId = createAdyenPaymentIntentId(event.data.object.id);
 
     const recordedTransactionResult = await this.resolveTransactionRecord({
       transactionRecorder,
-      stripePaymentIntentId,
+      adyenPaymentIntentId,
       appId,
       saleorApiUrl,
     });
@@ -198,11 +198,11 @@ export class StripePaymentIntentHandler {
 
     const { saleorMoney, paymentIntentStatus, timestamp } = paramsResult.value;
 
-    const externalUrl = generatePaymentIntentStripeDashboardUrl(stripePaymentIntentId, stripeEnv);
+    const externalUrl = generatePaymentIntentAdyenDashboardUrl(adyenPaymentIntentId, adyenEnv);
 
     const paymentMethodDetails = await this.getPaymentMethodDetails(
-      stripePaymentIntentsApi,
-      stripePaymentIntentId,
+      adyenPaymentIntentsApi,
+      adyenPaymentIntentId,
     );
 
     switch (event.type) {
@@ -219,7 +219,7 @@ export class StripePaymentIntentHandler {
             ),
             timestamp,
             saleorTransactionId,
-            stripeObjectId: stripePaymentIntentId,
+            adyenObjectId: adyenPaymentIntentId,
             externalUrl,
             paymentMethodDetails,
           }),
@@ -238,7 +238,7 @@ export class StripePaymentIntentHandler {
             transactionResult: failureResult,
             timestamp,
             saleorTransactionId,
-            stripeObjectId: stripePaymentIntentId,
+            adyenObjectId: adyenPaymentIntentId,
             externalUrl,
             paymentMethodDetails,
           }),
@@ -252,7 +252,7 @@ export class StripePaymentIntentHandler {
             saleorMoney,
             timestamp,
             saleorTransactionId,
-            stripeObjectId: stripePaymentIntentId,
+            adyenObjectId: adyenPaymentIntentId,
             externalUrl,
             paymentMethodDetails,
           }),

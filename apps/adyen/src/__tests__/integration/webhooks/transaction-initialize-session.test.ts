@@ -5,18 +5,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { transactionInitializeSessionFixture } from "@/__tests__/integration/webhooks/fixtures/transaction-initialize-session-fixture";
 import { mockedSaleorAppId, mockedSaleorChannelId } from "@/__tests__/mocks/constants";
-import { mockStripeWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
+import { mockAdyenWebhookSecret } from "@/__tests__/mocks/adyen-webhook-secret";
 import * as initializeSessionHandlers from "@/app/api/webhooks/saleor/transaction-initialize-session/route";
 import * as verifyWebhookSignatureModule from "@/app/api/webhooks/saleor/verify-signature";
 import { RandomId } from "@/lib/random-id";
-import { StripeConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { DynamoDbChannelConfigMapping } from "@/modules/app-config/repositories/dynamodb/channel-config-mapping-db-model";
 import { DynamodbAppConfigRepo } from "@/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo";
-import { DynamoDbStripeConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
+import { DynamoDbAdyenConfig } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { dynamoMainTable } from "@/modules/dynamodb/dynamo-main-table";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { createStripePublishableKey } from "@/modules/adyen/adyen-publishable-key";
-import { createStripeRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
+import { createAdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
+import { createAdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
 
 import { env } from "../env";
 
@@ -27,7 +27,7 @@ const configId = new RandomId().generate();
 const repo = new DynamodbAppConfigRepo({
   entities: {
     channelConfigMapping: DynamoDbChannelConfigMapping.entity,
-    stripeConfig: DynamoDbStripeConfig.entity,
+    adyenConfig: DynamoDbAdyenConfig.entity,
   },
   encryptor: new Encryptor(env.SECRET_KEY),
 });
@@ -49,15 +49,15 @@ describe("TransactionInitializeSession webhook: integration", async () => {
       jwks: "{}",
     });
 
-    await repo.saveStripeConfig({
+    await repo.saveAdyenConfig({
       saleorApiUrl: realSaleorApiUrl,
       appId: mockedSaleorAppId,
-      config: StripeConfig.create({
-        publishableKey: createStripePublishableKey(env.INTEGRATION_STRIPE_PK)._unsafeUnwrap(),
+      config: AdyenConfig.create({
+        publishableKey: createAdyenPublishableKey(env.INTEGRATION_ADYEN_PK)._unsafeUnwrap(),
         name: "Config name",
         webhookId: "we_123",
-        restrictedKey: createStripeRestrictedKey(env.INTEGRATION_STRIPE_RK)._unsafeUnwrap(),
-        webhookSecret: mockStripeWebhookSecret,
+        restrictedKey: createAdyenRestrictedKey(env.INTEGRATION_ADYEN_RK)._unsafeUnwrap(),
+        webhookSecret: mockAdyenWebhookSecret,
         id: configId,
       })._unsafeUnwrap(),
     });
@@ -93,7 +93,7 @@ describe("TransactionInitializeSession webhook: integration", async () => {
         expect(body).toStrictEqual({
           data: {
             paymentIntent: {
-              stripeClientSecret: expect.stringContaining("pi_"),
+              adyenClientSecret: expect.stringContaining("pi_"),
             },
           },
           actions: ["CANCEL"],
@@ -101,7 +101,7 @@ describe("TransactionInitializeSession webhook: integration", async () => {
           amount: 123.3,
           pspReference: expect.stringContaining("pi_"),
           message: "Payment intent requires payment method",
-          externalUrl: expect.stringContaining("https://dashboard.stripe.com/test/payments/pi_"),
+          externalUrl: expect.stringContaining("https://dashboard.adyen.com/test/payments/pi_"),
         });
 
         expect(response.status).toStrictEqual(200);

@@ -55,7 +55,7 @@ export class SaleorApi {
     const createCheckoutResponse = await this.callGraphqlApi(CheckoutCreateDocument, {
       channelSlug: args.channelSlug,
       variantId,
-      email: "saleor-app-payment-stripe-e2e-test@saleor.io",
+      email: "saleor-app-payment-adyen-e2e-test@saleor.io",
     });
 
     const checkoutId = createCheckoutResponse.data.checkoutCreate?.checkout?.id;

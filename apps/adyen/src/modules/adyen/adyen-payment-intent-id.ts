@@ -3,25 +3,25 @@ import { z } from "zod";
 
 import { BaseError } from "@/lib/errors";
 
-export const StripePaymentIntentValidationError = BaseError.subclass(
-  "StripePaymentIntentValidationError",
+export const AdyenPaymentIntentValidationError = BaseError.subclass(
+  "AdyenPaymentIntentValidationError",
   {
     props: {
-      _internalName: "StripePaymentIntentValidationError" as const,
+      _internalName: "AdyenPaymentIntentValidationError" as const,
     },
   },
 );
 
-const StripePaymentIntentIdSchema = z
+const AdyenPaymentIntentIdSchema = z
   .string({
     required_error: "Payment intent id is required",
   })
   .min(1)
   .refine((v) => {
     if (!v.startsWith("pi_")) {
-      captureMessage("Received unexpected Stripe Payment Intent ID format", (scope) => {
+      captureMessage("Received unexpected Adyen Payment Intent ID format", (scope) => {
         scope.setLevel("warning");
-        scope.setExtra("stripePaymentIntentId", v);
+        scope.setExtra("adyenPaymentIntentId", v);
 
         return scope;
       });
@@ -29,8 +29,8 @@ const StripePaymentIntentIdSchema = z
 
     return true;
   })
-  .brand("StripePaymentIntentId");
+  .brand("AdyenPaymentIntentId");
 
-export const createStripePaymentIntentId = (raw: string) => StripePaymentIntentIdSchema.parse(raw);
+export const createAdyenPaymentIntentId = (raw: string) => AdyenPaymentIntentIdSchema.parse(raw);
 
-export type StripePaymentIntentId = z.infer<typeof StripePaymentIntentIdSchema>;
+export type AdyenPaymentIntentId = z.infer<typeof AdyenPaymentIntentIdSchema>;

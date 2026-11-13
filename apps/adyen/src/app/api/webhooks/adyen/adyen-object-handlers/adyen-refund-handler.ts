@@ -1,19 +1,19 @@
 import { err, ok, type Result } from "neverthrow";
-import type Stripe from "stripe";
+import type Adyen from "adyen";
 
 import { BaseError } from "@/lib/errors";
 import { loggerContext } from "@/lib/logger-context";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { SaleorMoney } from "@/modules/saleor/saleor-money";
-import { generateRefundStripeDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
-import { type StripeEnv } from "@/modules/adyen/adyen-env";
+import { generateRefundAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
+import { type AdyenEnv } from "@/modules/adyen/adyen-env";
 import {
-  createStripePaymentIntentId,
-  type StripePaymentIntentId,
+  createAdyenPaymentIntentId,
+  type AdyenPaymentIntentId,
 } from "@/modules/adyen/adyen-payment-intent-id";
-import { createStripeRefundId } from "@/modules/adyen/adyen-refund-id";
-import { createStripeRefundStatus } from "@/modules/adyen/adyen-refund-status";
-import { createTimestampFromStripeEvent } from "@/modules/adyen/adyen-timestamps";
+import { createAdyenRefundId } from "@/modules/adyen/adyen-refund-id";
+import { createAdyenRefundStatus } from "@/modules/adyen/adyen-refund-status";
+import { createTimestampFromAdyenEvent } from "@/modules/adyen/adyen-timestamps";
 import { mapRefundStatusToTransactionResult } from "@/modules/transaction-result/map-refund-status-to-transaction-result";
 import {
   type TransactionRecorderError,
@@ -22,35 +22,35 @@ import {
 
 import { TransactionEventReportVariablesResolver } from "../transaction-event-report-variables-resolver";
 
-export type StripeChargeHandlerSupportedEvents = Stripe.ChargeRefundUpdatedEvent;
+export type AdyenChargeHandlerSupportedEvents = Adyen.ChargeRefundUpdatedEvent;
 
 type PossibleErrors =
   | InstanceType<
       | typeof SaleorMoney.ValidationError
-      | typeof StripeRefundHandler.NotSupportedEventError
-      | typeof StripeRefundHandler.MalformedEventError
+      | typeof AdyenRefundHandler.NotSupportedEventError
+      | typeof AdyenRefundHandler.MalformedEventError
     >
   | TransactionRecorderError;
 
-export class StripeRefundHandler {
+export class AdyenRefundHandler {
   static NotSupportedEventError = BaseError.subclass("NotSupportedEventError", {
     props: {
-      _internalName: "StripeRefundHandler.NotSupportedEventError" as const,
+      _internalName: "AdyenRefundHandler.NotSupportedEventError" as const,
     },
   });
 
   static MalformedEventError = BaseError.subclass("MalformedEventError", {
     props: {
-      _internalName: "StripeRefundHandler.MalformedEventError" as const,
+      _internalName: "AdyenRefundHandler.MalformedEventError" as const,
     },
   });
 
-  private prepareTransactionEventReportParams(event: StripeChargeHandlerSupportedEvents) {
+  private prepareTransactionEventReportParams(event: AdyenChargeHandlerSupportedEvents) {
     const chargeObject = event.data.object;
     const currency = chargeObject.currency;
-    const timestamp = createTimestampFromStripeEvent(event);
+    const timestamp = createTimestampFromAdyenEvent(event);
 
-    const saleorMoneyResult = SaleorMoney.createFromStripe({
+    const saleorMoneyResult = SaleorMoney.createFromAdyen({
       amount: chargeObject.amount,
       currency,
     });
@@ -65,40 +65,40 @@ export class StripeRefundHandler {
     });
   }
 
-  private resolvePaymentIntentId(refund: Stripe.Refund) {
+  private resolvePaymentIntentId(refund: Adyen.Refund) {
     const paymentIntentId = refund.payment_intent;
 
     if (!paymentIntentId) {
       return err(
-        new StripeRefundHandler.MalformedEventError("Refund event does not contain payment_intent"),
+        new AdyenRefundHandler.MalformedEventError("Refund event does not contain payment_intent"),
       );
     }
 
     if (typeof paymentIntentId !== "string") {
-      return ok(createStripePaymentIntentId(paymentIntentId.id));
+      return ok(createAdyenPaymentIntentId(paymentIntentId.id));
     }
 
-    return ok(createStripePaymentIntentId(paymentIntentId));
+    return ok(createAdyenPaymentIntentId(paymentIntentId));
   }
 
   private async resolveTransactionRecord({
     transactionRecorder,
-    stripePaymentIntentId,
+    adyenPaymentIntentId,
     appId,
     saleorApiUrl,
   }: {
     transactionRecorder: TransactionRecorderRepo;
-    stripePaymentIntentId: StripePaymentIntentId;
+    adyenPaymentIntentId: AdyenPaymentIntentId;
     appId: string;
     saleorApiUrl: SaleorApiUrl;
   }) {
     const recordedTransactionResult =
-      await transactionRecorder.getTransactionByStripePaymentIntentId(
+      await transactionRecorder.getTransactionByAdyenPaymentIntentId(
         {
           appId,
           saleorApiUrl,
         },
-        stripePaymentIntentId,
+        adyenPaymentIntentId,
       );
 
     if (recordedTransactionResult.isErr()) {
@@ -111,37 +111,37 @@ export class StripeRefundHandler {
   }
 
   private checkIfEventIsSupported(
-    event: Stripe.Event,
-  ): event is StripeChargeHandlerSupportedEvents {
+    event: Adyen.Event,
+  ): event is AdyenChargeHandlerSupportedEvents {
     return event.type === "charge.refund.updated";
   }
 
   async processRefundEvent({
     event,
-    stripeEnv,
+    adyenEnv,
     transactionRecorder,
     appId,
     saleorApiUrl,
   }: {
-    event: Stripe.Event;
-    stripeEnv: StripeEnv;
+    event: Adyen.Event;
+    adyenEnv: AdyenEnv;
     transactionRecorder: TransactionRecorderRepo;
     appId: string;
     saleorApiUrl: SaleorApiUrl;
   }): Promise<Result<TransactionEventReportVariablesResolver, PossibleErrors>> {
     if (!this.checkIfEventIsSupported(event)) {
-      return err(new StripeRefundHandler.NotSupportedEventError("Unsupported event type"));
+      return err(new AdyenRefundHandler.NotSupportedEventError("Unsupported event type"));
     }
 
-    const stripePaymentIntentIdResult = this.resolvePaymentIntentId(event.data.object);
+    const adyenPaymentIntentIdResult = this.resolvePaymentIntentId(event.data.object);
 
-    if (stripePaymentIntentIdResult.isErr()) {
-      return err(stripePaymentIntentIdResult.error);
+    if (adyenPaymentIntentIdResult.isErr()) {
+      return err(adyenPaymentIntentIdResult.error);
     }
 
     const recordedTransactionResult = await this.resolveTransactionRecord({
       transactionRecorder,
-      stripePaymentIntentId: stripePaymentIntentIdResult.value,
+      adyenPaymentIntentId: adyenPaymentIntentIdResult.value,
       appId,
       saleorApiUrl,
     });
@@ -158,20 +158,20 @@ export class StripeRefundHandler {
 
     const { saleorMoney, timestamp } = paramsResult.value;
 
-    const refundId = createStripeRefundId(event.data.object.id);
+    const refundId = createAdyenRefundId(event.data.object.id);
 
     switch (event.type) {
       case "charge.refund.updated": {
         return ok(
           new TransactionEventReportVariablesResolver({
             transactionResult: mapRefundStatusToTransactionResult(
-              createStripeRefundStatus(event.data.object.status),
+              createAdyenRefundStatus(event.data.object.status),
             ),
-            stripeObjectId: refundId,
+            adyenObjectId: refundId,
             saleorTransactionId: recordedTransactionResult.value.saleorTransactionId,
             saleorMoney,
             timestamp,
-            externalUrl: generateRefundStripeDashboardUrl(refundId, stripeEnv),
+            externalUrl: generateRefundAdyenDashboardUrl(refundId, adyenEnv),
             paymentMethodDetails: null, // there is no payment method details in refund event
           }),
         );

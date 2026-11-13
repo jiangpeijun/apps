@@ -12,7 +12,7 @@ export const transactionProcessSessionWebhookDefinition =
   new SaleorSyncWebhook<TransactionProcessSessionEventFragment>({
     apl: saleorApp.apl,
     event: "TRANSACTION_PROCESS_SESSION",
-    name: "Stripe Transaction Process Session",
+    name: "Adyen Transaction Process Session",
     isActive: true,
     query: TransactionProcessSessionDocument,
     webhookPath: "api/webhooks/saleor/transaction-process-session",

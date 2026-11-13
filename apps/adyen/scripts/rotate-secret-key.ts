@@ -49,7 +49,7 @@ const runner = createDynamoDBSecretKeyRotationRunner({
   logger,
   documentClient,
   tableName: env.DYNAMODB_MAIN_TABLE_NAME,
-  encryptedFieldNames: ["stripeRk", "stripeWhSecret"],
+  encryptedFieldNames: ["adyenRk", "adyenWhSecret"],
   decrypt: (value, key) => new Encryptor(key).decrypt(value),
   encrypt: (plaintext, key) => new Encryptor(key).encrypt(plaintext),
 });

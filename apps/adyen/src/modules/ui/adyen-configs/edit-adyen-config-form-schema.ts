@@ -14,7 +14,7 @@ import {
  * restricted key means "keep the saved one" and the field cannot be prefilled with a secret.
  * The server validates the same rules again on submit.
  */
-export const editStripeConfigFormSchema = z
+export const editAdyenConfigFormSchema = z
   .object({
     name: z.string().min(1, "Configuration name is required."),
     publishableKey: z.string().refine(hasPublishableKeyPrefix, PUBLISHABLE_KEY_FORMAT_MESSAGE),
@@ -34,4 +34,4 @@ export const editStripeConfigFormSchema = z
     },
   );
 
-export type EditStripeConfigFormShape = z.infer<typeof editStripeConfigFormSchema>;
+export type EditAdyenConfigFormShape = z.infer<typeof editAdyenConfigFormSchema>;
