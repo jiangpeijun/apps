@@ -1,26 +1,32 @@
+// apps/adyen/src/app/api/webhooks/saleor/payment-gateway-initialize-session/use-case-response.ts
 import { z } from "zod";
 
 import { SuccessWebhookResponse } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
 import { type PaymentGatewayInitializeSession } from "@/generated/app-webhooks-types/payment-gateway-initialize-session";
 import { type AppContext } from "@/lib/app-context";
-import { type AdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
 
 class Success extends SuccessWebhookResponse {
-  readonly pk: AdyenPublishableKey;
+  readonly clientKey: string;
+  readonly environment: string;
 
+  // 👇 定义返回给 Storefront 的数据结构
   private static ResponseDataSchema = z.object({
-    adyenPublishableKey: z.string(),
+    clientKey: z.string(),
+    environment: z.string(),
   });
 
-  constructor(args: { pk: AdyenPublishableKey; appContext: AppContext }) {
+  constructor(args: { clientKey: string; environment: string; appContext: AppContext }) {
     super(args.appContext);
-    this.pk = args.pk;
+    this.clientKey = args.clientKey;
+    this.environment = args.environment;
   }
 
   getResponse() {
     const typeSafeResponse: PaymentGatewayInitializeSession = {
+      // 👇 返回 Adyen 前端组件需要的参数
       data: Success.ResponseDataSchema.parse({
-        adyenPublishableKey: this.pk,
+        clientKey: this.clientKey,
+        environment: this.environment, // 例如 "test" 或 "live"
       }),
     };
 

@@ -1,3 +1,4 @@
+// apps\adyen\src\lib\graphql-client.ts
 import { createOtelUrqlExchange } from "@saleor/apps-otel/src/otel-urql-exchange-factory";
 import {
   createGraphQLClient,

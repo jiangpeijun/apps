@@ -1,3 +1,4 @@
+// apps\adyen\src\modules\app-config\repositories\app-config-repo.ts
 import { type Result } from "neverthrow";
 
 import { BaseError } from "@/lib/errors";

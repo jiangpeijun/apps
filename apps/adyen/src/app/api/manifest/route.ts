@@ -1,4 +1,5 @@
-import { AppManifest } from "@saleor/app-sdk/types";
+// apps/adyen/src/app/api/manifest/route.ts
+import { type AppManifest } from "@saleor/app-sdk/types";
 import {
   TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION,
   TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
@@ -6,13 +7,14 @@ import {
   TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION,
 } from "@/modules/saleor/webhook-subscriptions";
 
-export const manifest: AppManifest = {
+// 定义模板，后续会在 GET 请求中动态替换 URL
+const manifestTemplate: AppManifest = {
   id: "saleor.app.payment.adyen",
   version: "0.0.1",
   name: "Adyen",
   about: "Adyen payment app for Saleor",
-  appUrl: process.env.APP_IFRAME_BASE_URL!,
-  tokenTargetUrl: `${process.env.APP_API_BASE_URL}/api/register`,
+  appUrl: "http://localhost:3000", // 占位
+  tokenTargetUrl: "http://localhost:3000/api/register", // 占位
   permissions: ["HANDLE_PAYMENTS"],
   requiredSaleorVersion: "^3.22",
   webhooks: [
@@ -20,28 +22,47 @@ export const manifest: AppManifest = {
       name: "Transaction Initialize Session",
       syncEvents: ["TRANSACTION_INITIALIZE_SESSION"],
       query: TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION,
-      targetUrl: `${process.env.APP_API_BASE_URL}/api/webhooks/saleor/transaction-initialize-session`,
+      targetUrl: "http://localhost:3000/api/webhooks/saleor/transaction-initialize-session", // 占位
     },
     {
       name: "Transaction Process Session",
       syncEvents: ["TRANSACTION_PROCESS_SESSION"],
       query: TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
-      targetUrl: `${process.env.APP_API_BASE_URL}/api/webhooks/saleor/transaction-process-session`,
+      targetUrl: "http://localhost:3000/api/webhooks/saleor/transaction-process-session", // 占位
     },
     {
       name: "Transaction Refund Requested",
       syncEvents: ["TRANSACTION_REFUND_REQUESTED"],
       query: TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION,
-      targetUrl: `${process.env.APP_API_BASE_URL}/api/webhooks/saleor/transaction-refund-requested`,
+      targetUrl: "http://localhost:3000/api/webhooks/saleor/transaction-refund-requested", // 占位
     },
     {
       name: "Transaction Cancelation Requested",
       syncEvents: ["TRANSACTION_CANCELATION_REQUESTED"],
       query: TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION,
-      targetUrl: `${process.env.APP_API_BASE_URL}/api/webhooks/saleor/transaction-cancelation-requested`,
+      targetUrl: "http://localhost:3000/api/webhooks/saleor/transaction-cancelation-requested", // 占位
     },
   ],
   extensions: [],
 };
 
-export default manifest;
+// 导出一个标准的 Next.js App Router GET 处理函数
+export async function GET() {
+  // 读取环境变量，如果没有则回退到 localhost:3000
+  const iframeUrl = process.env.APP_IFRAME_BASE_URL || "http://localhost:3000";
+  const apiUrl = process.env.APP_API_BASE_URL || "http://localhost:3000";
+
+  // 动态替换 URL，确保浏览器访问 iframeUrl，Docker 访问 apiUrl
+  const dynamicManifest: AppManifest = {
+    ...manifestTemplate,
+    appUrl: iframeUrl,
+    tokenTargetUrl: `${apiUrl}/api/register`,
+    webhooks: manifestTemplate.webhooks?.map((webhook) => ({
+      ...webhook,
+      targetUrl: (webhook.targetUrl as string).replace("http://localhost:3000", apiUrl),
+    })),
+  };
+
+  // 返回 JSON 响应
+  return Response.json(dynamicManifest);
+}

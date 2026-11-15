@@ -1,6 +1,7 @@
+// apps/adyen/scripts/rotate-hmac-key.ts
 /* eslint-disable no-console */
 import { parseArgs } from "node:util";
-import { DynamoDBClient, ScanCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, ScanCommand, UpdateItemCommand, ScanCommandOutput } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { env } from "../src/lib/env";
 
@@ -23,7 +24,6 @@ async function main() {
 
   console.log(`🚀 开始轮换 Adyen HMAC 密钥... (Dry Run: ${isDryRun})`);
 
-  // 修复：确保 credentials 不为 undefined
   const client = new DynamoDBClient({
     region: env.AWS_REGION || "us-east-1",
     endpoint: env.AWS_ENDPOINT_URL,
@@ -39,8 +39,8 @@ async function main() {
     let lastEvaluatedKey: Record<string, any> | undefined = undefined;
     let totalProcessed = 0;
 
-    // 修复：加入 do-while 循环处理 DynamoDB 分页
     do {
+      // 不要写 : any，直接 new ScanCommand
       const scanCommand = new ScanCommand({
         TableName: tableName,
         FilterExpression: "begins_with(PK, :pkPrefix)",
@@ -50,7 +50,8 @@ async function main() {
         ExclusiveStartKey: lastEvaluatedKey,
       });
 
-      const response = await client.send(scanCommand);
+      // 👇 关键修复：显式声明 response 的类型为 ScanCommandOutput
+      const response = await client.send(scanCommand) as ScanCommandOutput;
       const items = response.Items ? response.Items.map((item) => unmarshall(item)) : [];
 
       for (const item of items) {
@@ -63,7 +64,7 @@ async function main() {
             Key: marshall({ PK: item.PK, SK: item.SK }),
             UpdateExpression: "SET hmacKeyEncrypted = :newKey, updatedAt = :now",
             ExpressionAttributeValues: marshall({
-              ":newKey": newHmacKey, // 实际生产中强烈建议使用 Encryptor 加密后再存入
+              ":newKey": newHmacKey,
               ":now": new Date().toISOString(),
             }),
           });

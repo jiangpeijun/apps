@@ -1,3 +1,4 @@
+// apps/adyen/src/app/api/webhooks/saleor/payment-gateway-initialize-session/use-case.ts
 import { err, ok, type Result } from "neverthrow";
 
 import {
@@ -48,9 +49,10 @@ export class PaymentGatewayInitializeSessionUseCase {
     });
 
     if (adyenConfigForThisChannel.isOk()) {
-      const pk = adyenConfigForThisChannel.value?.publishableKey;
+      // 👇 修复1：从 clientKey 取，而不是 publishableKey
+      const clientKey = adyenConfigForThisChannel.value?.clientKey;
 
-      if (!pk) {
+      if (!clientKey) {
         this.logger.warn("Config for channel not found", {
           channelId,
         });
@@ -63,13 +65,15 @@ export class PaymentGatewayInitializeSessionUseCase {
         );
       }
 
+      // 👇 修复2：直接使用 environment，而不是调用不存在的方法
       appContextContainer.set({
-        adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
+        adyenEnv: adyenConfigForThisChannel.value.environment === "live" ? "LIVE" : "TEST",
       });
 
       return ok(
         new PaymentGatewayInitializeSessionUseCaseResponses.Success({
-          pk,
+          clientKey: clientKey, // 👈 改为 clientKey
+          environment: adyenConfigForThisChannel.value.environment, // 👈 顺便把环境传过去
           appContext: appContextContainer.getContextValue(),
         }),
       );

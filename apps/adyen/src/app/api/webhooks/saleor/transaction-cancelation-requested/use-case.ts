@@ -1,6 +1,5 @@
-import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-attributes";
+// apps/adyen/src/app/api/webhooks/saleor/transaction-cancelation-requested/use-case.ts
 import { err, ok, type Result } from "neverthrow";
-import { after } from "next/server";
 
 import {
   AppIsNotConfiguredResponse,
@@ -11,24 +10,10 @@ import { type TransactionCancelationRequestedEventFragment } from "@/generated/g
 import { appContextContainer } from "@/lib/app-context";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
-import { loggerContext } from "@/lib/logger-context";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { type AdyenProblemReporter } from "@/modules/app-problems";
-import { resolveSaleorMoneyFromAdyenPaymentIntent } from "@/modules/saleor/resolve-saleor-money-from-adyen-payment-intent";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import {
-  getChannelIdFromRequestedEventPayload,
-  getIdempotencyKeyFromRequestedEventPayload,
-  getTransactionFromRequestedEventPayload,
-} from "@/modules/saleor/transaction-requested-event-helpers";
-import { mapAdyenErrorToApiError } from "@/modules/adyen/adyen-api-error";
-import { createAdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import { createTimestampFromPaymentIntent } from "@/modules/adyen/adyen-timestamps";
-import { type IAdyenPaymentIntentsApiFactory } from "@/modules/adyen/types";
-import {
-  CancelFailureResult,
-  CancelSuccessResult,
-} from "@/modules/transaction-result/cancel-result";
+import { createAdyenClient } from "@/modules/adyen/adyen-client";
+import { withTimeout, ADYEN_TIMEOUT_MS } from "@/modules/adyen/adyen-timeout";
 
 import {
   TransactionCancelationRequestedUseCaseResponses,
@@ -43,28 +28,34 @@ type UseCaseExecuteResult = Result<
 export class TransactionCancelationRequestedUseCase {
   private logger = createLogger("TransactionCancelationRequestedUseCase");
   private appConfigRepo: AppConfigRepo;
-  private adyenPaymentIntentsApiFactory: IAdyenPaymentIntentsApiFactory;
 
-  constructor(deps: {
-    appConfigRepo: AppConfigRepo;
-    adyenPaymentIntentsApiFactory: IAdyenPaymentIntentsApiFactory;
-  }) {
+  constructor(deps: { appConfigRepo: AppConfigRepo }) {
     this.appConfigRepo = deps.appConfigRepo;
-    this.adyenPaymentIntentsApiFactory = deps.adyenPaymentIntentsApiFactory;
   }
 
   async execute(args: {
     appId: string;
     saleorApiUrl: SaleorApiUrl;
     event: TransactionCancelationRequestedEventFragment;
-    problemReporter: AdyenProblemReporter;
   }): Promise<UseCaseExecuteResult> {
     const { appId, saleorApiUrl, event } = args;
+    const transaction = event.transaction;
 
-    const transaction = getTransactionFromRequestedEventPayload(event);
-    const channelId = getChannelIdFromRequestedEventPayload(event);
+    // 👇 修复 1：Saleor 中 transaction 是可选的
+    if (!transaction) {
+      return err(
+        new BaseError("Transaction is missing in the event") as any
+      );
+    }
 
-    loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, transaction.pspReference);
+    // 👇 修复 2：从 checkout 或 order 中获取 channelId
+    const channelId = transaction.checkout?.channel.id ?? transaction.order?.channel.id;
+
+    if (!channelId) {
+      return err(
+        new BaseError("Channel ID is missing in the event") as any
+      );
+    }
 
     const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
       channelId,
@@ -76,7 +67,6 @@ export class TransactionCancelationRequestedUseCase {
       this.logger.error("Failed to get configuration", {
         error: adyenConfigForThisChannel.error,
       });
-
       return err(
         new BrokenAppResponse(
           appContextContainer.getContextValue(),
@@ -85,11 +75,9 @@ export class TransactionCancelationRequestedUseCase {
       );
     }
 
-    if (!adyenConfigForThisChannel.value) {
-      this.logger.warn("Config for channel not found", {
-        channelId,
-      });
-
+    const config = adyenConfigForThisChannel.value;
+    if (!config) {
+      this.logger.warn("Config for channel not found", { channelId });
       return err(
         new AppIsNotConfiguredResponse(
           appContextContainer.getContextValue(),
@@ -99,72 +87,45 @@ export class TransactionCancelationRequestedUseCase {
     }
 
     appContextContainer.set({
-      adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
+      adyenEnv: config.environment === "live" ? "LIVE" : "TEST",
     });
 
-    const restrictedKey = adyenConfigForThisChannel.value.restrictedKey;
-
-    const adyenPaymentIntentsApi = this.adyenPaymentIntentsApiFactory.create({
-      key: restrictedKey,
+    const adyen = createAdyenClient({
+      apiKey: config.apiKeyEncrypted,
+      environment: config.environment,
     });
 
-    this.logger.debug("Canceling Adyen payment intent with id", {
-      id: transaction.pspReference,
-    });
+    const pspReference = transaction.pspReference;
 
-    const adyenPaymentIntentId = createAdyenPaymentIntentId(transaction.pspReference);
+    this.logger.debug("Canceling Adyen payment with pspReference", { pspReference });
 
-    const cancelPaymentIntentResult = await adyenPaymentIntentsApi.cancelPaymentIntent({
-      id: adyenPaymentIntentId,
-      idempotencyKey: getIdempotencyKeyFromRequestedEventPayload(event),
-    });
+    try {
+      await withTimeout(
+        adyen.modificationsApi.cancelAuthorisedPaymentByPspReference(pspReference, {
+          merchantAccount: config.merchantAccount,
+        }),
+        ADYEN_TIMEOUT_MS,
+        "Adyen cancelAuthorisedPayment"
+      );
 
-    if (cancelPaymentIntentResult.isErr()) {
-      const error = mapAdyenErrorToApiError(cancelPaymentIntentResult.error);
-
-      const config = {
-        id: adyenConfigForThisChannel.value.id,
-        name: adyenConfigForThisChannel.value.name,
-      };
-
-      after(() => args.problemReporter.reportApiProblem(error, config));
-
-      this.logger.warn("Failed to cancel payment intent", {
-        error,
-      });
+      // 👇 修复 3：返回正确的 Adyen Response 结构
+      return ok(
+        new TransactionCancelationRequestedUseCaseResponses.Success({
+          pspReference,
+          appContext: appContextContainer.getContextValue(),
+        }),
+      );
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Adyen cancel failed";
+      this.logger.warn("Failed to cancel Adyen payment", { error: errorMessage });
 
       return ok(
         new TransactionCancelationRequestedUseCaseResponses.Failure({
-          adyenPaymentIntentId,
-          transactionResult: new CancelFailureResult(),
-          error,
+          pspReference,
+          errorMessage,
           appContext: appContextContainer.getContextValue(),
         }),
       );
     }
-
-    const saleorMoneyResult = resolveSaleorMoneyFromAdyenPaymentIntent(
-      cancelPaymentIntentResult.value,
-    );
-
-    if (saleorMoneyResult.isErr()) {
-      this.logger.error("Failed to create Saleor money", {
-        error: saleorMoneyResult.error,
-      });
-
-      return err(
-        new BrokenAppResponse(appContextContainer.getContextValue(), saleorMoneyResult.error),
-      );
-    }
-
-    return ok(
-      new TransactionCancelationRequestedUseCaseResponses.Success({
-        saleorMoney: saleorMoneyResult.value,
-        adyenPaymentIntentId,
-        transactionResult: new CancelSuccessResult(),
-        timestamp: createTimestampFromPaymentIntent(cancelPaymentIntentResult.value),
-        appContext: appContextContainer.getContextValue(),
-      }),
-    );
   }
 }
