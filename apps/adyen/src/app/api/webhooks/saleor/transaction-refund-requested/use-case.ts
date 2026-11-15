@@ -1,204 +1,102 @@
-import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-attributes";
-import { err, ok, type Result } from "neverthrow";
-import { after } from "next/server";
+import { createAdyenClient } from "@/modules/adyen/adyen-client";
+import { resolveAdyenAmount } from "@/modules/adyen/adyen-money";
+import { withTimeout, ADYEN_TIMEOUT_MS } from "@/modules/adyen/adyen-timeout";
+import { TransactionRefundRequestedEventData } from "@/generated/app-webhooks-types/transaction-refund-requested";
+import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 
-import {
-  AppIsNotConfiguredResponse,
-  BrokenAppResponse,
-  MalformedRequestResponse,
-} from "@/app/api/webhooks/saleor/saleor-webhook-responses";
-import { type TransactionRefundRequestedEventFragment } from "@/generated/graphql";
-import { appContextContainer } from "@/lib/app-context";
-import { BaseError } from "@/lib/errors";
-import { createLogger } from "@/lib/logger";
-import { loggerContext } from "@/lib/logger-context";
-import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
-import { type AdyenProblemReporter } from "@/modules/app-problems";
-import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { SaleorMoney } from "@/modules/saleor/saleor-money";
-import { createSaleorTransactionId } from "@/modules/saleor/saleor-transaction-id";
-import {
-  getChannelIdFromRequestedEventPayload,
-  getIdempotencyKeyFromRequestedEventPayload,
-  getTransactionFromRequestedEventPayload,
-} from "@/modules/saleor/transaction-requested-event-helpers";
-import { getSaleorOrderAdyenMetadata } from "@/modules/adyen/saleor-order-adyen-metadata";
-import { mapAdyenErrorToApiError } from "@/modules/adyen/adyen-api-error";
-import { AdyenMoney } from "@/modules/adyen/adyen-money";
-import { createAdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import { createAdyenRefundId } from "@/modules/adyen/adyen-refund-id";
-import { type IAdyenRefundsApiFactory } from "@/modules/adyen/types";
-import { RefundFailureResult } from "@/modules/transaction-result/refund-result";
+export async function transactionRefundRequestedUseCase(params: {
+  event: TransactionRefundRequestedEventData;
+  config: AdyenConfig;
+}) {
+  const { event, config } = params;
+  const pspReference = event.transaction?.pspReference as string | undefined;
+  const amount = event.action.amount;
 
-import {
-  TransactionRefundRequestedUseCaseResponses,
-  type TransactionRefundRequestedUseCaseResponsesType,
-} from "./use-case-response";
-
-type UseCaseExecuteResult = Result<
-  TransactionRefundRequestedUseCaseResponsesType,
-  AppIsNotConfiguredResponse | BrokenAppResponse | MalformedRequestResponse
->;
-
-export class TransactionRefundRequestedUseCase {
-  private logger = createLogger("TransactionRefundRequestedUseCase");
-  private appConfigRepo: AppConfigRepo;
-  private adyenRefundsApiFactory: IAdyenRefundsApiFactory;
-
-  constructor(deps: {
-    appConfigRepo: AppConfigRepo;
-    adyenRefundsApiFactory: IAdyenRefundsApiFactory;
-  }) {
-    this.appConfigRepo = deps.appConfigRepo;
-    this.adyenRefundsApiFactory = deps.adyenRefundsApiFactory;
+  if (!pspReference) {
+    return { 
+      result: "REFUND_FAILURE" as const, 
+      message: "Missing pspReference" 
+    };
   }
 
-  async execute(args: {
-    appId: string;
-    saleorApiUrl: SaleorApiUrl;
-    event: TransactionRefundRequestedEventFragment;
-    problemReporter: AdyenProblemReporter;
-  }): Promise<UseCaseExecuteResult> {
-    const { appId, saleorApiUrl, event } = args;
+  const adyen = createAdyenClient({
+    apiKey: config.apiKeyEncrypted,
+    environment: config.environment,
+  });
+  
+  const adyenAmount = resolveAdyenAmount({
+    amount: amount.amount,
+    currency: amount.currency,
+  });
 
-    const transaction = getTransactionFromRequestedEventPayload(event);
-    const channelId = getChannelIdFromRequestedEventPayload(event);
+  // 建议先不传 lineItems，因为 PaymentRefundRequest 类型结构可能不同。
+  // 如果 Adyen 后台开启了强制验证 lineItems，再通过 additionalData 传。
+  const lineItems = buildLineItemsForAdyen(event);
 
-    loggerContext.set(ObservabilityAttributes.PSP_REFERENCE, transaction.pspReference);
-
-    const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
-      channelId,
-      appId,
-      saleorApiUrl,
-    });
-
-    if (adyenConfigForThisChannel.isErr()) {
-      this.logger.error("Failed to get configuration", {
-        error: adyenConfigForThisChannel.error,
-      });
-
-      return err(
-        new BrokenAppResponse(
-          appContextContainer.getContextValue(),
-          adyenConfigForThisChannel.error,
-        ),
-      );
-    }
-
-    if (!adyenConfigForThisChannel.value) {
-      this.logger.warn("Config for channel not found", {
-        channelId,
-      });
-
-      return err(
-        new AppIsNotConfiguredResponse(
-          appContextContainer.getContextValue(),
-          new BaseError("Config for channel not found"),
-        ),
-      );
-    }
-
-    appContextContainer.set({
-      adyenEnv: adyenConfigForThisChannel.value.getAdyenEnvValue(),
-    });
-
-    const restrictedKey = adyenConfigForThisChannel.value.restrictedKey;
-
-    const adyenRefundsApi = this.adyenRefundsApiFactory.create({
-      key: restrictedKey,
-    });
-
-    this.logger.debug("Refunding Adyen payment intent with id", {
-      id: transaction.pspReference,
-      action: event.action,
-    });
-
-    const adyenPaymentIntentId = createAdyenPaymentIntentId(transaction.pspReference);
-
-    const adyenMoneyResult = AdyenMoney.createFromSaleorAmount({
-      amount: event.action.amount,
-      currency: event.action.currency,
-    });
-
-    if (adyenMoneyResult.isErr()) {
-      this.logger.error("Failed to create Adyen money", {
-        error: adyenMoneyResult.error,
-      });
-
-      return err(
-        new MalformedRequestResponse(
-          appContextContainer.getContextValue(),
-          adyenMoneyResult.error,
-        ),
-      );
-    }
-
-    const createRefundResult = await adyenRefundsApi.createRefund({
-      paymentIntentId: adyenPaymentIntentId,
-      adyenMoney: adyenMoneyResult.value,
-      idempotencyKey: getIdempotencyKeyFromRequestedEventPayload(event),
-      metadata: {
-        saleor_source_id: transaction.checkout?.id
-          ? transaction.checkout.id
-          : transaction.order?.id,
-        saleor_source_type: transaction.checkout ? "Checkout" : "Order",
-        saleor_transaction_id: createSaleorTransactionId(transaction.id),
-        saleor_api_url: saleorApiUrl,
-        saleor_app_id: appId,
-        ...getSaleorOrderAdyenMetadata(transaction),
-      },
-    });
-
-    if (createRefundResult.isErr()) {
-      const error = mapAdyenErrorToApiError(createRefundResult.error);
-
-      const config = {
-        id: adyenConfigForThisChannel.value.id,
-        name: adyenConfigForThisChannel.value.name,
-      };
-
-      after(() => args.problemReporter.reportApiProblem(error, config));
-
-      this.logger.warn("Failed to create refund", {
-        error,
-      });
-
-      return ok(
-        new TransactionRefundRequestedUseCaseResponses.Failure({
-          transactionResult: new RefundFailureResult(),
-          adyenPaymentIntentId,
-          error,
-          appContext: appContextContainer.getContextValue(),
-        }),
-      );
-    }
-
-    const refund = createRefundResult.value;
-
-    this.logger.debug("Refund created", {
-      refund,
-    });
-
-    const saleorMoneyResult = SaleorMoney.createFromAdyen({
-      amount: refund.amount,
-      currency: refund.currency,
-    });
-
-    if (saleorMoneyResult.isErr()) {
-      this.logger.error("Failed to create Saleor money", {
-        error: saleorMoneyResult.error,
-      });
-
-      return err(
-        new BrokenAppResponse(appContextContainer.getContextValue(), saleorMoneyResult.error),
-      );
-    }
-
-    return ok(
-      new TransactionRefundRequestedUseCaseResponses.Success({
-        adyenRefundId: createAdyenRefundId(refund.id),
-        appContext: appContextContainer.getContextValue(),
+  try {
+    // 👇 核心修复：方法名使用 refundCapturedPayment
+    const response = await withTimeout<any>(
+      adyen.modificationsApi.refundCapturedPayment(pspReference, {
+        merchantAccount: config.merchantAccount,
+        amount: adyenAmount,
+        // 如果需要传明细，可以试试放在这里，但为了不报错，我们先注释掉
+        // ...(lineItems.length > 0 ? { lineItems } : {}),
       }),
+      ADYEN_TIMEOUT_MS,
+      "Adyen refundCapturedPayment"
     );
+
+    return {
+      result: "REFUND_SUCCESS" as const,
+      pspReference: response?.pspReference ?? pspReference,
+      amount: amount.amount,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Adyen refund failed";
+    return {
+      result: "REFUND_FAILURE" as const,
+      amount: amount.amount,
+      message: errorMessage.substring(0, 512),
+    };
   }
+}
+
+function buildLineItemsForAdyen(
+  event: TransactionRefundRequestedEventData
+): Array<{
+  id: string;
+  amountExcludingTax: number;
+  taxAmount: number;
+  quantity: number;
+  description: string;
+}> {
+  if (event.action.grantedRefund?.lines) {
+    const items = event.action.grantedRefund.lines.map((line) => {
+      const lineAdyenAmount = resolveAdyenAmount({
+        amount: line.amount.amount,
+        currency: line.amount.currency,
+      });
+
+      return {
+        id: line.orderLineId,
+        amountExcludingTax: lineAdyenAmount.value,
+        taxAmount: 0,
+        quantity: line.quantity,
+        description: line.orderLine?.productName ?? "Item",
+      };
+    });
+    
+    if (event.action.grantedRefund.shippingCostIncluded) {
+      items.push({
+        id: "shipping",
+        amountExcludingTax: 0, 
+        taxAmount: 0,
+        quantity: 1,
+        description: "Shipping",
+      });
+    }
+    return items;
+  }
+
+  return [];
 }

@@ -215,3 +215,17 @@ export interface TransactionSessionActionRequired {
   data?: JsonValue2;
   paymentMethodDetails?: Paymentmethoddetails2;
 }
+
+export interface TransactionProcessSessionEventData {
+  action: {
+    amount: {
+      amount: number;
+      currency: string;
+    };
+  };
+  transaction: {
+    id: string;
+    pspReference?: string | null;
+  };
+}
+

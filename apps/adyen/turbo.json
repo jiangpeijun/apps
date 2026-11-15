@@ -9,12 +9,12 @@
         "APP_API_BASE_URL",
         "APP_IFRAME_BASE_URL",
         "MANIFEST_APP_ID",
-        "MANIFEST_APP_ID",
         "NEXT_PUBLIC_SENTRY_DSN",
         "SECRET_KEY",
         "SENTRY_AUTH_TOKEN",
         "SENTRY_PROJECT",
-        "ADYEN_PARTNER_ID",
+        "APP_NAME",
+        "APPSTORE_URL",
         "DYNAMODB_MAIN_TABLE_NAME",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_ACCESS_KEY_ID",
@@ -23,10 +23,9 @@
         "INTEGRATION_DYNAMO_TABLE_NAME",
         "INTEGRATION_DYNAMO_REGION",
         "INTEGRATION_DYNAMO_ENDPOINT",
-        "APPSTORE_URL",
-        "APP_NAME",
         "DYNAMODB_REQUEST_TIMEOUT_MS",
-        "DYNAMODB_CONNECTION_TIMEOUT_MS"
+        "DYNAMODB_CONNECTION_TIMEOUT_MS",
+        "ADYEN_HMAC_KEY"
       ]
     }
   }

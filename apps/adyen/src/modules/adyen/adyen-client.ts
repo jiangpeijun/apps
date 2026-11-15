@@ -1,35 +1,25 @@
-import Adyen from "adyen";
+// apps\adyen\src\modules\adyen\adyen-client.ts
+import { Client, CheckoutAPI, EnvironmentEnum } from "@adyen/api-library";
 
-import { env } from "@/lib/env";
-import { type AdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import pkg from "@/package.json";
+export interface AdyenClientConfig {
+  apiKey: string;
+  environment: "test" | "live";
+}
 
-import { ADYEN_API_VERSION } from "./adyen-api-version";
+export function createAdyenClient(config: AdyenClientConfig) {
+  const client = new Client({
+    apiKey: config.apiKey,
+    // 修复枚举类型报错
+    environment: config.environment === "live" ? EnvironmentEnum.LIVE : EnvironmentEnum.TEST,
+  });
+  
+  const checkout = new CheckoutAPI(client);
 
-/**
- * Holds native client,
- * provides a single initialization place for Adyen SDK
- */
-export class AdyenClient {
-  readonly nativeClient: Adyen;
-
-  constructor(nativeClient: Adyen) {
-    this.nativeClient = nativeClient;
-  }
-
-  static createFromRestrictedKey(key: AdyenRestrictedKey) {
-    const nativeClient = new Adyen(key, {
-      typescript: true,
-      httpClient: Adyen.createFetchHttpClient(fetch), // this allow us to mock the fetch
-      apiVersion: ADYEN_API_VERSION,
-      appInfo: {
-        name: "Saleor App Adyen",
-        version: pkg.version,
-        url: env.APPSTORE_URL,
-        partner_id: env.ADYEN_PARTNER_ID,
-      },
-    });
-
-    return new AdyenClient(nativeClient);
-  }
+  return {
+    checkout,
+    // 把需要用到的 API 实例暴露出来，方便 Use-Case 调用
+    paymentLinksApi: checkout.PaymentLinksApi,
+    paymentsApi: checkout.PaymentsApi,
+    modificationsApi: checkout.ModificationsApi,
+  };
 }
