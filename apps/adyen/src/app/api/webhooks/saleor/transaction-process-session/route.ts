@@ -1,3 +1,4 @@
+// apps/adyen/src/app/api/webhooks/saleor/transaction-process-session/route.ts
 import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-attributes";
 import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-attributes";
 import { compose } from "@saleor/apps-shared/compose";
@@ -14,10 +15,7 @@ import { loggerContext, withLoggerContext } from "@/lib/logger-context";
 import { setObservabilitySaleorApiUrl } from "@/lib/observability-saleor-api-url";
 import { setObservabilitySourceObjectId } from "@/lib/observability-source-object-id";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
-import { createAdyenProblemReporter } from "@/modules/app-problems";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
-import { transactionRecorder } from "@/modules/transactions-recording/repositories/transaction-recorder-impl";
 
 import { withRecipientVerification } from "../with-recipient-verification";
 import { TransactionProcessSessionUseCase } from "./use-case";
@@ -25,8 +23,6 @@ import { transactionProcessSessionWebhookDefinition } from "./webhook-definition
 
 const useCase = new TransactionProcessSessionUseCase({
   appConfigRepo: appConfigRepoImpl,
-  adyenPaymentIntentsApiFactory: new AdyenPaymentIntentsApiFactory(),
-  transactionRecorder: transactionRecorder,
 });
 
 const logger = createLogger("TRANSACTION_PROCESS_SESSION route");
@@ -51,29 +47,22 @@ const handler = transactionProcessSessionWebhookDefinition.createHandler(
           appContextContainer.getContextValue(),
           saleorApiUrlResult.error,
         );
-
         return response.getResponse();
       }
 
       setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
 
-      const problemReporter = createAdyenProblemReporter(ctx.authData);
-
       const result = await useCase.execute({
         appId: ctx.authData.appId,
         saleorApiUrl: saleorApiUrlResult.value,
         event: ctx.payload,
-        problemReporter,
       });
 
       return result.match(
         (result) => {
           logger.info("Successfully processed webhook request", {
             httpsStatusCode: result.statusCode,
-            resolvedEvent: result.transactionResult.result,
-            adyenEnv: result.appContext.adyenEnv,
           });
-
           return result.getResponse();
         },
         (err) => {
@@ -81,7 +70,6 @@ const handler = transactionProcessSessionWebhookDefinition.createHandler(
             httpsStatusCode: err.statusCode,
             reason: err.message,
           });
-
           return err.getResponse();
         },
       );
@@ -93,7 +81,6 @@ const handler = transactionProcessSessionWebhookDefinition.createHandler(
         appContextContainer.getContextValue(),
         BaseError.normalize(error),
       );
-
       return response.getResponse();
     }
   }),

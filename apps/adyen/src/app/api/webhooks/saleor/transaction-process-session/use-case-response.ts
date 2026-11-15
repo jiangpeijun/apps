@@ -1,148 +1,62 @@
-import { z } from "zod";
-
-import { createFailureWebhookResponseDataSchema } from "@/app/api/webhooks/saleor/saleor-webhook-response-schema";
+// apps/adyen/src/app/api/webhooks/saleor/transaction-process-session/use-case-response.ts
 import { SuccessWebhookResponse } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
-import {
-  type TransactionSessionActionRequired,
-  type TransactionSessionFailure,
-  type TransactionSessionSuccess,
-} from "@/generated/app-webhooks-types/transaction-process-session";
 import { type AppContext } from "@/lib/app-context";
-import { BaseError } from "@/lib/errors";
-import { type SaleorMoney } from "@/modules/saleor/saleor-money";
-import { type SaleorPaymentMethodDetails } from "@/modules/saleor/saleor-payment-method-details";
-import { generatePaymentIntentAdyenDashboardUrl } from "@/modules/adyen/generate-adyen-dashboard-urls";
-import {
-  type AdyenApiError,
-  AdyenApiErrorPublicCode,
-  AdyenCardErrorPublicCode,
-} from "@/modules/adyen/adyen-api-error";
-import { type AdyenPaymentIntentId } from "@/modules/adyen/adyen-payment-intent-id";
-import {
-  type AuthorizationActionRequiredResult,
-  type ChargeActionRequiredResult,
-} from "@/modules/transaction-result/action-required-result";
-import {
-  type AuthorizationFailureResult,
-  type ChargeFailureResult,
-} from "@/modules/transaction-result/failure-result";
-import {
-  type AuthorizationRequestResult,
-  type ChargeRequestResult,
-} from "@/modules/transaction-result/request-result";
-import {
-  type AuthorizationSuccessResult,
-  type ChargeSuccessResult,
-} from "@/modules/transaction-result/success-result";
-
-type TransactionResult =
-  | ChargeSuccessResult
-  | AuthorizationSuccessResult
-  | ChargeActionRequiredResult
-  | AuthorizationActionRequiredResult
-  | ChargeRequestResult
-  | AuthorizationRequestResult;
 
 class Success extends SuccessWebhookResponse {
-  readonly transactionResult: TransactionResult;
-  readonly saleorMoney: SaleorMoney;
-  readonly timestamp: Date | null;
-  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
-  readonly paymentMethodDetails: SaleorPaymentMethodDetails | null;
+  readonly pspReference: string;
+  readonly amount: number;
+  readonly result: "CHARGE_SUCCESS" | "CHARGE_ACTION_REQUIRED";
+  readonly paymentUrl?: string;
 
   constructor(args: {
-    transactionResult: TransactionResult;
-    saleorMoney: SaleorMoney;
-    timestamp: Date | null;
-    adyenPaymentIntentId: AdyenPaymentIntentId;
+    pspReference: string;
+    amount: number;
+    result: "CHARGE_SUCCESS" | "CHARGE_ACTION_REQUIRED";
+    paymentUrl?: string;
     appContext: AppContext;
-    saleorPaymentMethodDetails: SaleorPaymentMethodDetails | null;
   }) {
     super(args.appContext);
-    this.transactionResult = args.transactionResult;
-    this.saleorMoney = args.saleorMoney;
-    this.timestamp = args.timestamp;
-    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
-    this.paymentMethodDetails = args.saleorPaymentMethodDetails;
+    this.pspReference = args.pspReference;
+    this.amount = args.amount;
+    this.result = args.result;
+    this.paymentUrl = args.paymentUrl;
   }
 
-  getResponse(): Response {
-    if (!this.appContext.adyenEnv) {
-      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
-    }
-
-    const typeSafeResponse: TransactionSessionSuccess | TransactionSessionActionRequired = {
-      result: this.transactionResult.result,
-      amount: this.saleorMoney.amount,
-      pspReference: this.adyenPaymentIntentId,
-      // https://docs.adyen.com/payments/paymentintents/lifecycle
-      message: this.transactionResult.message,
-      actions: this.transactionResult.actions,
-      externalUrl: generatePaymentIntentAdyenDashboardUrl(
-        this.adyenPaymentIntentId,
-        this.appContext.adyenEnv,
-      ),
-      time: this.timestamp?.toISOString(),
-      paymentMethodDetails: this.paymentMethodDetails?.toSaleorWebhookResponse(),
-    };
-
-    return Response.json(typeSafeResponse, { status: this.statusCode });
+  getResponse() {
+    return Response.json({
+      result: this.result,
+      pspReference: this.pspReference,
+      amount: this.amount,
+      externalUrl: this.paymentUrl,
+      data: this.paymentUrl ? { paymentUrl: this.paymentUrl } : undefined,
+    }, { status: this.statusCode });
   }
 }
 
 class Failure extends SuccessWebhookResponse {
-  readonly transactionResult: ChargeFailureResult | AuthorizationFailureResult;
-  readonly error: AdyenApiError;
-  readonly adyenPaymentIntentId: AdyenPaymentIntentId;
-
-  private static ResponseDataSchema = createFailureWebhookResponseDataSchema(
-    z.array(
-      z.object({
-        code: z.union([z.literal(AdyenCardErrorPublicCode), z.literal(AdyenApiErrorPublicCode)]),
-        message: z.string(),
-      }),
-    ),
-  );
+  readonly pspReference: string;
+  readonly amount: number;
+  readonly message: string;
 
   constructor(args: {
-    transactionResult: ChargeFailureResult | AuthorizationFailureResult;
-    error: AdyenApiError;
-    adyenPaymentIntentId: AdyenPaymentIntentId;
+    pspReference: string;
+    amount: number;
+    message: string;
     appContext: AppContext;
   }) {
     super(args.appContext);
-    this.transactionResult = args.transactionResult;
-    this.error = args.error;
-    this.adyenPaymentIntentId = args.adyenPaymentIntentId;
+    this.pspReference = args.pspReference;
+    this.amount = args.amount;
+    this.message = args.message;
   }
 
   getResponse() {
-    if (!this.appContext.adyenEnv) {
-      throw new BaseError("Adyen environment is not set. Ensure AppContext is set earlier");
-    }
-
-    const typeSafeResponse: TransactionSessionFailure = {
-      result: this.transactionResult.result,
-      message: this.error.merchantMessage,
-      pspReference: this.adyenPaymentIntentId,
-      externalUrl: generatePaymentIntentAdyenDashboardUrl(
-        this.adyenPaymentIntentId,
-        this.appContext.adyenEnv,
-      ),
-      data: Failure.ResponseDataSchema.parse({
-        paymentIntent: {
-          errors: [
-            {
-              code: this.error.publicCode,
-              message: this.error.publicMessage,
-            },
-          ],
-        },
-      }),
-      actions: this.transactionResult.actions,
-    };
-
-    return Response.json(typeSafeResponse, { status: this.statusCode });
+    return Response.json({
+      result: "CHARGE_FAILURE",
+      pspReference: this.pspReference,
+      amount: this.amount,
+      message: this.message,
+    }, { status: this.statusCode });
   }
 }
 

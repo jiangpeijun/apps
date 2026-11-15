@@ -41,14 +41,12 @@ export class TransactionCancelationRequestedUseCase {
     const { appId, saleorApiUrl, event } = args;
     const transaction = event.transaction;
 
-    // 👇 修复 1：Saleor 中 transaction 是可选的
     if (!transaction) {
       return err(
         new BaseError("Transaction is missing in the event") as any
       );
     }
 
-    // 👇 修复 2：从 checkout 或 order 中获取 channelId
     const channelId = transaction.checkout?.channel.id ?? transaction.order?.channel.id;
 
     if (!channelId) {
@@ -108,7 +106,6 @@ export class TransactionCancelationRequestedUseCase {
         "Adyen cancelAuthorisedPayment"
       );
 
-      // 👇 修复 3：返回正确的 Adyen Response 结构
       return ok(
         new TransactionCancelationRequestedUseCaseResponses.Success({
           pspReference,

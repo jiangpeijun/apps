@@ -1,12 +1,10 @@
+// apps/adyen/src/app/api/webhooks/saleor/transaction-initialize-session/route.ts
 import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-attributes";
 import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-attributes";
 import { compose } from "@saleor/apps-shared/compose";
 import { captureException } from "@sentry/nextjs";
 
-import {
-  MalformedRequestResponse,
-  UnhandledErrorResponse,
-} from "@/app/api/webhooks/saleor/saleor-webhook-responses";
+import { MalformedRequestResponse, UnhandledErrorResponse } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
 import { appContextContainer } from "@/lib/app-context";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
@@ -14,10 +12,7 @@ import { loggerContext, withLoggerContext } from "@/lib/logger-context";
 import { setObservabilitySaleorApiUrl } from "@/lib/observability-saleor-api-url";
 import { setObservabilitySourceObjectId } from "@/lib/observability-source-object-id";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
-import { createAdyenProblemReporter } from "@/modules/app-problems";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
-import { transactionRecorder } from "@/modules/transactions-recording/repositories/transaction-recorder-impl";
 
 import { withRecipientVerification } from "../with-recipient-verification";
 import { TransactionInitializeSessionUseCase } from "./use-case";
@@ -25,8 +20,6 @@ import { transactionInitializeSessionWebhookDefinition } from "./webhook-definit
 
 const useCase = new TransactionInitializeSessionUseCase({
   appConfigRepo: appConfigRepoImpl,
-  adyenPaymentIntentsApiFactory: new AdyenPaymentIntentsApiFactory(),
-  transactionRecorder: transactionRecorder,
 });
 
 const logger = createLogger("TRANSACTION_INITIALIZE_SESSION route");
@@ -51,7 +44,6 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
           appContextContainer.getContextValue(),
           saleorApiUrlResult.error,
         );
-
         return response.getResponse();
       }
 
@@ -61,32 +53,24 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
         captureException(new Error("No schema version provided"));
         const response = new MalformedRequestResponse(
           appContextContainer.getContextValue(),
-          new BaseError("No schema version provided", {
-            props: { _internalName: "TransactionInitializeSession.NoSchemaVersion" as const },
-          }),
+          new BaseError("No schema version provided"),
         );
-
         return response.getResponse();
       }
-
-      const problemReporter = createAdyenProblemReporter(ctx.authData);
 
       const result = await useCase.execute({
         appId: ctx.authData.appId,
         saleorApiUrl: saleorApiUrlResult.value,
         event: ctx.payload,
-        saleorSchemaVersion: ctx.schemaVersion,
-        problemReporter,
+        token: ctx.authData.token,
       });
 
       return result.match(
         (result) => {
           logger.info("Successfully processed webhook request", {
             httpsStatusCode: result.statusCode,
-            resolvedEvent: result.transactionResult.result,
-            // todo: would be good to print adyenEnv here as well, but it's not available
+            pspReference: "pspReference" in result ? result.pspReference : undefined,
           });
-
           return result.getResponse();
         },
         (err) => {
@@ -94,7 +78,6 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
             httpsStatusCode: err.statusCode,
             reason: err.message,
           });
-
           return err.getResponse();
         },
       );
@@ -106,7 +89,6 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
         appContextContainer.getContextValue(),
         BaseError.normalize(error),
       );
-
       return response.getResponse();
     }
   }),

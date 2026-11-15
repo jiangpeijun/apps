@@ -1,3 +1,4 @@
+// apps\adyen\src\app\api\webhooks\saleor\transaction-initialize-session\payment-method-resolver.ts
 import { assertUnreachable } from "@/lib/assert-unreachable";
 import { ApplePayPaymentMethod } from "@/modules/adyen/payment-methods/apple-pay";
 import { CardPaymentMethod } from "@/modules/adyen/payment-methods/card";

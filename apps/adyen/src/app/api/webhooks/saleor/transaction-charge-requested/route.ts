@@ -1,3 +1,4 @@
+// apps/adyen/src/app/api/webhooks/saleor/transaction-charge-requested/route.ts
 import { ObservabilityAttributes } from "@saleor/apps-otel/src/observability-attributes";
 import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-attributes";
 import { compose } from "@saleor/apps-shared/compose";
@@ -14,9 +15,7 @@ import { loggerContext, withLoggerContext } from "@/lib/logger-context";
 import { setObservabilitySaleorApiUrl } from "@/lib/observability-saleor-api-url";
 import { setObservabilitySourceObjectId } from "@/lib/observability-source-object-id";
 import { appConfigRepoImpl } from "@/modules/app-config/repositories/app-config-repo-impl";
-import { createAdyenProblemReporter } from "@/modules/app-problems";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { AdyenPaymentIntentsApiFactory } from "@/modules/adyen/adyen-payment-intents-api-factory";
 
 import { withRecipientVerification } from "../with-recipient-verification";
 import { TransactionChargeRequestedUseCase } from "./use-case";
@@ -24,7 +23,6 @@ import { transactionChargeRequestedWebhookDefinition } from "./webhook-definitio
 
 const useCase = new TransactionChargeRequestedUseCase({
   appConfigRepo: appConfigRepoImpl,
-  adyenPaymentIntentsApiFactory: new AdyenPaymentIntentsApiFactory(),
 });
 
 const logger = createLogger("TRANSACTION_CHARGE_REQUESTED route");
@@ -42,11 +40,6 @@ const handler = transactionChargeRequestedWebhookDefinition.createHandler(
         ctx.payload.transaction?.pspReference ?? null,
       );
 
-      loggerContext.set(
-        ObservabilityAttributes.TRANSACTION_AMOUNT,
-        ctx.payload.action.amount ?? null,
-      );
-
       logger.info("Received webhook request");
 
       const saleorApiUrlResult = createSaleorApiUrl(ctx.authData.saleorApiUrl);
@@ -57,29 +50,23 @@ const handler = transactionChargeRequestedWebhookDefinition.createHandler(
           appContextContainer.getContextValue(),
           saleorApiUrlResult.error,
         );
-
         return response.getResponse();
       }
 
       setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
 
-      const problemReporter = createAdyenProblemReporter(ctx.authData);
-
       const result = await useCase.execute({
         appId: ctx.authData.appId,
         saleorApiUrl: saleorApiUrlResult.value,
         event: ctx.payload,
-        problemReporter,
       });
 
       return result.match(
         (result) => {
           logger.info("Successfully processed webhook request", {
             httpsStatusCode: result.statusCode,
-            adyenEnv: result.appContext.adyenEnv,
-            transactionResult: result.transactionResult.result,
+            pspReference: result.pspReference,
           });
-
           return result.getResponse();
         },
         (err) => {
@@ -87,19 +74,15 @@ const handler = transactionChargeRequestedWebhookDefinition.createHandler(
             httpsStatusCode: err.statusCode,
             reason: err.message,
           });
-
           return err.getResponse();
         },
       );
     } catch (error) {
       captureException(error);
-      logger.error("Unhandled error", { error: error });
-
       const response = new UnhandledErrorResponse(
         appContextContainer.getContextValue(),
         BaseError.normalize(error),
       );
-
       return response.getResponse();
     }
   }),
