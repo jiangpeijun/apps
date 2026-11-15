@@ -49,7 +49,6 @@ export class PaymentGatewayInitializeSessionUseCase {
     });
 
     if (adyenConfigForThisChannel.isOk()) {
-      // 👇 修复1：从 clientKey 取，而不是 publishableKey
       const clientKey = adyenConfigForThisChannel.value?.clientKey;
 
       if (!clientKey) {
@@ -65,7 +64,6 @@ export class PaymentGatewayInitializeSessionUseCase {
         );
       }
 
-      // 👇 修复2：直接使用 environment，而不是调用不存在的方法
       appContextContainer.set({
         adyenEnv: adyenConfigForThisChannel.value.environment === "live" ? "LIVE" : "TEST",
       });
@@ -73,7 +71,7 @@ export class PaymentGatewayInitializeSessionUseCase {
       return ok(
         new PaymentGatewayInitializeSessionUseCaseResponses.Success({
           clientKey: clientKey, // 👈 改为 clientKey
-          environment: adyenConfigForThisChannel.value.environment, // 👈 顺便把环境传过去
+          environment: adyenConfigForThisChannel.value.environment,
           appContext: appContextContainer.getContextValue(),
         }),
       );

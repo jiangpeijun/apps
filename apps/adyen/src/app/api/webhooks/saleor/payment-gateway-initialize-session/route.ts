@@ -1,3 +1,4 @@
+// apps\adyen\src\app\api\webhooks\saleor\payment-gateway-initialize-session\route.ts
 import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-attributes";
 import { compose } from "@saleor/apps-shared/compose";
 import { captureException } from "@sentry/nextjs";

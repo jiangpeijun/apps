@@ -1,3 +1,4 @@
+// apps\adyen\src\app\api\webhooks\saleor\transaction-cancelation-requested\webhook-definition.ts
 import { SaleorSyncWebhook } from "@saleor/app-sdk/handlers/next-app-router";
 
 import {
