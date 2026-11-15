@@ -1,11 +1,10 @@
 {
   "extends": "@saleor/typescript-config-apps/base.json",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@/generated/*": ["generated/*"],
-      "@/package.json": ["package.json"]
+      "@/generated/*": ["./generated/*"],
+      "@/package.json": ["./package.json"]
     },
     "plugins": [
       {
