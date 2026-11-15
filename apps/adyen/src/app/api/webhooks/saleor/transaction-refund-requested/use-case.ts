@@ -71,11 +71,13 @@ export class TransactionRefundRequestedUseCase {
     });
 
     const pspReference = transaction.pspReference;
-    const saleorAmount = event.action.amount.amount;
+    
+    const saleorAmount = event.action.amount;
+    const saleorCurrency = event.action.currency;
     
     const adyenAmount = resolveAdyenAmount({
       amount: saleorAmount,
-      currency: event.action.amount.currency,
+      currency: saleorCurrency,
     });
 
     try {
