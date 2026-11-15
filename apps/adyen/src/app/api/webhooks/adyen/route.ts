@@ -1,9 +1,39 @@
+// apps/adyen/src/app/api/webhooks/adyen/route.ts
 import { hmacValidator } from "@adyen/api-library";
 import { env } from "@/lib/env";
 
+// 1. 定义 Adyen 的 Body 结构，解决 unknown 报错
+interface AdyenWebhookBody {
+  notificationItems: Array<{
+    NotificationRequestItem: {
+      eventCode: string;
+      merchantAccountCode: string;
+      merchantReference: string;
+      pspReference: string;
+      success: string;
+      amount: {
+        currency: string;
+        value: number;
+      };
+      additionalData?: Record<string, string>;
+    };
+  }>;
+}
+
+// 2. 定义 Saleor 的响应结构，解决 json unknown 报错
+interface SaleorGraphQLResponse {
+  errors?: Array<{ message: string }>;
+  data?: {
+    transactionEventReport?: {
+      errors?: Array<{ field: string; message: string }>;
+    };
+  };
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    // 👇 断言类型，解决 body 报错
+    const body = (await req.json()) as AdyenWebhookBody;
     const validator = new hmacValidator();
     const notificationItems = body.notificationItems || [];
 
@@ -11,22 +41,19 @@ export async function POST(req: Request) {
       const notification = item.NotificationRequestItem;
       if (!notification) continue;
 
-      // 1. HMAC 验签 (注意：HMAC Key 应当从你的配置库中根据 merchantAccountCode 动态获取)
-      // 这里为了演示，假设所有 Merchant Account 共用环境变量里的 Key
-      const hmacKey = process.env.ADYEN_HMAC_KEY || ""; 
+      // 使用 env 获取 HMAC Key
+      const hmacKey = env.ADYEN_HMAC_KEY || "";
       const isValid = validator.validateHMAC(notification, hmacKey);
 
       if (!isValid) {
         console.warn("⚠️ Adyen HMAC validation failed", notification.pspReference);
-        continue; // 验签失败直接跳过
+        continue;
       }
 
-      // 2. 只处理成功的交易事件
       if (notification.success !== "true") continue;
 
-      const { eventCode, pspReference, amount, merchantReference } = notification;
+      const { eventCode, pspReference, amount, merchantAccountCode } = notification;
 
-      // 3. 根据 eventCode 映射到 Saleor 的 transactionEventReport
       let saleorEventType: "CHARGE_SUCCESS" | "REFUND_SUCCESS" | "CANCEL_SUCCESS" | null = null;
 
       switch (eventCode) {
@@ -39,60 +66,63 @@ export async function POST(req: Request) {
         case "CANCELLATION":
           saleorEventType = "CANCEL_SUCCESS";
           break;
-        // 注意：CAPTURE 事件取决于你的 Adyen 账户是否开启了自动捕获
       }
 
       if (!saleorEventType) continue;
 
-      // 4. 从数据库中反查 Saleor 的 transactionId (对应 Stripe 的 transactions-recording)
-      // 如果还没实现反查逻辑，这里先 mock 一个
-      const saleorTransactionId = await getTransactionIdByPspReference(pspReference);
-      if (!saleorTransactionId) {
+      // 3. 根据 pspReference 反查交易记录
+      const transactionRecord = await getTransactionIdByPspReference(pspReference);
+      if (!transactionRecord) {
         console.error(`❌ 找不到对应的 Saleor 交易: ${pspReference}`);
         continue;
       }
 
+      // 4. TODO: 根据 merchantAccountCode 获取对应的 Saleor 配置 (API URL, Token)
+      // 实际开发中请使用你写的 getAdyenConfigByMerchantAccount
+      const saleorConfig = {
+        url: "http://localhost:8000/graphql/", 
+        token: "YOUR_SALEOR_APP_TOKEN",
+      };
+
       // 5. 调用 Saleor GraphQL 报告状态
-      await reportToSaleor({
-        transactionId: saleorTransactionId,
+      await reportToSaleor(saleorConfig, {
+        transactionId: transactionRecord.transactionId,
         pspReference,
         result: saleorEventType,
-        // 注意：Adyen 的 amount.value 是最小单位，需要转回主单位
+        // 注意：Adyen 返回的是最小单位（如 1050），需转回主单位。实际应根据币种精度处理
         amount: amount.value / 100, 
         currency: amount.currency,
       });
     }
 
-    // ⚠️ Adyen 强制要求返回纯文本 [accepted] 和 HTTP 200
     return new Response("[accepted]", {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
   } catch (error) {
     console.error("Adyen Webhook Error:", error);
-    // 即便是 500，也建议返回 accepted 防止 Adyen 无限重试导致雪崩
     return new Response("[accepted]", { status: 200 });
   }
 }
 
 // --- 辅助函数 ---
 
-async function getTransactionIdByPspReference(pspReference: string): Promise<string | null> {
-  // TODO: 实现从 DynamoDB 根据 pspReference 查询 transactionId 的逻辑
-  // 在 transaction-initialize-session 时，你应该把 { pspReference: link.id, transactionId: event.transaction.id } 存入数据库
-  return "mock-transaction-id-123"; 
+async function getTransactionIdByPspReference(pspReference: string) {
+  // TODO: 从 DynamoDB 查表。你在 transaction-initialize-session 时存入的记录
+  // 示例返回:
+  return { transactionId: "mock-transaction-id-123" }; 
 }
 
-async function reportToSaleor(params: {
-  transactionId: string;
-  pspReference: string;
-  result: string;
-  amount: number;
-  currency: string;
-}) {
-  const graphqlUrl = "http://localhost:8000/graphql/"; // 替换为你的 Saleor 地址
-  const token = "YOUR_SALEOR_APP_TOKEN"; // 从配置库或 AuthData 获取
-
+async function reportToSaleor(
+  config: { url: string; token: string },
+  params: {
+    transactionId: string;
+    pspReference: string;
+    result: string;
+    amount: number;
+    currency: string;
+  }
+) {
   const mutation = `
     mutation TransactionEventReport(
       $transactionId: ID!
@@ -113,11 +143,11 @@ async function reportToSaleor(params: {
   `;
 
   try {
-    const response = await fetch(graphqlUrl, {
+    const response = await fetch(config.url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${config.token}`,
       },
       body: JSON.stringify({
         query: mutation,
@@ -130,8 +160,10 @@ async function reportToSaleor(params: {
       }),
     });
 
-    const json = await response.json();
-    if (json.errors || json.data?.transactionEventReport?.errors?.length > 0) {
+    // 👇 断言类型，解决 json 报错
+    const json = (await response.json()) as SaleorGraphQLResponse;
+    
+    if (json.errors || (json.data?.transactionEventReport?.errors?.length ?? 0) > 0) {
       console.error("❌ Saleor 报告失败:", json);
     } else {
       console.log(`✅ Saleor 报告成功: ${params.result} for ${params.transactionId}`);

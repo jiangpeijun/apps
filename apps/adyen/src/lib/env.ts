@@ -38,6 +38,7 @@ export const env = createEnv({
     AWS_ROLE_ARN: z.string().optional(),
     APPSTORE_URL: z.string().optional(),
     APP_NAME: z.string().default("Adyen"),
+    ADYEN_HMAC_KEY: z.string().optional(),
   },
   shared: {
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -73,6 +74,7 @@ export const env = createEnv({
     AWS_ROLE_ARN: process.env.AWS_ROLE_ARN,
     APPSTORE_URL: process.env.APPSTORE_URL,
     APP_NAME: process.env.APP_NAME,
+    ADYEN_HMAC_KEY: process.env.ADYEN_HMAC_KEY,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
   onValidationError: formatEnvValidationError,
