@@ -1,3 +1,4 @@
+// apps/adyen/src/modules/app-config/repositories/dynamodb/dynamodb-app-config-repo.ts
 import { type IEncryptor } from "@saleor/apps-shared/encryptor";
 import { RotatingEncryptor } from "@saleor/apps-shared/key-rotation/rotating-encryptor";
 import {
@@ -12,7 +13,7 @@ import { env } from "@/lib/env";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { AppRootConfig } from "@/modules/app-config/domain/app-root-config";
-import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
+import { type AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import {
   type AppConfigRepo,
   AppConfigRepoError,
@@ -30,9 +31,6 @@ import {
   type DynamoDbAdyenConfigEntity,
 } from "@/modules/app-config/repositories/dynamodb/adyen-config-db-model";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { createAdyenPublishableKey } from "@/modules/adyen/adyen-publishable-key";
-import { createAdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { createAdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 
 type ConstructorParams = {
   entities: {
@@ -67,10 +65,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     this.encryptor = config.encryptor;
   }
 
-  /**
-   * Fetches twice - configs entity and mapping. These are queries. Looks like Toolbox (Dynamo?)
-   * can't batch queries
-   */
   async getRootConfig(
     access: BaseAccessPattern,
   ): Promise<Result<AppRootConfig, InstanceType<typeof BaseError>>> {
@@ -107,9 +101,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
 
       const [configs, mappings] = results;
 
-      /**
-       * For some reason types from Dynamo are unions of both entities, instead of valid types, so parsing them to get actual shapes
-       */
       const parsedConfigs =
         configs.Items?.map((item) => {
           return DynamoDbAdyenConfig.entitySchema.build(Parser).parse(item);
@@ -126,7 +117,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
             if (dynamoItem.configId) {
               record[dynamoItem.channelId] = dynamoItem.configId;
             }
-
             return record;
           },
           {} as Record<string, string>,
@@ -134,7 +124,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
         parsedConfigs.reduce(
           (record, dynamoItem) => {
             record[dynamoItem.configId] = this.mapRawDynamoConfigItemToConfigOrThrow(dynamoItem);
-
             return record;
           },
           {} as Record<string, AdyenConfig>,
@@ -144,7 +133,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
       return ok(rootConfig);
     } catch (e) {
       this.logger.error("Failed to fetch RootConfig from DynamoDB", { cause: e });
-
       return err(
         new AppConfigRepoError.FailureFetchingConfig("Error fetching RootConfig from DynamoDB", {
           cause: e,
@@ -160,7 +148,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
         configId: access.configId,
       }),
     });
-
     return query.send();
   }
 
@@ -171,43 +158,32 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
         channelId: access.channelId,
       }),
     });
-
     return query.send();
   }
 
-  private mapRawDynamoConfigItemToConfigOrThrow(item: unknown) {
+  private mapRawDynamoConfigItemToConfigOrThrow(item: unknown): AdyenConfig {
     const parsed = DynamoDbAdyenConfig.entitySchema.build(Parser).parse(item);
 
-    const configResult = AdyenConfig.create({
-      name: parsed.configName,
-      restrictedKey: createAdyenRestrictedKey(
-        this.encryptor.decrypt(parsed.adyenRk),
-      )._unsafeUnwrap(), // make it throwable
-      webhookId: parsed.adyenWhId,
+    // 借用旧字段存新数据
+    return {
       id: parsed.configId,
-      publishableKey: createAdyenPublishableKey(parsed.adyenPk)._unsafeUnwrap(), // make it throwable
-      webhookSecret: createAdyenWebhookSecret(
-        this.encryptor.decrypt(parsed.adyenWhSecret),
-      )._unsafeUnwrap(), // make it throwable
-    });
-
-    if (configResult.isErr()) {
-      // Throw and catch it below, so neverthrow can continue, to avoid too much boilerplate
-      throw new BaseError("Failed to parse config from DynamoDB", {
-        cause: configResult.error,
-      });
-    }
-
-    return configResult.value;
+      name: parsed.configName,
+      merchantAccount: parsed.adyenWhId || "", 
+      apiKeyEncrypted: this.encryptor.decrypt(parsed.adyenRk),
+      hmacKeyEncrypted: this.encryptor.decrypt(parsed.adyenWhSecret),
+      clientKey: parsed.adyenPk,
+      environment: parsed.adyenPk.startsWith("live_") ? "live" : "test",
+      storefrontUrl: process.env.APP_IFRAME_BASE_URL || "",
+      channelSlugs: [],
+      saleorApiUrl: "", 
+      token: "",
+    };
   }
 
   async getAdyenConfig(
     access: GetAdyenConfigAccessPattern,
   ): Promise<Result<AdyenConfig | null, InstanceType<typeof BaseError>>> {
     const channelId = "channelId" in access ? access.channelId : undefined;
-    /**
-     * We eventually need config id, so it's mutable. It's either provided or will be resolved later and written here
-     */
     let configId = "configId" in access ? access.configId : undefined;
 
     if (!configId && channelId) {
@@ -231,9 +207,7 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
         return err(
           new AppConfigRepoError.FailureFetchingConfig(
             "Error fetching specific config from DynamoDB",
-            {
-              cause: e,
-            },
+            { cause: e },
           ),
         );
       }
@@ -255,17 +229,13 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
       }
 
       const parsedConfig = this.mapRawDynamoConfigItemToConfigOrThrow(result.Item);
-
       return ok(parsedConfig);
     } catch (e) {
       this.logger.error("Failed to fetch config from DynamoDB", { cause: e });
-
       return err(
         new AppConfigRepoError.FailureFetchingConfig(
           "Error fetching specific config from DynamoDB",
-          {
-            cause: e,
-          },
+          { cause: e },
         ),
       );
     }
@@ -283,10 +253,10 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     try {
       const command = this.adyenConfigEntity.build(PutItemCommand).item({
         configId: config.id,
-        adyenPk: config.publishableKey,
-        adyenRk: this.encryptor.encrypt(config.restrictedKey),
-        adyenWhId: config.webhookId,
-        adyenWhSecret: this.encryptor.encrypt(config.webhookSecret),
+        adyenPk: config.clientKey, // 映射 clientKey
+        adyenRk: this.encryptor.encrypt(config.apiKeyEncrypted), // 映射加密 apiKey
+        adyenWhId: config.merchantAccount, // 映射 merchantAccount
+        adyenWhSecret: this.encryptor.encrypt(config.hmacKeyEncrypted), // 映射加密 hmacKey
         PK: DynamoDbAdyenConfig.accessPattern.getPK({ saleorApiUrl, appId }),
         SK: DynamoDbAdyenConfig.accessPattern.getSKforSpecificItem({ configId: config.id }),
         configName: config.name,
@@ -302,7 +272,6 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
       return ok(null);
     } catch (e) {
       this.logger.error("Failed to save config to DynamoDB", { cause: e });
-
       return err(
         new AppConfigRepoError.FailureSavingConfig("Failed to save config to DynamoDB", {
           cause: e,
@@ -329,19 +298,14 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
 
     try {
       const result = await command.send();
-
       this.logger.info("Updated mapping in DynamoDB", {
         dynamoHttpResponseStatusCode: result.$metadata.httpStatusCode,
         configId: data.configId,
         channelId: data.channelId,
       });
-
       return ok(null);
     } catch (e) {
-      this.logger.error("Failed to update mapping in DynamoDB", {
-        error: e,
-      });
-
+      this.logger.error("Failed to update mapping in DynamoDB", { error: e });
       return err(
         new AppConfigRepoError.FailureSavingConfig("Failed to update mapping in DynamoDB", {
           cause: e,
