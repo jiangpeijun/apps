@@ -7,11 +7,15 @@ import { createRequire } from "module";
 // 👇 动态获取当前环境下 @saleor/app-sdk 的唯一绝对物理路径
 const require = createRequire(import.meta.url);
 const appSdkPath = path.dirname(require.resolve("@saleor/app-sdk/package.json"));
+// 从环境变量读取隧道域名，.env 里定义 APP_IFRAME_BASE_URL
+const tunnelBaseUrl = process.env.APP_IFRAME_BASE_URL ?? "";
+// 提取 host，allowedDevOrigins 只需要 host，不要 https://
+const tunnelHost = tunnelBaseUrl.replace("https://", "");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // 放行 Cloudflare 域名
-  allowedDevOrigins: ["started-filters-res-only.trycloudflare.com"],
+  allowedDevOrigins: tunnelHost ? [tunnelHost] : [],
   transpilePackages: [
     "@saleor/app-sdk",
     "@saleor/apps-logger",
