@@ -3,6 +3,8 @@ import { type NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // 放行 Cloudflare 域名
+  allowedDevOrigins: ["sms-especially-oct-upgrading.trycloudflare.com"],
   transpilePackages: [
     "@saleor/apps-logger",
     "@saleor/apps-otel",

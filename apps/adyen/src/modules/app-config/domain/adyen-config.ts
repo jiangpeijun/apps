@@ -1,3 +1,5 @@
+// apps/adyen/src/modules/app-config/domain/adyen-config.ts
+
 export interface AdyenConfig {
   id: string;
   name: string;
@@ -11,3 +13,8 @@ export interface AdyenConfig {
   saleorApiUrl: string;
   token: string;
 }
+
+export type AdyenFrontendConfig = Pick<
+  AdyenConfig, 
+  "id" | "name" | "environment" | "clientKey" | "channelSlugs"
+>;

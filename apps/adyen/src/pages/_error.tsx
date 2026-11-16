@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\pages\_error.tsx
 import * as Sentry from "@sentry/nextjs";
 import type { NextPage } from "next";
 import type { ErrorProps } from "next/error";

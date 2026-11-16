@@ -1,20 +1,10 @@
+// apps/adyen/src/modules/app-config/trpc-handlers/new-adyen-config-input-schema.ts
 import { z } from "zod";
 
-import {
-  keysShareEnvironment,
-  MIXED_KEY_ENVIRONMENTS_MESSAGE,
-  adyenPublishableKeyInputSchema,
-  adyenRestrictedKeyInputSchema,
-} from "@/modules/app-config/trpc-handlers/adyen-key-input-schemas";
-
-export const newAdyenConfigInputSchema = z
-  .object({
-    name: z.string().min(1),
-    publishableKey: adyenPublishableKeyInputSchema,
-    restrictedKey: adyenRestrictedKeyInputSchema,
-  })
-  .refine(keysShareEnvironment, {
-    message: MIXED_KEY_ENVIRONMENTS_MESSAGE,
-  });
-
-export type NewAdyenConfigInput = z.infer<typeof newAdyenConfigInputSchema>;
+export const newAdyenConfigInputSchema = z.object({
+  name: z.string().min(1, "Configuration name is required"),
+  merchantAccount: z.string().min(1, "Merchant Account is required"),
+  apiKey: z.string().min(1, "API Key is required"),
+  clientKey: z.string().min(1, "Client Key is required"),
+  hmacKey: z.string().min(1, "HMAC Key is required"),
+});

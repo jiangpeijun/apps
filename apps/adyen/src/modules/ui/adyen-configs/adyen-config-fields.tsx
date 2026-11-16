@@ -1,101 +1,65 @@
+// apps/adyen/src/modules/ui/adyen-configs/adyen-config-fields.tsx
 import { Box, Text } from "@saleor/macaw-ui";
 import { Input } from "@saleor/react-hook-form-macaw";
-import { type ReactNode } from "react";
 import { type Control, type FieldErrors } from "react-hook-form";
-
-import { KeyPrefix } from "../key-prefix";
 
 export type AdyenConfigFormShape = {
   name: string;
-  publishableKey: string;
-  restrictedKey: string;
+  merchantAccount: string;
+  apiKey: string;
+  clientKey: string;
+  hmacKey: string;
 };
-
-/**
- * Required fields carry no mark. Optional ones append secondary “(optional)” — same pattern as
- * Dashboard settings forms (asterisks are not used).
- */
-const FieldLabel = ({ labelText, optional = false }: { labelText: string; optional?: boolean }) => (
-  <Text size={2} color="default2" as="span">
-    {optional ? `${labelText} (optional)` : labelText}
-  </Text>
-);
-
-/**
- * Hint that opens with the field name so the copy still reads when skimmed alone.
- * The term stays the same weight as the rest of the hint — emphasis belongs on values the
- * merchant must recognize while pasting (key prefixes, masked tails), not on restating the label.
- */
-export const FieldHint = ({ term, children }: { term: string; children: ReactNode }) => (
-  <Text size={2} color="default2">
-    {term} {children}
-  </Text>
-);
 
 type Props = {
   control: Control<AdyenConfigFormShape>;
   errors: FieldErrors<AdyenConfigFormShape>;
   disabled?: boolean;
-  /**
-   * Editing an existing configuration cannot prefill the restricted key - only its last
-   * characters ever reach the browser - so there the field is optional and empty means "keep the
-   * saved key".
-   */
-  restrictedKey?: {
-    optional?: boolean;
-    helperText?: ReactNode;
-  };
 };
 
-export const AdyenConfigFields = ({
-  control,
-  errors,
-  disabled = false,
-  restrictedKey = {},
-}: Props) => (
+export const AdyenConfigFields = ({ control, errors, disabled = false }: Props) => (
   <Box display="flex" flexDirection="column" gap={6}>
     <Input
-      label={<FieldLabel labelText="Configuration name" />}
+      label={<Text size={2}>Configuration name</Text>}
       name="name"
       control={control}
       disabled={disabled}
-      helperText={
-        errors.name?.message ??
-        "Configuration name is shown in Saleor only, for example “Live” or “UK Live”."
-      }
+      helperText={errors.name?.message ?? "For example “Live” or “UK Live”."}
       error={!!errors.name}
     />
     <Input
-      label={<FieldLabel labelText="Publishable key" />}
-      name="publishableKey"
+      label={<Text size={2}>Merchant Account</Text>}
+      name="merchantAccount"
       control={control}
       disabled={disabled}
-      helperText={
-        errors.publishableKey?.message ?? (
-          <FieldHint term="Publishable key">
-            generated in Adyen Dashboard (starting with <KeyPrefix size={2}>pk_live</KeyPrefix> or{" "}
-            <KeyPrefix size={2}>pk_test</KeyPrefix>).
-          </FieldHint>
-        )
-      }
-      error={!!errors.publishableKey}
+      helperText={errors.merchantAccount?.message ?? "Found in your Adyen Customer Area."}
+      error={!!errors.merchantAccount}
     />
     <Input
-      label={<FieldLabel labelText="Restricted key" optional={restrictedKey.optional} />}
-      name="restrictedKey"
+      label={<Text size={2}>API Key</Text>}
+      name="apiKey"
       control={control}
       type="password"
       disabled={disabled}
-      helperText={
-        errors.restrictedKey?.message ??
-        restrictedKey.helperText ?? (
-          <FieldHint term="Restricted key">
-            generated in Adyen Dashboard (starting with <KeyPrefix size={2}>rk_live</KeyPrefix> or{" "}
-            <KeyPrefix size={2}>rk_test</KeyPrefix>). Not the secret key.
-          </FieldHint>
-        )
-      }
-      error={!!errors.restrictedKey}
+      helperText={errors.apiKey?.message ?? "Generate in Developers > API credentials > Web service user."}
+      error={!!errors.apiKey}
+    />
+    <Input
+      label={<Text size={2}>Client Key</Text>}
+      name="clientKey"
+      control={control}
+      disabled={disabled}
+      helperText={errors.clientKey?.message ?? "Used for the frontend Drop-in. Starts with test_ or live_."}
+      error={!!errors.clientKey}
+    />
+    <Input
+      label={<Text size={2}>HMAC Key</Text>}
+      name="hmacKey"
+      control={control}
+      type="password"
+      disabled={disabled}
+      helperText={errors.hmacKey?.message ?? "Used for webhook verification. Hex string."}
+      error={!!errors.hmacKey}
     />
   </Box>
 );

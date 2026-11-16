@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\pages\config\index.tsx
 import { ParkedSetupChecklist } from "@saleor/apps-ui-next";
 import { type NextPage } from "next";
 import { useMemo } from "react";

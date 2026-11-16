@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\pages\index.tsx
 import { useAppBridge } from "@saleor/app-sdk/app-bridge";
 import { isInIframe } from "@saleor/apps-shared/is-in-iframe";
 import { type NextPage } from "next";

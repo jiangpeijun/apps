@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\instrumentation-client.ts
 import * as Sentry from "@sentry/nextjs";
 
 import { env } from "@/lib/env";

@@ -1,41 +1,21 @@
-import { captureException } from "@sentry/nextjs";
+// apps/adyen/src/modules/app-config/trpc-handlers/new-adyen-config-trpc-handler.ts
 import { TRPCError } from "@trpc/server";
+import { captureException } from "@sentry/nextjs";
 
 import { BaseError } from "@/lib/errors";
 import { RandomId } from "@/lib/random-id";
-import { AdyenConfig } from "@/modules/app-config/domain/adyen-config";
 import { newAdyenConfigInputSchema } from "@/modules/app-config/trpc-handlers/new-adyen-config-input-schema";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { AdyenAuthValidator } from "@/modules/adyen/adyen-auth-validator";
-import { AdyenClient } from "@/modules/adyen/adyen-client";
-import { type AdyenRestrictedKey } from "@/modules/adyen/adyen-restricted-key";
-import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
-import { createAdyenWebhookSecret } from "@/modules/adyen/adyen-webhook-secret";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
+import { type AdyenConfig } from "../domain/adyen-config";
 
 export class NewAdyenConfigTrpcHandler {
   baseProcedure = protectedClientProcedure;
-  private readonly webhookManager = new AdyenWebhookManager();
-
-  constructor(deps: { webhookManager: AdyenWebhookManager }) {
-    this.webhookManager = deps.webhookManager;
-  }
-
-  private validateRk(rk: AdyenRestrictedKey) {
-    const validator = AdyenAuthValidator.createFromClient(
-      AdyenClient.createFromRestrictedKey(rk),
-    );
-
-    return validator.validateAdyenAuth();
-  }
 
   getTrpcProcedure() {
     return this.baseProcedure.input(newAdyenConfigInputSchema).mutation(async ({ input, ctx }) => {
       const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
 
-      /**
-       * TODO: Extract such logic to be shared between handlers
-       */
       if (saleorApiUrl.isErr()) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -45,7 +25,6 @@ export class NewAdyenConfigTrpcHandler {
 
       if (!ctx.appUrl) {
         captureException(new BaseError("Missing appUrl in TRPC request"));
-
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Something went wrong, please contact support.",
@@ -54,117 +33,29 @@ export class NewAdyenConfigTrpcHandler {
 
       const configId = new RandomId().generate();
 
-      /**
-       * Create model just to validate
-       */
-      const configValidation = AdyenConfig.create({
-        publishableKey: input.publishableKey,
-        restrictedKey: input.restrictedKey,
+      // 直接构造符合 AdyenConfig interface 的对象
+      const configToSave: AdyenConfig = {
+        id: configId,
         name: input.name,
-        id: configId,
-        /**
-         * Is passed later after webhook is created
-         * If we find this not elegant, we need to create "Partial" config model + final config model
-         * Or move validation to separate logic
-         */
-        webhookSecret: createAdyenWebhookSecret("whsec_TODO")._unsafeUnwrap(),
-        webhookId: "wh_TODO",
-      });
-
-      // TODO: Handle exact reasons, give good messages
-      if (configValidation.isErr()) {
-        captureException(
-          new BaseError(
-            "Handler validation triggered outside of input validation. This means input validation is leaky.",
-          ),
-        );
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Failed to create Adyen configuration: ${configValidation.error.message}`,
-        });
-      }
-
-      const rkValidationResult = await this.validateRk(input.restrictedKey);
-
-      if (rkValidationResult.isErr()) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Failed to create Adyen configuration. Restricted key is invalid",
-        });
-      }
-
-      const webhookCreationResult = await this.webhookManager.createWebhook(
-        {
-          name: configValidation.value.name,
-          restrictedKey: configValidation.value.restrictedKey,
-          publishableKey: configValidation.value.publishableKey,
-          configurationId: configId,
-        },
-        {
-          saleorApiUrl: saleorApiUrl.value,
-          appUrl: ctx.appUrl,
-          appId: ctx.appId,
-        },
-      );
-
-      if (webhookCreationResult.isErr()) {
-        // todo map errors
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "Failed to create Adyen webhook. Please validate your credentials or contact support.",
-        });
-      }
-
-      const { secret: rawAdyenWebhookSecret, id: adyenWebhookId } = webhookCreationResult.value;
-
-      const adyenWebhookSecretVo = createAdyenWebhookSecret(rawAdyenWebhookSecret);
-
-      if (adyenWebhookSecretVo.isErr()) {
-        captureException(
-          new BaseError("Secret from Adyen doesnt match expected format", {
-            cause: adyenWebhookSecretVo.error,
-          }),
-        );
-
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create Adyen webhook. Secret is invalid. Please contact support.",
-        });
-      }
-
-      const configToSave = AdyenConfig.create({
-        name: configValidation.value.name,
-        restrictedKey: configValidation.value.restrictedKey,
-        publishableKey: configValidation.value.publishableKey,
-        id: configId,
-        webhookSecret: adyenWebhookSecretVo.value,
-        webhookId: adyenWebhookId,
-      });
-
-      if (configToSave.isErr()) {
-        captureException(
-          new BaseError("Failed to create Adyen configuration. This should not happen", {
-            cause: configToSave.error,
-          }),
-        );
-
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to create Adyen configuration. Please contact support.",
-        });
-      }
+        merchantAccount: input.merchantAccount,
+        apiKeyEncrypted: input.apiKey, // 注意：实际生产中应使用加密服务
+        hmacKeyEncrypted: input.hmacKey, // 注意：实际生产中应使用加密服务
+        clientKey: input.clientKey,
+        environment: input.clientKey.startsWith("live_") ? "live" : "test",
+        storefrontUrl: process.env.APP_IFRAME_BASE_URL || "http://localhost:3001",
+        channelSlugs: [],
+        saleorApiUrl: ctx.saleorApiUrl,
+        token: ctx.appToken,
+      };
 
       const saveResult = await ctx.configRepo.saveAdyenConfig({
-        config: configToSave.value,
+        config: configToSave,
         saleorApiUrl: saleorApiUrl.value,
         appId: ctx.appId,
       });
 
       if (saveResult.isErr()) {
         captureException(saveResult.error);
-
-        // TODO Handle exact errors
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to create Adyen configuration. Data can't be saved.",

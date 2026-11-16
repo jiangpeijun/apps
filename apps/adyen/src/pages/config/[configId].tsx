@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\pages\config\[configId].tsx
 import {
   AppPageHeader,
   DetailPageLayout,

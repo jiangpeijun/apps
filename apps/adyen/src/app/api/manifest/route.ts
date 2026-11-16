@@ -21,29 +21,37 @@ const manifestTemplate: AppManifest = {
   permissions: ["HANDLE_PAYMENTS"],
   requiredSaleorVersion: "^3.22",
   webhooks: [
+    // {
+    //   name: "Transaction Initialize Session",
+    //   syncEvents: ["TRANSACTION_INITIALIZE_SESSION"],
+    //   query: TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION,
+    //   targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-initialize-session`, // 占位
+    // },
+    // {
+    //   name: "Transaction Process Session",
+    //   syncEvents: ["TRANSACTION_PROCESS_SESSION"],
+    //   query: TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
+    //   targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-process-session`, // 占位
+    // },
+    // {
+    //   name: "Transaction Refund Requested",
+    //   syncEvents: ["TRANSACTION_REFUND_REQUESTED"],
+    //   query: TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION,
+    //   targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-refund-requested`, // 占位
+    // },
+    // {
+    //   name: "Transaction Cancelation Requested",
+    //   syncEvents: ["TRANSACTION_CANCELATION_REQUESTED"],
+    //   query: TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION,
+    //   targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-cancelation-requested`, // 占位
+    // },
     {
       name: "Transaction Initialize Session",
+      asyncEvents: [], // 👈 暂时留空
       syncEvents: ["TRANSACTION_INITIALIZE_SESSION"],
-      query: TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION,
-      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-initialize-session`, // 占位
-    },
-    {
-      name: "Transaction Process Session",
-      syncEvents: ["TRANSACTION_PROCESS_SESSION"],
-      query: TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
-      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-process-session`, // 占位
-    },
-    {
-      name: "Transaction Refund Requested",
-      syncEvents: ["TRANSACTION_REFUND_REQUESTED"],
-      query: TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION,
-      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-refund-requested`, // 占位
-    },
-    {
-      name: "Transaction Cancelation Requested",
-      syncEvents: ["TRANSACTION_CANCELATION_REQUESTED"],
-      query: TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION,
-      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-cancelation-requested`, // 占位
+      query:
+        "subscription { event { ... on TransactionInitializeSession { transaction { id } } } }", // 👈 极简 query
+      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-initialize-session`,
     },
   ],
   extensions: [],

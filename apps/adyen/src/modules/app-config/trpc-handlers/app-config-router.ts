@@ -1,3 +1,4 @@
+// apps/adyen/src/modules/app-config/trpc-handlers/app-config-router.ts
 import { GetSaleorChannelsTrpcHandler } from "@/modules/app-config/trpc-handlers/get-saleor-channels-trpc-handler";
 import { GetAdyenConfigsChannelsMappingTrpcHandler } from "@/modules/app-config/trpc-handlers/get-adyen-configs-channels-mapping-trpc-handler";
 import { GetAdyenConfigsListTrpcHandler } from "@/modules/app-config/trpc-handlers/get-adyen-configs-list-trpc-handler";
@@ -11,13 +12,8 @@ import { router } from "@/modules/trpc/trpc-server";
 
 const webhookManager = new AdyenWebhookManager();
 
-/**
- * TODO Figure out end-to-end router testing (must somehow check valid jwt token)
- */
 export const appConfigRouter = router({
-  saveNewAdyenConfig: new NewAdyenConfigTrpcHandler({
-    webhookManager,
-  }).getTrpcProcedure(),
+  saveNewAdyenConfig: new NewAdyenConfigTrpcHandler().getTrpcProcedure(), 
   getAdyenConfigsList: new GetAdyenConfigsListTrpcHandler().getTrpcProcedure(),
   fetchChannels: new GetSaleorChannelsTrpcHandler({
     channelsFetcherFactory: (client) => new ChannelsFetcher(client),
