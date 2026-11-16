@@ -1,7 +1,7 @@
 // apps/adyen/src/app/api/webhooks/adyen/route.ts
 import { hmacValidator } from "@adyen/api-library";
 import { env } from "@/lib/env";
-import { getTransactionMapping } from "@/modules/adyen/transaction-recorder"; // 👈 引入查库函数
+import { getTransactionMapping } from "@/modules/adyen/transaction-recorder";
 import { createInstrumentedGraphqlClient } from "@/lib/graphql-client";
 import { TransactionEventReportDocument } from "@/generated/graphql";
 
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       const notification = item.NotificationRequestItem;
       if (!notification) continue;
 
+      // 1. HMAC 验证
       const hmacKey = env.ADYEN_HMAC_KEY || "";
       const isValid = validator.validateHMAC(notification as any, hmacKey);
 
@@ -51,23 +52,24 @@ export async function POST(req: Request) {
 
       if (!saleorEventType) continue;
 
-      // 👇 核心 1：去 DynamoDB 查真实的 transactionId 和 Saleor 配置
+      // 2. 从 DynamoDB 查出 transactionId 和 Saleor 凭据
       const transactionRecord = await getTransactionMapping(pspReference);
       if (!transactionRecord) {
         console.error(`❌ 找不到对应的 Saleor 交易: ${pspReference}`);
         continue;
       }
 
-      // 👇 核心 2：动态使用对应 Saleor 实例的 API URL 和 Token
+      // 3. 动态创建 GraphQL 客户端
       const client = createInstrumentedGraphqlClient({
         saleorApiUrl: transactionRecord.saleorApiUrl,
         token: transactionRecord.token,
       });
 
       try {
+        // 4. 向 Saleor 报告状态
         await client.mutation(TransactionEventReportDocument, {
           transactionId: transactionRecord.transactionId,
-          message: `Adyen event: ${saleorEventType}`,
+          message: `Adyen async event: ${saleorEventType}`,
           pspReference,
           type: saleorEventType,
           amount: amount.value / 100, // 转回主单位
@@ -80,12 +82,13 @@ export async function POST(req: Request) {
       }
     }
 
+    // 必须返回 [accepted] 纯文本
     return new Response("[accepted]", {
       status: 200,
       headers: { "Content-Type": "text/plain" },
     });
   } catch (error) {
-    console.error("Adyen Webhook Error:", error);
+    console.error("Adyen Webhook 解析错误:", error);
     return new Response("[accepted]", { status: 200 });
   }
 }
