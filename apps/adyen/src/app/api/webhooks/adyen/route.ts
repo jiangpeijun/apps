@@ -39,6 +39,8 @@ export async function POST(req: Request) {
         continue;
       }
 
+      // const isValid = true; // 👈 临时跳过验签，本地测试强制通过
+
       if (notification.success !== "true") continue;
 
       const { eventCode, pspReference, amount } = notification;
