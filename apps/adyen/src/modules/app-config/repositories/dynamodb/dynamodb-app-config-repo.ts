@@ -123,7 +123,19 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
         ),
         parsedConfigs.reduce(
           (record, dynamoItem) => {
-            record[dynamoItem.configId] = this.mapRawDynamoConfigItemToConfigOrThrow(dynamoItem);
+            record[dynamoItem.configId] = {
+              id: dynamoItem.configId,
+              name: dynamoItem.configName,
+              merchantAccount: dynamoItem.adyenWhId || "",
+              clientKey: dynamoItem.adyenPk || "",
+              environment: dynamoItem.adyenPk?.startsWith("live_") ? "live" : "test",
+              apiKeyEncrypted: dynamoItem.adyenRk || "",
+              hmacKeyEncrypted: dynamoItem.adyenWhSecret || "",
+              storefrontUrl: "",
+              channelSlugs: [],
+              saleorApiUrl: access.saleorApiUrl,
+              token: "",
+            };
             return record;
           },
           {} as Record<string, AdyenConfig>,
@@ -161,21 +173,25 @@ export class DynamodbAppConfigRepo implements AppConfigRepo {
     return query.send();
   }
 
-  private mapRawDynamoConfigItemToConfigOrThrow(item: unknown): AdyenConfig {
+    private mapRawDynamoConfigItemToConfigOrThrow(item: unknown): AdyenConfig {
     const parsed = DynamoDbAdyenConfig.entitySchema.build(Parser).parse(item);
 
-    // 借用旧字段存新数据
+    // 加上安全默认值，防止旧数据或者空字符串导致 startsWith 崩溃
+    const clientKey = parsed.adyenPk || "";
+    const adyenRk = parsed.adyenRk || "";
+    const adyenWhSecret = parsed.adyenWhSecret || "";
+
     return {
       id: parsed.configId,
       name: parsed.configName,
-      merchantAccount: parsed.adyenWhId || "", 
-      apiKeyEncrypted: this.encryptor.decrypt(parsed.adyenRk),
-      hmacKeyEncrypted: this.encryptor.decrypt(parsed.adyenWhSecret),
-      clientKey: parsed.adyenPk,
-      environment: parsed.adyenPk.startsWith("live_") ? "live" : "test",
+      merchantAccount: parsed.adyenWhId || "",
+      apiKeyEncrypted: adyenRk ? this.encryptor.decrypt(adyenRk) : "",
+      hmacKeyEncrypted: adyenWhSecret ? this.encryptor.decrypt(adyenWhSecret) : "",
+      clientKey: clientKey,
+      environment: clientKey.startsWith("live_") ? "live" : "test",
       storefrontUrl: process.env.APP_IFRAME_BASE_URL || "",
       channelSlugs: [],
-      saleorApiUrl: "", 
+      saleorApiUrl: "",
       token: "",
     };
   }

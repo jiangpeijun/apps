@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\modules\app-config\repositories\dynamodb\adyen-config-db-model.ts
 import { Entity, string } from "dynamodb-toolbox";
 import { item } from "dynamodb-toolbox/schema/item";
 

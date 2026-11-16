@@ -1,56 +1,17 @@
-import { captureException } from "@sentry/nextjs";
+// apps/adyen/src/modules/app-config/trpc-handlers/get-adyen-configs-list-trpc-handler.ts
 import { TRPCError } from "@trpc/server";
 
-import { type AdyenConfig, AdyenFrontendConfig } from "@/modules/app-config/domain/adyen-config";
+import { AdyenFrontendConfig } from "@/modules/app-config/domain/adyen-config";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-import { AdyenWebhookManager } from "@/modules/adyen/adyen-webhook-manager";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
-// todo test
 export class GetAdyenConfigsListTrpcHandler {
   baseProcedure = protectedClientProcedure;
-
-  webhookManager: AdyenWebhookManager;
-
-  constructor(
-    deps: { webhookManager: AdyenWebhookManager } = {
-      webhookManager: new AdyenWebhookManager(),
-    },
-  ) {
-    this.webhookManager = deps.webhookManager;
-  }
-
-  private getFrontendConfigWithWebhookStatus = async (
-    config: AdyenConfig,
-  ): Promise<AdyenFrontendConfig> => {
-    const webhookResult = await this.webhookManager.getWebhook({
-      webhookId: config.webhookId,
-      restrictedKey: config.restrictedKey,
-    });
-
-    const frontendConfig = AdyenFrontendConfig.createFromAdyenConfig(config);
-
-    if (webhookResult.isErr()) {
-      frontendConfig.webhookStatus = "missing";
-    }
-
-    if (webhookResult.isOk()) {
-      const isActive = webhookResult.value.status === "enabled";
-
-      frontendConfig.webhookStatus = isActive ? "active" : "disabled";
-    }
-
-    return frontendConfig;
-  };
 
   getTrpcProcedure() {
     return this.baseProcedure.query(async ({ ctx }) => {
       const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
 
-      /**
-       * TODO: Extract such logic to be shared between handlers
-       * TODO CTX should have already created SaleorApiUrl instance, not Result
-       */
       if (saleorApiUrl.isErr()) {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -70,14 +31,40 @@ export class GetAdyenConfigsListTrpcHandler {
         });
       }
 
-      const configsList = config.value.getAllConfigsAsList();
-      const mappedPromises = configsList.map(this.getFrontendConfigWithWebhookStatus);
-      const results = await Promise.all(mappedPromises).catch((e) => {
-        captureException(e);
+      const rootConfig = config.value as any;
+      
+      let mapping: Record<string, string> = {};
+      let configsMap: Record<string, any> = {};
+      
+      for (const key of Object.keys(rootConfig)) {
+        const val = rootConfig[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+           if (Object.values(val).every(v => typeof v === 'string')) {
+             mapping = val;
+           } else {
+             configsMap = val;
+           }
+        }
+      }
+      
+      if (Object.keys(mapping).length === 0) mapping = rootConfig.channelConfigMapping || {};
+      if (Object.keys(configsMap).length === 0) configsMap = rootConfig.adyenConfigsById || rootConfig.configsById || rootConfig.configs || {};
+      
+      const configsList = Object.values(configsMap);
 
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to fetch configurations, try again",
+      const results = configsList.map((configItem: any) => {
+        // 核心修复：找出绑定了该 configId 的所有 channelId
+        const assignedChannelIds = Object.entries(mapping)
+          .filter(([_, cId]) => cId === configItem.id)
+          .map(([channelId]) => channelId);
+
+        return AdyenFrontendConfig.createFromSerializedFields({
+          id: configItem.id,
+          name: configItem.name,
+          environment: configItem.environment,
+          clientKey: configItem.clientKey,
+          channelSlugs: assignedChannelIds, // 塞入已绑定的 channelIds
+          webhookStatus: "active", 
         });
       });
 

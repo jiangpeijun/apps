@@ -1,60 +1,76 @@
+// apps/adyen/src/modules/app-config/trpc-handlers/get-adyen-configs-channels-mapping-trpc-handler.ts
 import { TRPCError } from "@trpc/server";
 
-import {
-  AdyenFrontendConfig,
-  type AdyenFrontendConfigSerializedFields,
-} from "@/modules/app-config/domain/adyen-config";
+import { AdyenFrontendConfig } from "@/modules/app-config/domain/adyen-config";
 import { createSaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { protectedClientProcedure } from "@/modules/trpc/protected-client-procedure";
 
-// todo test
 export class GetAdyenConfigsChannelsMappingTrpcHandler {
   baseProcedure = protectedClientProcedure;
 
   getTrpcProcedure() {
-    return this.baseProcedure.query(
-      async ({ ctx }): Promise<Record<string, AdyenFrontendConfigSerializedFields>> => {
-        const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
+    return this.baseProcedure.query(async ({ ctx }) => {
+      const saleorApiUrl = createSaleorApiUrl(ctx.saleorApiUrl);
 
-        /**
-         * TODO: Extract such logic to be shared between handlers
-         * TODO CTX should have already created SaleorApiUrl instance, not Result
-         */
-        if (saleorApiUrl.isErr()) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Malformed request",
-          });
-        }
-
-        const config = await ctx.configRepo.getRootConfig({
-          saleorApiUrl: saleorApiUrl.value,
-          appId: ctx.appId,
+      if (saleorApiUrl.isErr()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Malformed request",
         });
+      }
 
-        if (config.isErr()) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "App failed to fetch config, please contact Saleor",
+      const configResult = await ctx.configRepo.getRootConfig({
+        saleorApiUrl: saleorApiUrl.value,
+        appId: ctx.appId,
+      });
+
+      if (configResult.isErr()) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch configurations, try again",
+        });
+      }
+
+      const rootConfig = configResult.value as any;
+      
+      // 暴力遍历获取 mapping 和 configs，防止属性名不一致
+      let mapping: Record<string, string> = {};
+      let configsMap: Record<string, any> = {};
+      
+      for (const key of Object.keys(rootConfig)) {
+        const val = rootConfig[key];
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+           // 如果里面的 value 是 string（比如 channelId -> configId），说明这是 mapping
+           if (Object.values(val).every(v => typeof v === 'string')) {
+             mapping = val;
+           } else {
+             // 否则是 configs 记录
+             configsMap = val;
+           }
+        }
+      }
+      
+      // 如果暴力遍历没找到，用旧名字兜底
+      if (Object.keys(mapping).length === 0) mapping = rootConfig.channelConfigMapping || {};
+      if (Object.keys(configsMap).length === 0) configsMap = rootConfig.adyenConfigsById || rootConfig.configsById || rootConfig.configs || {};
+
+      const result: Record<string, AdyenFrontendConfig> = {};
+      
+      for (const [channelId, configId] of Object.entries(mapping)) {
+        const config = configsMap[configId as string];
+        if (config) {
+          result[channelId] = AdyenFrontendConfig.createFromSerializedFields({
+            id: config.id,
+            name: config.name,
+            environment: config.environment,
+            clientKey: config.clientKey,
+            channelSlugs: config.channelSlugs,
+            webhookStatus: "active",
           });
         }
-
-        const mapping = config.value.chanelConfigMapping;
-        const allConfigs = config.value.adyenConfigsById;
-
-        return Object.entries(mapping).reduce(
-          (acc, [channelID, configId]) => {
-            const config = allConfigs[configId];
-
-            if (config) {
-              acc[channelID] = AdyenFrontendConfig.createFromAdyenConfig(config);
-            }
-
-            return acc;
-          },
-          {} as Record<string, AdyenFrontendConfigSerializedFields>,
-        );
-      },
-    );
+      }
+      
+      return result;
+    });
   }
 }
