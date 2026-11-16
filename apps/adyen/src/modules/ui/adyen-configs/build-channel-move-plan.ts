@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\modules\ui\adyen-configs\build-channel-move-plan.ts
 import { type ConfigChannelFragment } from "@/generated/graphql";
 import {
   AdyenFrontendConfig,

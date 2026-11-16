@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\modules\ui\adyen-configs\adyen-config-card.tsx
 import { TextLink } from "@saleor/apps-ui";
 import { Box, Button, Multiselect, Text, useTheme } from "@saleor/macaw-ui";
 import { useRouter } from "next/router";

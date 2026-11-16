@@ -9,7 +9,7 @@
     "lint:fix": "eslint --fix ."
   },
   "devDependencies": {
-    "@saleor/app-sdk": "link:../../node_modules/@saleor/app-sdk",
+    "@saleor/app-sdk": "catalog:",
     "@saleor/eslint-config-apps": "workspace:*",
     "@saleor/macaw-ui": "catalog:",
     "@saleor/typescript-config-apps": "workspace:*",
@@ -23,6 +23,7 @@
     "typescript": "5.8.2"
   },
   "peerDependencies": {
+    "@saleor/app-sdk": "catalog:",
     "@saleor/macaw-ui": "catalog:",
     "lucide-react": "catalog:",
     "next": "catalog:",

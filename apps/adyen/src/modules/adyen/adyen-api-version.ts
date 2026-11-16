@@ -1,3 +1,3 @@
-import type Adyen from "adyen";
+// apps/adyen/src/modules/adyen/adyen-api-version.ts
 
-export const ADYEN_API_VERSION: Adyen.LatestApiVersion = "2025-04-30.basil";
+export const ADYEN_API_VERSION = "2025-04-30.basil";

@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\modules\ui\adyen-configs\assign-channel-select.tsx
 import { Box, Select } from "@saleor/macaw-ui";
 
 import {

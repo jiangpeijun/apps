@@ -1,24 +1,15 @@
+// apps/adyen/src/modules/app-problems/adyen-problem-reporter.ts
 import { AppProblemsReporter } from "@saleor/app-problems";
 import { type Client } from "urql";
 
 import { createLogger } from "@/lib/logger";
-import {
-  type AdyenApiError,
-  AdyenAuthenticationError,
-  AdyenPermissionError,
-} from "@/modules/adyen/adyen-api-error";
+import { type AdyenApiError } from "@/modules/adyen/adyen-api-error";
 
 const logger = createLogger("AdyenProblemReporter");
 
 export const PROBLEM_KEYS = {
-  authFailure: (configId: string) => `adyen-auth-failure:${configId}`,
-  permissionError: (configId: string) => `adyen-permission-error:${configId}`,
-  webhookSecretMismatch: (configId: string) => `adyen-webhook-secret-mismatch:${configId}`,
+  apiFailure: (configId: string) => `adyen-api-failure:${configId}`,
   configMissing: (configId: string) => `adyen-config-missing:${configId}`,
-  legacyWebhookOrphaned: (configId: string) => `adyen-legacy-webhook-orphaned:${configId}`,
-  invalidPaymentMethod: (channelSlug: string) => `adyen-invalid-payment-method:${channelSlug}`,
-  objectFromDifferentInstallation: (configId: string) =>
-    `adyen-object-from-different-installation:${configId}`,
 } as const;
 
 export class AdyenProblemReporter {
@@ -28,113 +19,30 @@ export class AdyenProblemReporter {
     this.reporter = new AppProblemsReporter(client);
   }
 
-  async reportAuthFailure(configId: string, configName: string): Promise<void> {
+  async reportApiProblem(
+    error: AdyenApiError,
+    config: { id: string; name: string },
+  ): Promise<void> {
     const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.authFailure(configId),
+      key: PROBLEM_KEYS.apiFailure(config.id),
       criticalThreshold: 1,
-      message: `Adyen restricted key for configuration "${configName}" is invalid or expired. Payments for channels using this configuration will fail. Please update the restricted key.`,
+      message: `Adyen API error for configuration "${config.name}": ${error.message}. Please verify your Adyen credentials.`,
     });
 
     if (result.isErr()) {
-      logger.warn("Failed to report auth failure problem", { error: result.error });
-    }
-  }
-
-  async reportPermissionError(configId: string, configName: string): Promise<void> {
-    const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.permissionError(configId),
-      criticalThreshold: 1,
-      message: `Adyen restricted key for configuration "${configName}" lacks required permissions. Payments for channels using this configuration will fail. Please verify the key has the necessary Adyen permissions.`,
-    });
-
-    if (result.isErr()) {
-      logger.warn("Failed to report permission error problem", { error: result.error });
-    }
-  }
-
-  async reportWebhookSecretMismatch(configId: string, configName: string): Promise<void> {
-    const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.webhookSecretMismatch(configId),
-      criticalThreshold: 1,
-      message: `Webhook signature verification failed for configuration "${configName}". Payment status updates from Adyen are not being processed. The webhook secret may have been rotated in Adyen. Please recreate the configuration.`,
-    });
-
-    if (result.isErr()) {
-      logger.warn("Failed to report webhook secret mismatch problem", { error: result.error });
-    }
-  }
-
-  async reportConfigMissing(configId: string): Promise<void> {
-    const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.configMissing(configId),
-      criticalThreshold: 1,
-      message: `Adyen is sending webhook events for configuration "${configId}" but no matching configuration was found. The configuration may have been deleted while the Adyen webhook endpoint is still active. Please remove the orphaned webhook in your Adyen Dashboard.`,
-    });
-
-    if (result.isErr()) {
-      logger.warn("Failed to report config missing problem", { error: result.error });
-    }
-  }
-
-  async reportLegacyWebhookOrphaned(configId: string): Promise<void> {
-    const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.legacyWebhookOrphaned(configId),
-      aggregationPeriod: 24 * 60,
-      message: `Adyen is sending webhook events for configuration "${configId}" from a previous app installation. The app can't remove this webhook because the old configuration no longer exists. Please remove the orphaned webhook in your Adyen Dashboard.`,
-    });
-
-    if (result.isErr()) {
-      logger.warn("Failed to report legacy webhook orphaned problem", { error: result.error });
-    }
-  }
-
-  async reportInvalidPaymentMethod(channelSlug: string) {
-    const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.invalidPaymentMethod(channelSlug),
-      message: `Storefront is using Payment Method that is not supported. Verify app docs and disable not supported payment methods in Adyen. Channel: ${channelSlug}`,
-    });
-
-    if (result.isErr()) {
-      logger.warn("Failed to report invalid payment method problem", { error: result.error });
-    }
-  }
-
-  async reportObjectFromDifferentInstallation(configId: string, configName: string): Promise<void> {
-    const result = await this.reporter.reportProblem({
-      key: PROBLEM_KEYS.objectFromDifferentInstallation(configId),
-      message: `Adyen is sending webhook events for payments created by a different Saleor environment to configuration "${configName}". These events are ignored. This happens when multiple Saleor environments use the same Adyen account in the same mode (test or live). Use a separate Adyen account or sandbox for each environment.`,
-    });
-
-    if (result.isErr()) {
-      logger.warn("Failed to report object from different installation problem", {
-        error: result.error,
-      });
+      logger.warn("Failed to report API problem", { error: result.error });
     }
   }
 
   async clearProblemsForConfig(configId: string): Promise<void> {
     const keys = [
-      PROBLEM_KEYS.authFailure(configId),
-      PROBLEM_KEYS.permissionError(configId),
-      PROBLEM_KEYS.webhookSecretMismatch(configId),
+      PROBLEM_KEYS.apiFailure(configId),
       PROBLEM_KEYS.configMissing(configId),
-      PROBLEM_KEYS.objectFromDifferentInstallation(configId),
     ];
     const result = await this.reporter.clearProblems(keys);
 
     if (result.isErr()) {
       logger.warn("Failed to clear problems for config", { error: result.error, configId });
-    }
-  }
-
-  async reportApiProblem(
-    error: AdyenApiError,
-    config: { id: string; name: string },
-  ): Promise<void> {
-    if (error instanceof AdyenAuthenticationError) {
-      await this.reportAuthFailure(config.id, config.name);
-    } else if (error instanceof AdyenPermissionError) {
-      await this.reportPermissionError(config.id, config.name);
     }
   }
 }
