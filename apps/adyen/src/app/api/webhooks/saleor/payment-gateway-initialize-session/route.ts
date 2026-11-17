@@ -1,4 +1,4 @@
-// apps\adyen\src\app\api\webhooks\saleor\payment-gateway-initialize-session\route.ts
+// apps/adyen/src/app/api/webhooks/saleor/payment-gateway-initialize-session/route.ts
 import { withSpanAttributesAppRouter } from "@saleor/apps-otel/src/with-span-attributes";
 import { compose } from "@saleor/apps-shared/compose";
 import { captureException } from "@sentry/nextjs";
@@ -48,10 +48,12 @@ const handler = paymentGatewayInitializeSessionWebhookDefinition.createHandler(
 
       setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
 
+      // ✅ 必须传入 event: ctx.payload
       const result = await useCase.execute({
         channelId: ctx.payload.sourceObject.channel.id,
         appId: ctx.authData.appId,
         saleorApiUrl: saleorApiUrlResult.value,
+        event: ctx.payload, 
       });
 
       return result.match(

@@ -1,30 +1,18 @@
 // apps/adyen/src/app/api/webhooks/saleor/payment-gateway-initialize-session/use-case.ts
 import { err, ok, type Result } from "neverthrow";
-
-import {
-  AppIsNotConfiguredResponse,
-  BrokenAppResponse,
-} from "@/app/api/webhooks/saleor/saleor-webhook-responses";
+import { AppIsNotConfiguredResponse, BrokenAppResponse } from "@/app/api/webhooks/saleor/saleor-webhook-responses";
 import { appContextContainer } from "@/lib/app-context";
 import { BaseError } from "@/lib/errors";
 import { createLogger } from "@/lib/logger";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
-
-import {
-  PaymentGatewayInitializeSessionUseCaseResponses,
-  type PaymentGatewayInitializeSessionUseCaseResponsesType,
-} from "./use-case-response";
+import { createAdyenClient } from "@/modules/adyen/adyen-client";
+import { resolveAdyenAmount } from "@/modules/adyen/adyen-money";
+import { PaymentGatewayInitializeSessionUseCaseResponses, type PaymentGatewayInitializeSessionUseCaseResponsesType } from "./use-case-response";
 
 export class PaymentGatewayInitializeSessionUseCase {
   private appConfigRepo: AppConfigRepo;
   private logger = createLogger("PaymentGatewayInitializeSessionUseCase");
-
-  static UseCaseError = BaseError.subclass("PaymentGatewayInitializeSessionUseCaseError", {
-    props: {
-      _internalName: "InitializeAdyenSessionUseCaseError" as const,
-    },
-  });
 
   constructor(deps: { appConfigRepo: AppConfigRepo }) {
     this.appConfigRepo = deps.appConfigRepo;
@@ -34,62 +22,60 @@ export class PaymentGatewayInitializeSessionUseCase {
     channelId: string;
     appId: string;
     saleorApiUrl: SaleorApiUrl;
-  }): Promise<
-    Result<
-      PaymentGatewayInitializeSessionUseCaseResponsesType,
-      AppIsNotConfiguredResponse | BrokenAppResponse
-    >
-  > {
-    const { channelId, appId, saleorApiUrl } = params;
+    event: any; // ctx.payload
+  }): Promise<Result<PaymentGatewayInitializeSessionUseCaseResponsesType, AppIsNotConfiguredResponse | BrokenAppResponse>> {
+    const { channelId, appId, saleorApiUrl, event } = params;
 
-    const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
-      channelId,
-      appId,
-      saleorApiUrl,
-    });
+    const adyenConfigResult = await this.appConfigRepo.getAdyenConfig({ channelId, appId, saleorApiUrl });
 
-    if (adyenConfigForThisChannel.isOk()) {
-      const clientKey = adyenConfigForThisChannel.value?.clientKey;
+    if (adyenConfigResult.isErr()) {
+      return err(new BrokenAppResponse(appContextContainer.getContextValue(), adyenConfigResult.error));
+    }
 
-      if (!clientKey) {
-        this.logger.warn("Config for channel not found", {
-          channelId,
-        });
+    const config = adyenConfigResult.value;
+    if (!config || !config.clientKey) {
+      return err(new AppIsNotConfiguredResponse(appContextContainer.getContextValue(), new BaseError("Config for channel not found")));
+    }
 
-        return err(
-          new AppIsNotConfiguredResponse(
-            appContextContainer.getContextValue(),
-            new BaseError("Config for channel not found"),
-          ),
-        );
+    appContextContainer.set({ adyenEnv: config.environment === "live" ? "LIVE" : "TEST" });
+
+    try {
+      const adyenClient = createAdyenClient({
+        apiKey: config.apiKeyEncrypted,
+        environment: config.environment,
+      });
+
+      // ⚠️ 注意：如果你已经重新执行了 pnpm generate，把这里的 as any 去掉
+      const checkout = event.sourceObject as any;
+      
+      if (!checkout || checkout.__typename !== 'Checkout') {
+        return err(new BrokenAppResponse(appContextContainer.getContextValue(), new BaseError("Invalid source object")));
       }
 
-      appContextContainer.set({
-        adyenEnv: adyenConfigForThisChannel.value.environment === "live" ? "LIVE" : "TEST",
+      const amount = resolveAdyenAmount({
+        amount: checkout.totalPrice?.gross?.amount || 0,
+        currency: checkout.totalPrice?.gross?.currency || "JPY",
+      });
+
+      // ✅ 核心修复：通过 paymentsApi 获取支付方式
+      const paymentMethodsResponse = await adyenClient.paymentsApi.paymentMethods({
+        merchantAccount: config.merchantAccount,
+        amount: amount,
+        countryCode: checkout.billingAddress?.country?.code || "JP",
+        channel: "Web" as any, // 转换 Adyen 的 channel 枚举类型
       });
 
       return ok(
         new PaymentGatewayInitializeSessionUseCaseResponses.Success({
-          clientKey: clientKey, // 👈 改为 clientKey
-          environment: adyenConfigForThisChannel.value.environment,
+          clientKey: config.clientKey,
+          environment: config.environment,
+          paymentMethodsResponse: paymentMethodsResponse,
           appContext: appContextContainer.getContextValue(),
-        }),
+        })
       );
+    } catch (error) {
+      this.logger.error("Failed to fetch Adyen payment methods", { error });
+      return err(new BrokenAppResponse(appContextContainer.getContextValue(), BaseError.normalize(error)));
     }
-
-    if (adyenConfigForThisChannel.isErr()) {
-      this.logger.error("Failed to get configuration", {
-        error: adyenConfigForThisChannel.error,
-      });
-
-      return err(
-        new BrokenAppResponse(
-          appContextContainer.getContextValue(),
-          adyenConfigForThisChannel.error,
-        ),
-      );
-    }
-
-    throw new PaymentGatewayInitializeSessionUseCase.UseCaseError("Leaky logic, should not happen");
   }
 }

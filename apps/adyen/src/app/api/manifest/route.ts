@@ -21,12 +21,12 @@ const manifestTemplate: AppManifest = {
   permissions: ["HANDLE_PAYMENTS"],
   requiredSaleorVersion: "^3.22",
   webhooks: [
-    // {
-    //   name: "Payment Gateway Initialize Session",
-    //   syncEvents: ["PAYMENT_GATEWAY_INITIALIZE_SESSION"],
-    //   query: PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION,
-    //   targetUrl: `${apiUrl}/api/webhooks/saleor/payment-gateway-initialize-session`,
-    // },
+    {
+      name: "Payment Gateway Initialize Session",
+      syncEvents: ["PAYMENT_GATEWAY_INITIALIZE_SESSION"],
+      query: PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION,
+      targetUrl: `${apiUrl}/api/webhooks/saleor/payment-gateway-initialize-session`,
+    },
     {
       name: "Transaction Initialize Session",
       asyncEvents: [],

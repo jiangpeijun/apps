@@ -1,6 +1,6 @@
 // apps/adyen/src/modules/saleor/webhook-subscriptions.ts
 
-// ✅ 1. 支付网关初始化（修复：去除 checkout，改用 sourceObject）
+// ✅ 1. 支付网关初始化（修复：currency 在 totalPrice 里面）
 export const PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION = `
   subscription PaymentGatewayInitializeSession {
     event {
@@ -8,16 +8,19 @@ export const PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION = `
         sourceObject {
           ... on Checkout {
             id
-            currency
             totalPrice {
               gross {
                 amount
+                currency
               }
             }
             billingAddress {
               country {
                 code
               }
+            }
+            channel {
+              id
             }
           }
         }
@@ -26,7 +29,7 @@ export const PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 2. 交易初始化（修复：action 内部没有 checkout 字段，改从 sourceObject 获取）
+// ✅ 2. 交易初始化（补充 sourceObject 里的 id 和 channel）
 export const TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION = `
   subscription TransactionInitializeSession {
     event {
@@ -42,6 +45,10 @@ export const TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION = `
         }
         sourceObject {
           ... on Checkout {
+            id
+            channel {
+              id
+            }
             billingAddress {
               country {
                 code
@@ -56,7 +63,7 @@ export const TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 3. 交易处理
+// ✅ 3. 交易处理（补充 sourceObject 里的 id 和 channel）
 export const TRANSACTION_PROCESS_SESSION_SUBSCRIPTION = `
   subscription TransactionProcessSession {
     event {
@@ -70,6 +77,20 @@ export const TRANSACTION_PROCESS_SESSION_SUBSCRIPTION = `
           currency
           actionType
         }
+        sourceObject {
+          ... on Checkout {
+            id
+            channel {
+              id
+            }
+          }
+          ... on Order {
+            id
+            channel {
+              id
+            }
+          }
+        }
         customerIpAddress
         data
       }
@@ -77,7 +98,7 @@ export const TRANSACTION_PROCESS_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 4. 退款请求（修复：action 里不能查 transaction，需移出）
+// 4. 退款请求
 export const TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION = `
   subscription TransactionRefundRequested {
     event {
@@ -107,7 +128,7 @@ export const TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 5. 取消请求
+// 5. 取消请求
 export const TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION = `
   subscription TransactionCancelationRequested {
     event {

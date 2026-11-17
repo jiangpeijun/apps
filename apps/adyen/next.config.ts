@@ -14,6 +14,7 @@ const tunnelHost = tunnelBaseUrl.replace("https://", "");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   // 放行 Cloudflare 域名
   allowedDevOrigins: tunnelHost ? [tunnelHost] : [],
   transpilePackages: [
