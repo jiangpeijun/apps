@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\modules\adyen\payment-methods\types.ts
 import type Adyen from "adyen";
 
 import { type ResolvedTransactionFlow } from "@/modules/resolved-transaction-flow";

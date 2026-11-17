@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\modules\adyen\payment-methods\card.ts
 import type Adyen from "adyen";
 import { z } from "zod";
 

@@ -15,24 +15,33 @@ import { RevolutPayPaymentMethod } from "@/modules/adyen/payment-methods/revolut
 import { SepaDebitPaymentMethod } from "@/modules/adyen/payment-methods/sepa-debit";
 import { USBankAccountPaymentMethod } from "@/modules/adyen/payment-methods/us-bank-account";
 
-const TransactionInitializeEventDataSchema = z
-  .object({
-    paymentIntent: z.discriminatedUnion("paymentMethod", [
-      CardPaymentMethod.TransactionInitializeSchema,
-      KlarnaPaymentMethod.TransactionInitializeSchema,
-      GooglePayPaymentMethod.TransactionInitializeSchema,
-      ApplePayPaymentMethod.TransactionInitializeSchema,
-      PayPalPaymentMethod.TransactionInitializeSchema,
-      USBankAccountPaymentMethod.TransactionInitializeSchema,
-      SepaDebitPaymentMethod.TransactionInitializeSchema,
-      LinkPaymentMethod.TransactionInitializeSchema,
-      PayByBankPaymentMethod.TransactionInitializeSchema,
-      MobilePayPaymentMethod.TransactionInitializeSchema,
-      RevolutPayPaymentMethod.TransactionInitializeSchema,
-    ]),
-  })
-  .strict()
-  .brand("TransactionInitializeRequestData");
+// const TransactionInitializeEventDataSchema = z
+//   .object({
+//     paymentIntent: z.discriminatedUnion("paymentMethod", [
+//       CardPaymentMethod.TransactionInitializeSchema,
+//       KlarnaPaymentMethod.TransactionInitializeSchema,
+//       GooglePayPaymentMethod.TransactionInitializeSchema,
+//       ApplePayPaymentMethod.TransactionInitializeSchema,
+//       PayPalPaymentMethod.TransactionInitializeSchema,
+//       USBankAccountPaymentMethod.TransactionInitializeSchema,
+//       SepaDebitPaymentMethod.TransactionInitializeSchema,
+//       LinkPaymentMethod.TransactionInitializeSchema,
+//       PayByBankPaymentMethod.TransactionInitializeSchema,
+//       MobilePayPaymentMethod.TransactionInitializeSchema,
+//       RevolutPayPaymentMethod.TransactionInitializeSchema,
+//     ]),
+//   })
+//   .strict()
+//   .brand("TransactionInitializeRequestData");
+
+// 明确定义 Drop-in 传来的数据结构
+const TransactionInitializeEventDataSchema = z.object({
+  paymentMethod: z.object({
+    type: z.string(),
+  }).passthrough(), // 允许包含 encryptedCardNumber 等加密字段
+  browserInfo: z.record(z.any()).optional(),
+  origin: z.string().optional(),
+}).passthrough();
 
 export const ParseErrorPublicCode = "ParseError" as const;
 export const UnsupportedPaymentMethodErrorPublicCode = "UnsupportedPaymentMethodError" as const;

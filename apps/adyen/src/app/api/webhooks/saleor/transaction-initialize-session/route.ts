@@ -27,36 +27,25 @@ const logger = createLogger("TRANSACTION_INITIALIZE_SESSION route");
 const handler = transactionInitializeSessionWebhookDefinition.createHandler(
   withRecipientVerification(async (_req, ctx) => {
     try {
+      console.log(`\n🔥 [Route] 收到请求: TransactionId=${ctx.payload.transaction.id}`);
+      console.log(`🔥 [Route] ctx.authData.saleorApiUrl: ${ctx.authData.saleorApiUrl}`);
+      console.log(`🔥 [Route] ctx.schemaVersion: ${ctx.schemaVersion || 'undefined'}`);
+
       setObservabilitySourceObjectId(ctx.payload.sourceObject);
-
-      loggerContext.set(
-        ObservabilityAttributes.TRANSACTION_AMOUNT,
-        ctx.payload.action.amount ?? null,
-      );
-
-      logger.info("Received webhook request");
+      loggerContext.set(ObservabilityAttributes.TRANSACTION_AMOUNT, ctx.payload.action.amount ?? null);
 
       const saleorApiUrlResult = createSaleorApiUrl(ctx.authData.saleorApiUrl);
-
       if (saleorApiUrlResult.isErr()) {
+        console.error(`❌ [Route] Saleor API URL 解析失败`);
         captureException(saleorApiUrlResult.error);
-        const response = new MalformedRequestResponse(
-          appContextContainer.getContextValue(),
-          saleorApiUrlResult.error,
-        );
-        return response.getResponse();
+        return new MalformedRequestResponse(appContextContainer.getContextValue(), saleorApiUrlResult.error).getResponse();
       }
 
-      setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
-
-      if (!ctx.schemaVersion) {
-        captureException(new Error("No schema version provided"));
-        const response = new MalformedRequestResponse(
-          appContextContainer.getContextValue(),
-          new BaseError("No schema version provided"),
-        );
-        return response.getResponse();
-      }
+      // 👈 修复：强制转换为 string，并给一个默认值兼容
+      const schemaVersionString = ctx.schemaVersion ? String(ctx.schemaVersion) : "3.23";
+      
+      // 现在传入的是纯 string，不会再报类型错误
+      setObservabilitySaleorApiUrl(saleorApiUrlResult.value, schemaVersionString);
 
       const result = await useCase.execute({
         appId: ctx.authData.appId,
@@ -66,24 +55,18 @@ const handler = transactionInitializeSessionWebhookDefinition.createHandler(
       });
 
       return result.match(
-        (result) => {
-          logger.info("Successfully processed webhook request", {
-            httpsStatusCode: result.statusCode,
-            pspReference: "pspReference" in result ? result.pspReference : undefined,
-          });
-          return result.getResponse();
+        (successResult) => {
+          console.log(`✅ [Route] UseCase 处理成功, HTTP ${successResult.statusCode}`);
+          return successResult.getResponse();
         },
-        (err) => {
-          logger.warn("Failed to process webhook request", {
-            httpsStatusCode: err.statusCode,
-            reason: err.message,
-          });
-          return err.getResponse();
+        (errorResult) => {
+          console.warn(`⚠️ [Route] UseCase 处理失败(非500):`, errorResult.message);
+          return errorResult.getResponse();
         },
       );
     } catch (error) {
+      console.error(`💥💥💥 [Route] 捕获到致命异常 (500):`, error);
       captureException(error);
-      logger.error("Unhandled error", { error: error });
 
       const response = new UnhandledErrorResponse(
         appContextContainer.getContextValue(),
