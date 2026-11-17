@@ -1,10 +1,11 @@
 // apps/adyen/src/modules/saleor/webhook-subscriptions.ts
 
-// ✅ 1. 支付网关初始化（修复：currency 在 totalPrice 里面）
+// ✅ 1. 支付网关初始化
 export const PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION = `
   subscription PaymentGatewayInitializeSession {
     event {
       ... on PaymentGatewayInitializeSession {
+        recipient { id }
         sourceObject {
           ... on Checkout {
             id
@@ -29,11 +30,12 @@ export const PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 2. 交易初始化（补充 sourceObject 里的 id 和 channel）
+// ✅ 2. 交易初始化
 export const TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION = `
   subscription TransactionInitializeSession {
     event {
       ... on TransactionInitializeSession {
+        recipient { id }
         transaction {
           id
           pspReference
@@ -63,11 +65,12 @@ export const TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 3. 交易处理（补充 sourceObject 里的 id 和 channel）
+// ✅ 3. 交易处理
 export const TRANSACTION_PROCESS_SESSION_SUBSCRIPTION = `
   subscription TransactionProcessSession {
     event {
       ... on TransactionProcessSession {
+        recipient { id }
         transaction {
           id
           pspReference
@@ -98,11 +101,12 @@ export const TRANSACTION_PROCESS_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// 4. 退款请求
+// ✅ 4. 退款请求
 export const TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION = `
   subscription TransactionRefundRequested {
     event {
       ... on TransactionRefundRequested {
+        recipient { id }
         transaction {
           id
           pspReference
@@ -128,11 +132,12 @@ export const TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION = `
   }
 `;
 
-// 5. 取消请求
+// ✅ 5. 取消请求
 export const TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION = `
   subscription TransactionCancelationRequested {
     event {
       ... on TransactionCancelationRequested {
+        recipient { id }
         transaction {
           id
           pspReference

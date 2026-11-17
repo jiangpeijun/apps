@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\app\api\webhooks\saleor\payment-gateway-initialize-session\webhook-definition.ts
 import { SaleorSyncWebhook } from "@saleor/app-sdk/handlers/next-app-router";
 
 import { verifyWebhookSignature } from "@/app/api/webhooks/saleor/verify-signature";

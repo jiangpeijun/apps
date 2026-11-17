@@ -1,3 +1,4 @@
+// apps\apps\adyen\src\app\api\webhooks\saleor\with-recipient-verification.ts
 import { type NextAppRouterSyncWebhookHandler } from "@saleor/app-sdk/handlers/next-app-router";
 import { type WebhookContext } from "@saleor/app-sdk/handlers/shared";
 import { type NextRequest } from "next/server";
