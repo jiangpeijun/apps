@@ -47,29 +47,30 @@ const handler = paymentGatewayInitializeSessionWebhookDefinition.createHandler(
       }
 
       setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
+      console.log("🔥 [route.ts] 准备调用 useCase.execute, Payload 如下:", ctx.payload);
 
-      // ✅ 必须传入 event: ctx.payload
-      const result = await useCase.execute({
-        channelId: ctx.payload.sourceObject.channel.id,
-        appId: ctx.authData.appId,
-        saleorApiUrl: saleorApiUrlResult.value,
-        event: ctx.payload, 
-      });
+      let result;
+      try {
+        result = await useCase.execute({
+          channelId: ctx.payload.sourceObject.channel.id,
+          appId: ctx.authData.appId,
+          saleorApiUrl: saleorApiUrlResult.value,
+          event: ctx.payload, 
+        });
+        console.log("🔥 [route.ts] useCase.execute 执行完毕");
+      } catch (err) {
+        console.error("💥 [route.ts] useCase.execute 直接抛出异常:", err);
+        throw err; // 抛给外层 catch
+      }
 
       return result.match(
         (result) => {
-          logger.info("Successfully processed webhook request", {
-            httpsStatusCode: result.statusCode,
-          });
-
+          logger.info("Successfully processed webhook request", { httpsStatusCode: result.statusCode });
           return result.getResponse();
         },
         (err) => {
-          logger.warn("Failed to process webhook request", {
-            httpsStatusCode: err.statusCode,
-            reason: err.message,
-          });
-
+          console.error("💥 [route.ts] useCase 返回了 Err 对象:", err);
+          logger.warn("Failed to process webhook request", { httpsStatusCode: err.statusCode, reason: err.message });
           return err.getResponse();
         },
       );

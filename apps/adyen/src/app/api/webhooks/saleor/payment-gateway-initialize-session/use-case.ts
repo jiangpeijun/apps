@@ -8,7 +8,7 @@ import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { createAdyenClient } from "@/modules/adyen/adyen-client";
 import { resolveAdyenAmount } from "@/modules/adyen/adyen-money";
-import { PaymentGatewayInitializeSessionUseCaseResponses, type PaymentGatewayInitializeSessionUseCaseResponsesType } from "./use-case-response";
+import { PaymentGatewayInitializeSessionUseCaseResponses } from "./use-case-response";
 
 export class PaymentGatewayInitializeSessionUseCase {
   private appConfigRepo: AppConfigRepo;
@@ -18,37 +18,38 @@ export class PaymentGatewayInitializeSessionUseCase {
     this.appConfigRepo = deps.appConfigRepo;
   }
 
-  async execute(params: {
-    channelId: string;
-    appId: string;
-    saleorApiUrl: SaleorApiUrl;
-    event: any; // ctx.payload
-  }): Promise<Result<PaymentGatewayInitializeSessionUseCaseResponsesType, AppIsNotConfiguredResponse | BrokenAppResponse>> {
+  async execute(params: any) {
+    // 👇 只要这个没打印，就绝对说明跑的不是这个文件！
+    console.log("🔥🔥🔥 [Adyen Init Debug] UseCase START !!", params.channelId);
+
     const { channelId, appId, saleorApiUrl, event } = params;
 
-    const adyenConfigResult = await this.appConfigRepo.getAdyenConfig({ channelId, appId, saleorApiUrl });
-
-    if (adyenConfigResult.isErr()) {
-      return err(new BrokenAppResponse(appContextContainer.getContextValue(), adyenConfigResult.error));
-    }
-
-    const config = adyenConfigResult.value;
-    if (!config || !config.clientKey) {
-      return err(new AppIsNotConfiguredResponse(appContextContainer.getContextValue(), new BaseError("Config for channel not found")));
-    }
-
-    appContextContainer.set({ adyenEnv: config.environment === "live" ? "LIVE" : "TEST" });
-
     try {
+      const adyenConfigResult = await this.appConfigRepo.getAdyenConfig({ channelId, appId, saleorApiUrl });
+      
+      console.log("🔥 [Adyen Init Debug] DB 查询结果:", adyenConfigResult);
+
+      if (adyenConfigResult.isErr()) {
+        console.error("❌ [Adyen Init Debug] DB 报错:", adyenConfigResult.error);
+        return err(new BrokenAppResponse(appContextContainer.getContextValue(), adyenConfigResult.error));
+      }
+
+      const config = adyenConfigResult.value;
+      if (!config || !config.clientKey) {
+        console.error("❌ [Adyen Init Debug] Config 为空或 clientKey 为空");
+        return err(new AppIsNotConfiguredResponse(appContextContainer.getContextValue(), new BaseError("Config not found")));
+      }
+
+      appContextContainer.set({ adyenEnv: config.environment === "live" ? "LIVE" : "TEST" });
+
       const adyenClient = createAdyenClient({
         apiKey: config.apiKeyEncrypted,
         environment: config.environment,
       });
 
-      // ⚠️ 注意：如果你已经重新执行了 pnpm generate，把这里的 as any 去掉
       const checkout = event.sourceObject as any;
-      
-      if (!checkout || checkout.__typename !== 'Checkout') {
+      if (!checkout || !checkout.totalPrice) {
+        console.error("❌ [Adyen Init Debug] sourceObject 无效:", checkout);
         return err(new BrokenAppResponse(appContextContainer.getContextValue(), new BaseError("Invalid source object")));
       }
 
@@ -57,13 +58,20 @@ export class PaymentGatewayInitializeSessionUseCase {
         currency: checkout.totalPrice?.gross?.currency || "JPY",
       });
 
-      // ✅ 核心修复：通过 paymentsApi 获取支付方式
+      console.log("🔥 [Adyen Init Debug] 准备请求 Adyen API，参数如下：", {
+        merchantAccount: config.merchantAccount,
+        amount,
+        countryCode: checkout.billingAddress?.country?.code || "JP",
+      });
+
       const paymentMethodsResponse = await adyenClient.paymentsApi.paymentMethods({
         merchantAccount: config.merchantAccount,
         amount: amount,
         countryCode: checkout.billingAddress?.country?.code || "JP",
-        channel: "Web" as any, // 转换 Adyen 的 channel 枚举类型
+        channel: "Web" as any,
       });
+
+      console.log("✅ [Adyen Init Debug] Adyen API 成功返回！");
 
       return ok(
         new PaymentGatewayInitializeSessionUseCaseResponses.Success({
@@ -73,8 +81,8 @@ export class PaymentGatewayInitializeSessionUseCase {
           appContext: appContextContainer.getContextValue(),
         })
       );
-    } catch (error) {
-      this.logger.error("Failed to fetch Adyen payment methods", { error });
+    } catch (error: any) {
+      console.error("❌ [Adyen Init Debug] Catch 到异常:", error);
       return err(new BrokenAppResponse(appContextContainer.getContextValue(), BaseError.normalize(error)));
     }
   }
