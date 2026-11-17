@@ -34,12 +34,12 @@ const manifestTemplate: AppManifest = {
       query: TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION,
       targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-initialize-session`,
     },
-    // {
-    //   name: "Transaction Process Session",
-    //   syncEvents: ["TRANSACTION_PROCESS_SESSION"],
-    //   query: TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
-    //   targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-process-session`,
-    // },
+    {
+      name: "Transaction Process Session",
+      syncEvents: ["TRANSACTION_PROCESS_SESSION"],
+      query: TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
+      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-process-session`,
+    },
     // {
     //   name: "Transaction Refund Requested",
     //   syncEvents: ["TRANSACTION_REFUND_REQUESTED"],

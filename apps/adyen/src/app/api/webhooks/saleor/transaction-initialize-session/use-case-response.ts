@@ -22,11 +22,11 @@ export class Success extends SuccessWebhookResponse {
 }
 
 export class ActionRequired extends SuccessWebhookResponse {
-  readonly pspReference: string;
+  readonly pspReference: string | undefined;
   readonly amount: number;
   readonly adyenAction: any;
 
-  constructor(args: { pspReference: string; amount: number; adyenAction: any; appContext: AppContext }) {
+  constructor(args: { pspReference: string | undefined; amount: number; adyenAction: any; appContext: AppContext }) {
     super(args.appContext);
     this.pspReference = args.pspReference;
     this.amount = args.amount;

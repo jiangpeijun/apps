@@ -30,6 +30,10 @@ const logger = createLogger("TRANSACTION_PROCESS_SESSION route");
 const handler = transactionProcessSessionWebhookDefinition.createHandler(
   withRecipientVerification(async (_req, ctx) => {
     try {
+      // 👈 使用 (ctx.payload.transaction as any) 绕过未重新生成的类型限制
+      const txId = (ctx.payload.transaction as any)?.id || "unknown";
+      console.log(`\n🔥 [ProcessSession Route] 收到请求, TxId: ${txId}`);
+
       setObservabilitySourceObjectId(ctx.payload.sourceObject);
 
       loggerContext.set(
@@ -37,11 +41,10 @@ const handler = transactionProcessSessionWebhookDefinition.createHandler(
         ctx.payload.action.amount ?? null,
       );
 
-      logger.info("Received webhook request");
-
       const saleorApiUrlResult = createSaleorApiUrl(ctx.authData.saleorApiUrl);
 
       if (saleorApiUrlResult.isErr()) {
+        console.error(`❌ [ProcessSession Route] URL 解析失败`);
         captureException(saleorApiUrlResult.error);
         const response = new MalformedRequestResponse(
           appContextContainer.getContextValue(),
@@ -50,7 +53,8 @@ const handler = transactionProcessSessionWebhookDefinition.createHandler(
         return response.getResponse();
       }
 
-      setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
+      const schemaVersionString = ctx.schemaVersion ? String(ctx.schemaVersion) : "3.23";
+      setObservabilitySaleorApiUrl(saleorApiUrlResult.value, schemaVersionString);
 
       const result = await useCase.execute({
         appId: ctx.authData.appId,
@@ -59,24 +63,18 @@ const handler = transactionProcessSessionWebhookDefinition.createHandler(
       });
 
       return result.match(
-        (result) => {
-          logger.info("Successfully processed webhook request", {
-            httpsStatusCode: result.statusCode,
-          });
-          return result.getResponse();
+        (successResult) => {
+          console.log(`✅ [ProcessSession Route] UseCase 处理成功, HTTP ${successResult.statusCode}`);
+          return successResult.getResponse();
         },
-        (err) => {
-          logger.warn("Failed to process webhook request", {
-            httpsStatusCode: err.statusCode,
-            reason: err.message,
-          });
-          return err.getResponse();
+        (errorResult) => {
+          console.warn(`⚠️ [ProcessSession Route] UseCase 处理失败(非500):`, (errorResult as any).message);
+          return errorResult.getResponse();
         },
       );
     } catch (error) {
+      console.error(`💥💥💥 [ProcessSession Route] 致命异常 (500):`, error);
       captureException(error);
-      logger.error("Unhandled error", { error: error });
-
       const response = new UnhandledErrorResponse(
         appContextContainer.getContextValue(),
         BaseError.normalize(error),

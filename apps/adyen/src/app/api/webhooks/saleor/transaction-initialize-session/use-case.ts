@@ -86,40 +86,58 @@ export class TransactionInitializeSessionUseCase {
         "Adyen payments"
       );
 
-      console.log('✅ [UseCase] Adyen API 返回, resultCode:', paymentResponse.resultCode);
+      console.log(`✅ [UseCase] Adyen API 返回, resultCode: ${paymentResponse.resultCode}`);
+      console.log(`🔥 [UseCase] 完整支付响应:`, JSON.stringify(paymentResponse, null, 2));
 
-      const pspReference = paymentResponse.pspReference;
-      if (!pspReference) {
-        throw new Error("Adyen API 没有返回 pspReference");
+      const pspReference = paymentResponse.pspReference; // 这里可能是 undefined
+      const resultCode = paymentResponse.resultCode;
+
+      // 👈 核心修复：优先处理需要 Action (3DS/重定向) 的情况
+      if (
+        resultCode === "IdentifyShopper" ||
+        resultCode === "ChallengeShopper" ||
+        resultCode === "RedirectShopper"
+      ) {
+        console.log('🔥 [UseCase] 触发 3DS/重定向验证 (ActionRequired)');
+        
+        // 如果 Adyen 没给 pspReference，我们临时用 Saleor 的 TransactionId 替代用于记录
+        const safePspRef = pspReference || `temp-${event.transaction.id}`;
+
+        // 保存映射关系
+        await saveTransactionMapping({
+          pspReference: safePspRef,
+          transactionId: event.transaction.id,
+          saleorApiUrl,
+          token,
+        });
+
+        return ok(new TransactionInitializeSessionUseCaseResponses.ActionRequired({
+          pspReference: pspReference, // 直接透传，前端和 Saleor 都能处理 undefined
+          amount: event.action.amount,
+          adyenAction: paymentResponse.action,
+          appContext: appContextContainer.getContextValue(),
+        }));
       }
 
-      // 4. 记录映射关系（如果这里失败也会被 catch 捕获）
-      console.log('🔥 [UseCase] 正在保存交易映射关系...');
+      // 👈 只有在非 ActionRequired 的情况下，才必须要求 pspReference
+      if (!pspReference) {
+        throw new Error("Adyen API 没有返回 pspReference (非 3DS 场景)");
+      }
+
+      // 记录映射关系
       await saveTransactionMapping({
         pspReference,
         transactionId: event.transaction.id,
         saleorApiUrl,
         token,
       });
-      console.log('✅ [UseCase] 映射关系保存成功');
 
-      // 5. 处理响应
-      const resultCode = paymentResponse.resultCode;
-
+      // 处理直接成功
       if (resultCode === "Authorised" || resultCode === "Received") {
+        console.log('✅ [UseCase] 支付直接成功');
         return ok(new TransactionInitializeSessionUseCaseResponses.Success({
           pspReference,
           amount: event.action.amount,
-          appContext: appContextContainer.getContextValue(),
-        }));
-      }
-
-      if (["IdentifyShopper", "ChallengeShopper", "RedirectShopper"].includes(resultCode as string)) {
-        console.log('🔥 [UseCase] 触发 3DS 验证');
-        return ok(new TransactionInitializeSessionUseCaseResponses.ActionRequired({
-          pspReference,
-          amount: event.action.amount,
-          adyenAction: paymentResponse.action,
           appContext: appContextContainer.getContextValue(),
         }));
       }
@@ -131,8 +149,7 @@ export class TransactionInitializeSessionUseCase {
       }));
 
     } catch (error: any) {
-      // 👈 终极拦截：如果 Adyen API 报错或 saveTransactionMapping 报错，这里会捕获，防止 500
-      console.error("💥 [UseCase] 发生未捕获异常 (之前会导致 500):", error);
+      console.error("💥 [UseCase] 发生未捕获异常:", error);
       return err(new TransactionInitializeSessionUseCaseResponses.Failure({
         message: error.message || "Internal Server Error in UseCase",
         appContext: appContextContainer.getContextValue(),
