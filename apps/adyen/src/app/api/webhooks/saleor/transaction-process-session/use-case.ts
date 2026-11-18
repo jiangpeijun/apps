@@ -28,19 +28,18 @@ export class TransactionProcessSessionUseCase {
   }) {
     const { appId, saleorApiUrl, event } = args;
     
-    // 👈 使用 (event as any) 绕过未重新生成的类型限制
-    const pspReference = (event as any).transaction?.pspReference;
+    // 👈 移除对 pspReference 的强制依赖，因为 3DS 回调时可能还没有最终 pspRef
     const channelId = (event as any).sourceObject?.channel?.id;
-    const eventData = (event as any).data; // 👈 获取 3DS 返回的数据
+    const eventData = (event as any).data;
 
-    console.log(`\n🔥 [ProcessSession UseCase] 开始处理, PspRef: ${pspReference}, Channel: ${channelId}`);
+    console.log(`\n🔥 [ProcessSession UseCase] 开始处理, Channel: ${channelId}`);
     console.log(`🔥 [ProcessSession UseCase] 收到的 event.data (3DS结果):`, JSON.stringify(eventData, null, 2));
 
-    if (!pspReference || !channelId) {
-      console.error(`❌ [ProcessSession UseCase] 缺少 pspReference 或 channelId`);
+    if (!channelId) {
+      console.error(`❌ [ProcessSession UseCase] 缺少 channelId`);
       return err(new BrokenAppResponse(
         appContextContainer.getContextValue(),
-        new BaseError("Missing pspReference or channelId") as any
+        new BaseError("Missing channelId") as any
       ));
     }
 
@@ -50,13 +49,11 @@ export class TransactionProcessSessionUseCase {
     });
 
     if (configResult.isErr()) {
-      console.error(`❌ [ProcessSession UseCase] 获取配置异常:`, configResult.error);
       return err(new BrokenAppResponse(appContextContainer.getContextValue(), configResult.error));
     }
 
     const config = configResult.value;
     if (!config) {
-      console.error(`❌ [ProcessSession UseCase] 未找到该 Channel 的 Adyen 配置`);
       return err(new AppIsNotConfiguredResponse(
         appContextContainer.getContextValue(),
         new BaseError("No config found for channel")
@@ -80,7 +77,7 @@ export class TransactionProcessSessionUseCase {
       // 2. 显式调用 PaymentsApi.paymentsDetails
       const processResponse = await withTimeout(
         adyen.checkout.PaymentsApi.paymentsDetails({
-          details: eventData,
+          details: eventData.details || eventData, // 兼容前端传来的结构
         }),
         ADYEN_TIMEOUT_MS,
         "Adyen paymentsDetails"
@@ -89,7 +86,12 @@ export class TransactionProcessSessionUseCase {
       console.log(`✅ [ProcessSession UseCase] Adyen API 返回, resultCode: ${processResponse.resultCode}`);
 
       const resultCode = processResponse.resultCode;
-      const finalPspRef = processResponse.pspReference || pspReference;
+      const finalPspRef = processResponse.pspReference;
+
+      // 👈 只有拿到最终的 pspReference，才能交给 Saleor 记账
+      if (!finalPspRef) {
+        throw new Error("Adyen 返回成功，但没有提供 pspReference");
+      }
 
       // 3. 根据结果返回给 Saleor
       if (resultCode === "Authorised" || resultCode === "Received") {
@@ -113,7 +115,7 @@ export class TransactionProcessSessionUseCase {
     } catch (error: any) {
       console.error("💥 [ProcessSession UseCase] 发生未捕获异常:", error);
       return ok(new TransactionProcessSessionUseCaseResponses.Failure({
-        pspReference,
+        pspReference: (event as any).transaction?.pspReference || "unknown",
         amount: (event as any).action.amount,
         message: error.message || "Adyen process error",
         appContext: appContextContainer.getContextValue(),
