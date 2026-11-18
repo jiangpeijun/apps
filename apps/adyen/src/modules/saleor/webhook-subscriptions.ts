@@ -101,7 +101,35 @@ export const TRANSACTION_PROCESS_SESSION_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 4. 退款请求
+// ✅ 4. 请款（Capture）请求
+export const TRANSACTION_CHARGE_REQUESTED_SUBSCRIPTION = `
+  subscription TransactionChargeRequested {
+    event {
+      ... on TransactionChargeRequested {
+        recipient { id }
+        idempotencyKey
+        transaction {
+          id
+          pspReference
+          checkout {
+            id
+            channel { id }
+          }
+          order {
+            id
+            channel { id }
+          }
+        }
+        action {
+          amount
+          currency
+        }
+      }
+    }
+  }
+`;
+
+// ✅ 5. 退款请求
 export const TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION = `
   subscription TransactionRefundRequested {
     event {
@@ -132,7 +160,7 @@ export const TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION = `
   }
 `;
 
-// ✅ 5. 取消请求
+// ✅ 6. 取消请求
 export const TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION = `
   subscription TransactionCancelationRequested {
     event {

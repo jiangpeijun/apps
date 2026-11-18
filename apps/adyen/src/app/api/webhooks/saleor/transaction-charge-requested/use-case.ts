@@ -13,6 +13,7 @@ import { createLogger } from "@/lib/logger";
 import { type AppConfigRepo } from "@/modules/app-config/repositories/app-config-repo";
 import { type SaleorApiUrl } from "@/modules/saleor/saleor-api-url";
 import { createAdyenClient } from "@/modules/adyen/adyen-client";
+import { resolveAdyenAmount } from "@/modules/adyen/adyen-money";
 import { withTimeout, ADYEN_TIMEOUT_MS } from "@/modules/adyen/adyen-timeout";
 
 import {
@@ -50,6 +51,19 @@ export class TransactionChargeRequestedUseCase {
       return err(new BaseError("Channel ID is missing in the event") as any);
     }
 
+    const pspReference = transaction.pspReference;
+    if (!pspReference) {
+      return err(new TransactionChargeRequestedUseCaseResponses.Failure({
+        pspReference: "",
+        errorMessage: "Missing pspReference in transaction",
+        appContext: appContextContainer.getContextValue(),
+      }) as any);
+    }
+
+    // 👈 使用 any 绕过 GraphQL 生成类型未更新的报错
+    const currency = (event.action as any).currency || "JPY"; 
+    console.log(`\n🔥 [Charge UseCase] 开始处理请款, PspRef: ${pspReference}, Amount: ${event.action.amount} ${currency}`);
+
     const adyenConfigForThisChannel = await this.appConfigRepo.getAdyenConfig({
       channelId,
       appId,
@@ -84,39 +98,54 @@ export class TransactionChargeRequestedUseCase {
       environment: config.environment,
     });
 
-    const pspReference = transaction.pspReference;
-    
-    // 注意：这里的 event.action.amount 是 Saleor 传过来的主单位金额
-    const saleorAmount = event.action.amount;
-    const adyenAmount = { value: Math.round(saleorAmount * 100), currency: "USD" }; // 替换为真实币种
-
-    this.logger.debug("Capturing Adyen payment with pspReference", { pspReference });
+    const adyenAmount = resolveAdyenAmount({
+      amount: event.action.amount,
+      currency: currency,
+    });
 
     try {
-      // 👇 使用 Adyen 的捕获 API
-      await withTimeout(
-        adyen.modificationsApi.captureAuthorisedPayment(pspReference, {
+      console.log(`🔥 [Charge UseCase] 准备调用 Adyen ModificationsApi.capture...`);
+      
+      // 👈 修复 1：使用 as any 绕过 SDK 类型缺失
+      // 👈 修复 2：使用 as any 解决返回值为 unknown 的问题
+      const captureResponse = await withTimeout(
+        (adyen.checkout.ModificationsApi as any).capture({
           merchantAccount: config.merchantAccount,
+          paymentPspReference: pspReference,
           amount: adyenAmount,
+          reference: `capture-${event.idempotencyKey}`,
         }),
         ADYEN_TIMEOUT_MS,
-        "Adyen captureAuthorisedPayment"
+        "Adyen capture"
+      ) as any; 
+
+      console.log(`✅ [Charge UseCase] Adyen API 返回, status: ${captureResponse.status}`);
+
+      if (captureResponse.status === "received") {
+        return ok(
+          new TransactionChargeRequestedUseCaseResponses.Success({
+            pspReference: captureResponse.pspReference || pspReference,
+            appContext: appContextContainer.getContextValue(),
+          }),
+        );
+      }
+
+      return err(
+        new TransactionChargeRequestedUseCaseResponses.Failure({
+          pspReference: pspReference,
+          errorMessage: `Capture failed with status: ${captureResponse.status}`,
+          appContext: appContextContainer.getContextValue(),
+        }) as any
       );
 
-      return ok(
-        new TransactionChargeRequestedUseCaseResponses.Success({
-          pspReference,
-          appContext: appContextContainer.getContextValue(),
-        }),
-      );
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Adyen capture failed";
-      return ok(
+    } catch (error: any) {
+      console.error(`💥 [Charge UseCase] Adyen 捕获异常:`, error);
+      return err(
         new TransactionChargeRequestedUseCaseResponses.Failure({
-          pspReference,
-          errorMessage,
+          pspReference: pspReference,
+          errorMessage: error.message || "Adyen capture failed",
           appContext: appContextContainer.getContextValue(),
-        }),
+        }) as any
       );
     }
   }

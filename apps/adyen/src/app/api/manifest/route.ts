@@ -4,6 +4,7 @@ import {
   PAYMENT_GATEWAY_INITIALIZE_SESSION_SUBSCRIPTION,
   TRANSACTION_INITIALIZE_SESSION_SUBSCRIPTION,
   TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
+  TRANSACTION_CHARGE_REQUESTED_SUBSCRIPTION,
   TRANSACTION_REFUND_REQUESTED_SUBSCRIPTION,
   TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION,
 } from "@/modules/saleor/webhook-subscriptions";
@@ -39,6 +40,12 @@ const manifestTemplate: AppManifest = {
       syncEvents: ["TRANSACTION_PROCESS_SESSION"],
       query: TRANSACTION_PROCESS_SESSION_SUBSCRIPTION,
       targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-process-session`,
+    },
+    {
+      name: "Transaction Charge Requested",
+      syncEvents: ["TRANSACTION_CHARGE_REQUESTED"],
+      query: TRANSACTION_CHARGE_REQUESTED_SUBSCRIPTION,
+      targetUrl: `${apiUrl}/api/webhooks/saleor/transaction-charge-requested`,
     },
     // {
     //   name: "Transaction Refund Requested",

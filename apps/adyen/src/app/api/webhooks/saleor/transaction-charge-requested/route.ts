@@ -30,6 +30,9 @@ const logger = createLogger("TRANSACTION_CHARGE_REQUESTED route");
 const handler = transactionChargeRequestedWebhookDefinition.createHandler(
   withRecipientVerification(async (_req, ctx) => {
     try {
+      const txId = ctx.payload.transaction?.id || "unknown";
+      console.log(`\n🔥 [Charge Route] 收到请求, TxId: ${txId}`);
+
       setObservabilitySourceObjectId({
         __typename: ctx.payload.transaction?.checkout?.id ? "Checkout" : "Order",
         id: ctx.payload.transaction?.checkout?.id ?? ctx.payload.transaction?.order?.id ?? null,
@@ -40,11 +43,10 @@ const handler = transactionChargeRequestedWebhookDefinition.createHandler(
         ctx.payload.transaction?.pspReference ?? null,
       );
 
-      logger.info("Received webhook request");
-
       const saleorApiUrlResult = createSaleorApiUrl(ctx.authData.saleorApiUrl);
 
       if (saleorApiUrlResult.isErr()) {
+        console.error(`❌ [Charge Route] URL 解析失败`);
         captureException(saleorApiUrlResult.error);
         const response = new MalformedRequestResponse(
           appContextContainer.getContextValue(),
@@ -53,7 +55,9 @@ const handler = transactionChargeRequestedWebhookDefinition.createHandler(
         return response.getResponse();
       }
 
-      setObservabilitySaleorApiUrl(saleorApiUrlResult.value, ctx.payload.version);
+      // 👈 兼容 schemaVersion 缺失
+      const schemaVersionString = ctx.schemaVersion ? String(ctx.schemaVersion) : "3.23";
+      setObservabilitySaleorApiUrl(saleorApiUrlResult.value, schemaVersionString);
 
       const result = await useCase.execute({
         appId: ctx.authData.appId,
@@ -63,21 +67,16 @@ const handler = transactionChargeRequestedWebhookDefinition.createHandler(
 
       return result.match(
         (result) => {
-          logger.info("Successfully processed webhook request", {
-            httpsStatusCode: result.statusCode,
-            pspReference: result.pspReference,
-          });
+          console.log(`✅ [Charge Route] UseCase 处理成功, HTTP ${result.statusCode}`);
           return result.getResponse();
         },
         (err) => {
-          logger.warn("Failed to process webhook request", {
-            httpsStatusCode: err.statusCode,
-            reason: err.message,
-          });
+          console.warn(`⚠️ [Charge Route] UseCase 处理失败(非500):`, err.message);
           return err.getResponse();
         },
       );
     } catch (error) {
+      console.error(`💥💥💥 [Charge Route] 捕获到致命异常 (500):`, error);
       captureException(error);
       const response = new UnhandledErrorResponse(
         appContextContainer.getContextValue(),
