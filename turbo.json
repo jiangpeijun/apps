@@ -1,13 +1,13 @@
 {
   "$schema": "https://turbo.build/schema.v2.json",
-  "globalDependencies": ["**/.env.*local", "schema.graphql"],
+  "globalDependencies": ["**/.env.*local", "**/.env.production", "schema.graphql", "saleor-json-schemas/**"],
+  "globalPassThroughEnv": ["SKIP_ENV_VALIDATION"],
   "globalEnv": [
     "APP_LOG_LEVEL",
     "CI",
     "ENABLE_EXPERIMENTAL_COREPACK",
     "ENV",
     "NEW_SECRET_KEY",
-    "NEXT_RUNTIME",
     "NEXT_RUNTIME",
     "NODE_ENV",
     "OTEL_ACCESS_TOKEN",
@@ -25,52 +25,41 @@
     "VERCEL"
   ],
   "tasks": {
-    "topo": {
-      "dependsOn": ["^topo"]
-    },
+    "topo": { "dependsOn": ["^topo"] },
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", ".vercel/**", "!.next/cache/**"],
-      "inputs": ["$TURBO_DEFAULT$", ".env"],
-      "env": ["GITHUB_SHA", "VERCEL_GIT_COMMIT_SHA"]
+      "inputs": ["$TURBO_DEFAULT$", ".env", ".env.production"],
+      "env": ["GITHUB_SHA", "VERCEL_GIT_COMMIT_SHA", "APP_API_BASE_URL", "APP_IFRAME_BASE_URL"]
     },
-    "check-types": {
-      "dependsOn": ["topo"]
+    "build:ci": {
+      "dependsOn": ["topo"],
+      "inputs": ["$TURBO_DEFAULT$", "!**/*.md", "!vercel.json"],
+      "outputs": [],
+      "passThroughEnv": [
+        "ALLOWED_DOMAIN_PATTERN",
+        "AWS_REGION",
+        "DYNAMODB_MAIN_TABLE_NAME",
+        "NEXT_PUBLIC_INITIAL_CHANNEL_SLUG",
+        "SECRET_KEY"
+      ]
     },
+    "check-types": { "dependsOn": ["topo"] },
     "deploy": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", ".vercel/**", "!.next/cache/**"],
       "inputs": ["$TURBO_DEFAULT$", ".env"],
       "env": ["GITHUB_SHA", "VERCEL_GIT_COMMIT_SHA"]
     },
-    "dev": {
-      "dependsOn": ["^dev"],
-      "cache": false,
-      "persistent": true
-    },
+    "dev": { "dependsOn": ["^dev"], "cache": false, "persistent": true },
     "generate": {
-      "dependsOn": ["topo"],
-      "outputs": ["generated/**"],
-      "cache": false
+      "inputs": ["**/*.graphql", "**/*.ts", "**/*.tsx", "package.json", "tsconfig.json", "!**/.next/**", "!**/next-env.d.ts"],
+      "outputs": ["generated/**"]
     },
-    "lint": {
-      "dependsOn": ["topo"]
-    },
-    "lint:fix": {
-      "dependsOn": ["topo"]
-    },
-    "start": {
-      "dependsOn": ["^build", "^start"],
-      "cache": false,
-      "persistent": true
-    },
-    "test": {
-      "cache": false,
-      "persistent": true
-    },
-    "test:ci": {
-      "dependsOn": ["topo"],
-      "outputs": ["coverage/**"]
-    }
+    "lint": { "dependsOn": ["topo"] },
+    "lint:fix": { "dependsOn": ["topo"] },
+    "start": { "dependsOn": ["^build", "^start"], "cache": false, "persistent": true },
+    "test": { "cache": false, "persistent": true },
+    "test:ci": { "dependsOn": ["topo"], "outputs": ["coverage/**"] }
   }
 }

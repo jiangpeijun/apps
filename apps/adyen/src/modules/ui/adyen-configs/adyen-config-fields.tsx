@@ -63,3 +63,16 @@ export const AdyenConfigFields = ({ control, errors, disabled = false }: Props) 
     />
   </Box>
 );
+
+export const FieldHint = (props: { children?: React.ReactNode }) => (
+  <div
+    style={{
+      fontSize: 12,
+      lineHeight: 1.5,
+      color: "#666",
+      marginTop: 4,
+    }}
+  >
+    {props.children}
+  </div>
+);

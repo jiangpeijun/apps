@@ -79,5 +79,6 @@ export const env = createEnv({
     AWS_ENDPOINT_URL: process.env.AWS_ENDPOINT_URL,
   },
   isServer: typeof window === "undefined" || process.env.NODE_ENV === "test",
+  skipValidation: process.env.SKIP_ENV_VALIDATION === "1",
   onValidationError: formatEnvValidationError,
 });

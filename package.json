@@ -30,7 +30,7 @@
     "oss:verify": "node oss/export.ts verify",
     "prepare": "husky",
     "start": "turbo run start",
-    "start:adyen": "pnpm --filter saleor-app-payment-adyen start",
+    "start:adyen": "pnpm --filter saleor-app-payment-adyen start:local",
     "test": "turbo run test",
     "test:ci": "turbo run test:ci"
   },

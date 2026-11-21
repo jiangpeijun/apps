@@ -1,0 +1,46 @@
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg=BUILDKIT_INLINE_CACHE=1
+      - -f
+      - apps/adyen/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/adyen-app:$SHORT_SHA
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/adyen-app:$SHORT_SHA
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - adyen-app
+      - --image=${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPO}/adyen-app:$SHORT_SHA
+      - --region=${_REGION}
+      - --port=8080
+      - --min-instances=1
+      - --max-instances=3
+      - --cpu=1
+      - --memory=1Gi
+      - --allow-unauthenticated
+      - --set-env-vars=APP_API_BASE_URL=https://app.a67y76j.garvee.jp,APP_IFRAME_BASE_URL=https://app.a67y76j.garvee.jp,APL=dynamodb,AWS_REGION=${_AWS_REGION},DYNAMODB_MAIN_TABLE_NAME=adyen-main-table,ALLOWED_DOMAIN_PATTERN=.*garvee\.jp.*,APP_LOG_LEVEL=info
+      - --set-secrets=SECRET_KEY=adyen-secret-key:latest,AWS_ACCESS_KEY_ID=adyen-aws-key-id:latest,AWS_SECRET_ACCESS_KEY=adyen-aws-secret:latest
+
+substitutions:
+  _REGION: asia-northeast1
+  _REPO: saleor-apps
+  _AWS_REGION: ap-northeast-1
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+timeout: 1800s

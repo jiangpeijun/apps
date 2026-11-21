@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+**/*.log
+.env
+.env.local
+apps/adyen/.env
+apps/adyen/.env.local
+apps/adyen/.env.test
+apps/adyen/.env.test.example
