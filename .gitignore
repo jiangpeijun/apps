@@ -36,12 +36,12 @@ yarn-error.log*
 .tmp/
 
 # env files
-.env
-.env.test
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# .env
+# .env.test
+# .env.local
+# .env.development.local
+# .env.test.local
+# .env.production.local
 
 # misc
 .saleor-app-auth.json
