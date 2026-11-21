@@ -9,6 +9,12 @@ import { saleorApp } from "@/lib/saleor-app";
 
 import { verifyWebhookSignature } from "../verify-signature";
 
+/**
+ * 订阅体（webhook-subscriptions.ts 第 163 行起）必须含 action { amount currency }：
+ * Saleor 3.23 的 TransactionCancelationRequested 没有 event.amount，
+ * 取消金额只存在于 action.amount（3.21 起会填用户请求额，未指定则回填 authorizedAmount）。
+ * 改完订阅务必 pnpm generate:adyen 重新生成 src/generated/graphql.ts。
+ */
 export const transactionCancelationRequestedWebhookDefinition =
   new SaleorSyncWebhook<TransactionCancelationRequestedEventFragment>({
     apl: saleorApp.apl,
@@ -21,3 +27,5 @@ export const transactionCancelationRequestedWebhookDefinition =
       return verifyWebhookSignature(jwks, signature, rawBody);
     },
   });
+
+

@@ -165,14 +165,14 @@ export const TRANSACTION_CANCELATION_REQUESTED_SUBSCRIPTION = `
   subscription TransactionCancelationRequested {
     event {
       ... on TransactionCancelationRequested {
-        recipient { id }
+        ...EventMetadata
+        idempotencyKey
+        action { amount currency }
         transaction {
           id
           pspReference
-        }
-        action {
-          amount
-          currency
+          checkout { id channel { ...Channel } }
+          order { id channel { ...Channel } }
         }
       }
     }
